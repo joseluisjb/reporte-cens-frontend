@@ -1,0 +1,10 @@
+:root {
+  /* Colores */
+  --color-primary: #0D9648;
+  --color-secondary: #9FCF67;
+  --color-neutral: #A1A1A5;
+
+  /* Tipografía */
+  --font-heading: 'Baloo 2', cursive;
+  --font-body: 'Mulish', sans-serif;
+}

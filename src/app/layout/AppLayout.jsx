@@ -1,8 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Icon, Spinner } from '../../components/ui'
+import { Outlet, useLocation } from 'react-router-dom'
+import { Icon, Spinner, useToast } from '../../components/ui'
 import { useAuth } from '../../features/auth/authContext'
-import { RUTA_LOGIN } from '../navigation'
 import ProfileMenu from './ProfileMenu'
 import Sidebar from './Sidebar'
 
@@ -10,7 +9,7 @@ import Sidebar from './Sidebar'
 // Las páginas se dibujan en <Outlet />.
 export default function AppLayout() {
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const toast = useToast()
   const { pathname } = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
 
@@ -21,9 +20,10 @@ export default function AppLayout() {
     return () => document.removeEventListener('keydown', onKey)
   }, [menuAbierto])
 
-  const cerrarSesion = () => {
-    logout()
-    navigate(RUTA_LOGIN)
+  // Al quedar sin usuario, RequireAuth lleva solo a /login.
+  const cerrarSesion = async () => {
+    await logout()
+    toast.success('Sesión cerrada correctamente.')
   }
 
   return (

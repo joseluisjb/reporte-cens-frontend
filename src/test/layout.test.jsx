@@ -56,15 +56,15 @@ describe('menú de perfil', () => {
     renderApp('/panel')
     await userEvent.click(await screen.findByRole('button', { name: /rosa martínez/i }))
     await userEvent.click(screen.getByRole('menuitem', { name: /cerrar sesión/i }))
-    expect(await screen.findByRole('heading', { name: /nexovolt/i })).toBeInTheDocument()
-    expect(screen.getByText(/inicio de sesión en construcción/i)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument()
+    expect(screen.getByText('Sesión cerrada correctamente.')).toBeInTheDocument()
   })
 
   test('el botón Cerrar sesión de la barra lateral también cierra', async () => {
     renderApp('/panel')
     await screen.findByRole('heading', { name: /bienvenido/i })
     await userEvent.click(within(screen.getByRole('complementary')).getByRole('button', { name: /cerrar sesión/i }))
-    expect(await screen.findByText(/inicio de sesión en construcción/i)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument()
   })
 })
 

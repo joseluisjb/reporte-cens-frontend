@@ -44,6 +44,19 @@
   }
 }
 
+/* Resalta unos segundos la fila recién creada o editada (usuarios, códigos...). */
+@keyframes resaltar {
+  from {
+    background-color: #dcfce7;
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.fila-resaltada td {
+  animation: resaltar 2.6s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

@@ -3,6 +3,7 @@ import ChangePasswordPage from '../features/auth/ChangePasswordPage'
 import LoginPage from '../features/auth/LoginPage'
 import RecoverPasswordPage from '../features/auth/RecoverPasswordPage'
 import RequireAuth from '../features/auth/RequireAuth'
+import ResetPasswordPage from '../features/auth/ResetPasswordPage'
 import RequireRole from '../features/auth/RequireRole'
 import { ROLES } from '../features/auth/roles'
 import CatalogPage from './CatalogPage'
@@ -16,6 +17,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/recuperar" element={<RecoverPasswordPage />} />
+      <Route path="/restablecer" element={<ResetPasswordPage />} />
       <Route path="/catalogo" element={<CatalogPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/cambio-password" element={<ChangePasswordPage />} />

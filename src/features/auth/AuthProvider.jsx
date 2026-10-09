@@ -78,9 +78,18 @@ export default function AuthProvider({ initialUser = null, children }) {
     return u
   }, [])
 
+  // Vuelve a pedir el usuario al backend (ej. tras cambiar la contraseña temporal, que cambia
+  // la marca "debe cambiar contraseña").
+  const refrescarUsuario = useCallback(async () => {
+    const u = await getCurrentUser()
+    setUser(u)
+    setStatus(u ? 'autenticado' : 'anonimo')
+    return u
+  }, [])
+
   const value = useMemo(
-    () => ({ user, status, motivoSalida, login, logout, cambiarPerfilDemo }),
-    [user, status, motivoSalida, login, logout, cambiarPerfilDemo],
+    () => ({ user, status, motivoSalida, login, logout, cambiarPerfilDemo, refrescarUsuario }),
+    [user, status, motivoSalida, login, logout, cambiarPerfilDemo, refrescarUsuario],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

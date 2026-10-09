@@ -16,3 +16,9 @@ export function mapUser(raw) {
     debeCambiarPassword: Boolean(raw.must_change_password),
   }
 }
+
+// El backend nombra el campo `email`; el formulario lo llama `correo`.
+export function mapUserFieldErrors(fieldErrors = {}) {
+  const { email, ...resto } = fieldErrors
+  return email ? { ...resto, correo: email } : resto
+}

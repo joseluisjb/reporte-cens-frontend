@@ -11,6 +11,7 @@ const VARIANTS = {
   primary: 'bg-bosque text-white enabled:hover:bg-bosque-d',
   outline: 'bg-white text-bosque border-bosque enabled:hover:bg-green-50',
   ghost: 'bg-white text-slate-700 border-gris enabled:hover:bg-slate-50',
+  danger: 'bg-error-d text-white enabled:hover:bg-red-800',
 }
 
 // Estilos del botón; también sirven para un <Link> con aspecto de botón.

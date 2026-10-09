@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import rayo from '../../assets/brand/rayo-blanco.png'
 import { Icon } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
 import { ROLES } from '../../features/auth/roles'
@@ -21,8 +22,11 @@ export default function Sidebar({ rol, open, onNavigate, onLogout }) {
         'md:sticky md:top-0 md:h-screen md:self-start',
       )}
     >
-      <div className="font-hd px-6 pb-8 text-2xl font-bold">
-        Nexo<b className="text-citrico">Volt</b>
+      <div className="flex items-center gap-2.5 px-6 pb-8 font-hd text-2xl font-bold">
+        <img src={rayo} alt="" width="67" height="151" className="h-8 w-auto" />
+        <span>
+          Nexo<b className="text-citrico">Volt</b>
+        </span>
       </div>
       <nav aria-label="Navegación principal" className="flex flex-1 flex-col gap-1 overflow-auto">
         {items.map((i) => (

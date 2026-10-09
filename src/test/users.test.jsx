@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { ROLES } from '../features/auth/roles'
 import { mapUserFieldErrors } from '../features/users/userMapper'
 import { validarUsuario } from '../features/users/userValidation'
-import { formatearFechaHora } from '../lib/format'
+import { formatearCOP, formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../lib/format'
 import { server } from '../mocks/server'
 import { renderConSesion } from './renderApp'
 
@@ -32,6 +32,16 @@ describe('validación y utilidades', () => {
   test('las fechas se muestran como en la maqueta', () => {
     expect(formatearFechaHora(new Date(2026, 8, 30, 8, 14))).toBe('30/09/2026 08:14')
     expect(formatearFechaHora(null)).toBe('—')
+  })
+
+  test('pesos, fechas ISO y plurales (para las pantallas de cartera)', () => {
+    expect(formatearCOP(1276016)).toBe('$1.276.016')
+    expect(formatearCOP(0)).toBe('$0')
+    expect(formatearCOP(842300.6)).toBe('$842.301')
+    expect(formatearFechaISO('2026-09-30')).toBe('30/09/2026')
+    expect(formatearFechaISOLarga('2026-09-30')).toBe('30 de septiembre de 2026')
+    expect(plural(1, 'obligación', 'obligaciones')).toBe('1 obligación')
+    expect(plural(6, 'obligación', 'obligaciones')).toBe('6 obligaciones')
   })
 })
 

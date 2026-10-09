@@ -1,4 +1,6 @@
-// Base de datos FICTICIA en memoria para los mocks. Todos los datos y contraseñas son inventados.
+// Base de datos FICTICIA para los mocks. Todos los datos y contraseñas son inventados.
+// Vive en memoria y se copia a sessionStorage (solo en los mocks, nunca en producción) para que
+// una recarga de la página no borre lo creado durante una demostración; cerrar la pestaña la reinicia.
 // Cuentas de prueba (solo con VITE_USE_MOCKS=true):
 //   rmartinez@cens.com.co / Admin12345      → Administrador
 //   jperez@cens.com.co    / Analista123     → Analista de Cartera
@@ -6,7 +8,8 @@
 //   avargas@cens.com.co   / Cartera123      → usuario desactivado
 import { ROLES } from '../features/auth/roles'
 
-const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio, nada sensible
+const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
+const DB_KEY = 'nexovolt-mock-db' // solo mocks: usuarios ficticios y sus contraseñas de prueba
 
 const usuariosIniciales = () => [
   { id: 1, nombre: 'Juan Pérez', email: 'jperez@cens.com.co', rol: ROLES.ANALISTA, is_active: true, last_login: '2026-09-30T08:14:00', must_change_password: false, password: 'Analista123' },
@@ -20,7 +23,26 @@ const usuariosIniciales = () => [
 
 export const TOKEN_RECUPERACION_VALIDO = 'token-de-prueba'
 
-export const db = { usuarios: usuariosIniciales(), sesionId: leerSesion(), siguienteId: 8 }
+function leerBase() {
+  try {
+    const guardada = JSON.parse(sessionStorage.getItem(DB_KEY))
+    if (guardada?.usuarios?.length) return guardada
+  } catch {
+    /* sin datos guardados o ilegibles: se parte de los iniciales */
+  }
+  return { usuarios: usuariosIniciales(), siguienteId: 8 }
+}
+
+export const db = { ...leerBase(), sesionId: leerSesion() }
+
+// Llamar después de cada cambio en db.usuarios.
+export function persistir() {
+  try {
+    sessionStorage.setItem(DB_KEY, JSON.stringify({ usuarios: db.usuarios, siguienteId: db.siguienteId }))
+  } catch {
+    /* sin sessionStorage: los datos viven solo en memoria */
+  }
+}
 
 function leerSesion() {
   try {
@@ -47,5 +69,10 @@ export const publico = ({ password: _password, ...u }) => u // nunca se devuelve
 export function resetMockDb() {
   db.usuarios = usuariosIniciales()
   db.siguienteId = 8
+  try {
+    sessionStorage.removeItem(DB_KEY)
+  } catch {
+    /* nada que limpiar */
+  }
   guardarSesion(null)
 }

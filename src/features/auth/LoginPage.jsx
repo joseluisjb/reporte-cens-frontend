@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { Alert, Button, Input, PasswordField, TextLink } from '../../components/ui'
 import { RUTA_INICIAL } from '../../app/navigation'
 import { usePageTitle } from '../../lib/usePageTitle'
-import { IDENTIFICADOR } from './authConfig'
+import { IDENTIFICADOR, MSG_SALIDA } from './authConfig'
 import { useAuth } from './authContext'
 import { RUTA_CAMBIO_PASSWORD } from './RequireAuth'
 import { validarLogin } from './loginValidation'
@@ -28,7 +28,7 @@ function PanelMarca() {
 
 export default function LoginPage() {
   usePageTitle('Iniciar sesión')
-  const { user, login } = useAuth()
+  const { user, login, motivoSalida } = useAuth()
   const location = useLocation()
   const [valores, setValores] = useState({ identificador: '', password: '' })
   const [errores, setErrores] = useState({})
@@ -77,6 +77,11 @@ export default function LoginPage() {
           <div aria-hidden="true" className="mb-8 font-hd text-[34px] font-bold text-bosque">
             Nexo<span className="text-citrico">Volt</span>
           </div>
+          {MSG_SALIDA[motivoSalida] && (
+            <div className="mb-5">
+              <Alert tone="aviso">{MSG_SALIDA[motivoSalida]}</Alert>
+            </div>
+          )}
           <Input
             ref={idRef}
             label={IDENTIFICADOR.etiqueta}

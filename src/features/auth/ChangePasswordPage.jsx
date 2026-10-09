@@ -15,7 +15,7 @@ export default function ChangePasswordPage() {
         </span>
         <h1 className="mb-2 font-hd text-2xl font-bold">Debes cambiar tu contraseña</h1>
         <p className="mb-6 text-muted">Formulario de cambio obligatorio en construcción (RF28).</p>
-        <Button variant="ghost" onClick={logout}>
+        <Button variant="ghost" onClick={() => logout()}>
           Cerrar sesión
         </Button>
       </Card>

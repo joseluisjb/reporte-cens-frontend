@@ -25,6 +25,7 @@ export default function InactivityGuard({
 
   return (
     <Modal
+      alert
       open={fase === 'aviso'}
       onClose={seguirConectado}
       initialFocusRef={seguirRef}

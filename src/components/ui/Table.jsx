@@ -1,8 +1,8 @@
 import { cx } from './cx'
 
 // Tabla con el estilo de la maqueta. Se usa con etiquetas normales:
-//   <Table><thead><tr><th>Nombre</th></tr></thead><tbody>...</tbody></Table>
-export default function Table({ compact = false, className, children, ...rest }) {
+//   <Table caption="Nombre de la tabla"><thead><tr><th>Nombre</th></tr></thead><tbody>...</tbody></Table>
+export default function Table({ compact = false, caption, className, children, ...rest }) {
   return (
     <div className="overflow-auto">
       <table
@@ -16,6 +16,7 @@ export default function Table({ compact = false, className, children, ...rest })
         )}
         {...rest}
       >
+        {caption && <caption className="sr-only">{caption}</caption>}
         {children}
       </table>
     </div>

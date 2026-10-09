@@ -5,7 +5,7 @@ import { ROLES } from '../../features/auth/roles'
 import { NAV_ITEMS } from '../navigation'
 
 const ITEM =
-  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-sm font-medium text-white opacity-90 hover:bg-white/8 hover:opacity-100 focus-visible:outline-white'
+  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-sm font-medium text-white hover:bg-white/8 focus-visible:outline-white'
 
 // Barra lateral. Muestra solo las opciones que el rol puede abrir.
 // En pantallas angostas es un panel que se abre desde la barra superior.
@@ -35,7 +35,7 @@ export default function Sidebar({ rol, open, onNavigate, onLogout }) {
             <Icon name={i.icon} />
             <span>{i.label}</span>
             {i.adminOnly && (
-              <span className="ml-auto shrink-0 rounded-full bg-citrico px-1.5 py-0.5 text-[10px] font-bold text-bosque">
+              <span className="ml-auto shrink-0 rounded-full bg-citrico px-1.5 py-0.5 text-[10px] font-bold text-[#064e24]">
                 ADMIN
               </span>
             )}

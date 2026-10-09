@@ -5,7 +5,7 @@ import { ROLES } from '../../features/auth/roles'
 import { DEMO_ACTIVO } from '../../lib/config'
 
 const ITEM =
-  'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-green-50 hover:text-bosque focus-visible:bg-green-50 focus-visible:text-bosque'
+  'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-green-50 hover:text-bosque-d focus-visible:bg-green-50 focus-visible:text-bosque-d'
 
 // Menú de perfil de la barra superior. Teclado: flechas, Inicio/Fin, Escape.
 // "Cambiar de perfil" solo aparece en modo demostración (VITE_DEMO_MODE con mocks).

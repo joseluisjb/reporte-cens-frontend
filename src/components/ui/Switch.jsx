@@ -8,7 +8,7 @@ export default function Switch({ checked, onChange, label, disabled }) {
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
-      className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-55"
+      className="cursor-pointer rounded-full p-1 disabled:cursor-not-allowed disabled:opacity-55"
     >
       {checked ? (
         <svg width="30" height="17" viewBox="0 0 36 20" aria-hidden="true">

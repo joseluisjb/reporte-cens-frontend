@@ -17,6 +17,7 @@ export default function ConfirmDialog({
   const cancelarRef = useRef(null)
   return (
     <Modal
+      alert
       open={open}
       onClose={onCancel}
       initialFocusRef={cancelarRef}

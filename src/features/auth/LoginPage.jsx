@@ -69,7 +69,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <main className="flex min-h-screen bg-white">
       <PanelMarca />
       <div className="flex flex-1 items-center justify-center p-8">
         <form onSubmit={enviar} noValidate className="flex w-full max-w-95 flex-col" aria-label="Iniciar sesión">
@@ -85,6 +85,7 @@ export default function LoginPage() {
           <Input
             ref={idRef}
             label={IDENTIFICADOR.etiqueta}
+            required
             type={IDENTIFICADOR.tipoInput}
             placeholder={IDENTIFICADOR.placeholder}
             autoComplete={IDENTIFICADOR.autoComplete}
@@ -96,6 +97,7 @@ export default function LoginPage() {
             ref={passRef}
             className="mt-5"
             label="Contraseña"
+            required
             placeholder="••••••••••••"
             autoComplete="current-password"
             value={valores.password}
@@ -115,6 +117,6 @@ export default function LoginPage() {
           </TextLink>
         </form>
       </div>
-    </div>
+    </main>
   )
 }

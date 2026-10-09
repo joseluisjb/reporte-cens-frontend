@@ -1,8 +1,9 @@
 import { useId } from 'react'
 import Icon from './Icon'
+import { describedByIds } from './cx'
 import { CONTROL, FieldError, FieldLabel } from './Field'
 
-export default function Select({ label, error, id, className, children, ...rest }) {
+export default function Select({ label, error, describedBy, id, className, children, ...rest }) {
   const auto = useId()
   const selId = id ?? auto
   const errId = `${selId}-err`
@@ -14,7 +15,7 @@ export default function Select({ label, error, id, className, children, ...rest 
           id={selId}
           className={`${CONTROL} appearance-none pr-10`}
           aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? errId : undefined}
+          aria-describedby={describedByIds(error && errId, describedBy)}
           {...rest}
         >
           {children}

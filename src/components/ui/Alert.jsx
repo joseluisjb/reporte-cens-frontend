@@ -2,7 +2,7 @@ import Icon from './Icon'
 import { cx } from './cx'
 
 const TONOS = {
-  error: 'border-red-200 bg-red-50 text-error',
+  error: 'border-red-200 bg-red-50 text-error-d',
   aviso: 'border-amber-200 bg-amber-50 text-amber-800',
 }
 

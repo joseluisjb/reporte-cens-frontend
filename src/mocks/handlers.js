@@ -5,7 +5,7 @@ import { reglasIncumplidas } from '../features/auth/authConfig'
 import { ROLES } from '../features/auth/roles'
 import { API_URL } from '../lib/config'
 import { ENDPOINTS } from '../lib/api/endpoints'
-import { db, guardarSesion, publico, TOKEN_RECUPERACION_VALIDO, usuarioActual } from './db'
+import { db, guardarSesion, persistir, publico, TOKEN_RECUPERACION_VALIDO, usuarioActual } from './db'
 
 const url = (ruta) => `${API_URL}${ruta}`
 const espera = () => delay(import.meta.env.MODE === 'test' ? 0 : 400)
@@ -36,6 +36,7 @@ export const handlers = [
     if (!u.is_active) return error(403, { detail: 'Tu usuario está desactivado. Contacta al administrador.' })
     guardarSesion(u.id)
     u.last_login = new Date().toISOString()
+    persistir()
     return HttpResponse.json({ user: publico(u) })
   }),
 
@@ -60,6 +61,7 @@ export const handlers = [
     if (invalida) return error(400, invalida)
     usuario.password = nueva
     usuario.must_change_password = false
+    persistir()
     return new HttpResponse(null, { status: 204 })
   }),
 
@@ -107,6 +109,7 @@ export const handlers = [
     const temporal = 'Temporal123'
     const u = { id: db.siguienteId++, nombre: nombre.trim(), email: email.trim(), rol, is_active: true, last_login: null, must_change_password: true, password: temporal }
     db.usuarios.push(u)
+    persistir()
     return HttpResponse.json({ user: publico(u), temporary_password: temporal }, { status: 201 })
   }),
 
@@ -123,6 +126,7 @@ export const handlers = [
     for (const campo of ['nombre', 'email', 'rol', 'is_active']) {
       if (cambios[campo] !== undefined) u[campo] = cambios[campo]
     }
+    persistir()
     return HttpResponse.json(publico(u))
   }),
 ]

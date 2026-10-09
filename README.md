@@ -98,3 +98,4 @@ El correo no se envía de verdad. Con los mocks, el enlace de restablecimiento v
 - [`docs/GUIA_EQUIPO.md`](docs/GUIA_EQUIPO.md): cómo agregar una pantalla, hablar con la API, hacer formularios, probar y abrir un PR.
 - [`docs/PENDIENTES_BACKEND.md`](docs/PENDIENTES_BACKEND.md): lo que el frontend espera del backend y las decisiones por cerrar con Dilan y José Luis.
 - [`docs/ACCESIBILIDAD.md`](docs/ACCESIBILIDAD.md): resultados de la revisión de accesibilidad, contraste y lista de revisión manual.
+- [`docs/GUION_DEMO.md`](docs/GUION_DEMO.md): guion de 10 minutos para la reunión de aceptación con CENS (HU-D).

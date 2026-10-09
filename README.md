@@ -91,3 +91,8 @@ Los tokens de marca (colores, fuentes, radios, sombras) viven en `src/index.css`
 
 El correo no se envía de verdad. Con los mocks, el enlace de restablecimiento válido es:
 `http://localhost:5173/restablecer?token=token-de-prueba` (cualquier otro token se rechaza).
+
+## Documentación para el equipo
+
+- [`docs/GUIA_EQUIPO.md`](docs/GUIA_EQUIPO.md): cómo agregar una pantalla, hablar con la API, hacer formularios, probar y abrir un PR.
+- [`docs/PENDIENTES_BACKEND.md`](docs/PENDIENTES_BACKEND.md): lo que el frontend espera del backend y las decisiones por cerrar con Dilan y José Luis.

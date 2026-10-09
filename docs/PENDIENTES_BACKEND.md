@@ -1,0 +1,121 @@
+# Pendientes con el backend (Dilan y José Luis)
+
+Lo que el frontend **ya espera** del backend y lo que hay que confirmar. El frontend está construido y probado contra una API simulada; cuando los endpoints reales existan, se apaga `VITE_USE_MOCKS` y se corrigen solo `src/lib/api/endpoints.js` y los mappers.
+
+Dónde está todo: contrato completo en el `README.md` (sección "Contrato propuesto"), la API simulada en `src/mocks/handlers.js`.
+
+Cada punto trae una **suposición** del frontend. Si es correcta, basta responder "ok"; si no, dígannos cuál es y se ajusta aquí.
+
+---
+
+## 1. Para Dilan — autenticación, sesión y roles (RF25, RF26, RF27)
+
+### 1.1 Antes de la primera migración (urgente)
+
+El backend aún no tiene migraciones. **El modelo de usuario propio debe definirse antes del primer `migrate`**; cambiarlo después es muy doloroso en Django.
+
+- `AUTH_USER_MODEL = 'usuarios.Usuario'`, con el correo como identificador de login (`USERNAME_FIELD = 'email'`).
+- Campos que el frontend consume: `nombre`, `email`, `rol` (`'Analista de Cartera'` o `'Administrador'`), `is_active`, `last_login`, `must_change_password`.
+- `rest_framework` y `usuarios` no están en `INSTALLED_APPS`.
+
+### 1.2 Sesión: cookie de Django + CSRF (decisión tomada con el coordinador)
+
+El frontend usa la **cookie de sesión HttpOnly de Django** y el token CSRF. No guarda nada en `localStorage`. Ajustes sugeridos en `settings.py`:
+
+```python
+SESSION_COOKIE_AGE = 10 * 60          # RF26: 10 minutos de inactividad (coincide con VITE_IDLE_MINUTES)
+SESSION_SAVE_EVERY_REQUEST = True     # vencimiento DESLIZANTE: cada petición renueva la sesión
+SESSION_COOKIE_HTTPONLY = True        # (es el valor por defecto)
+SESSION_COOKIE_SECURE = not DEBUG     # solo por HTTPS en producción (RNF-05)
+SESSION_COOKIE_SAMESITE = 'Lax'       # 'None' + Secure solo si front y back quedan en dominios distintos
+CSRF_COOKIE_HTTPONLY = False          # el JS necesita leer csrftoken para enviarlo en X-CSRFToken
+
+# Solo si el frontend NO va detrás del mismo dominio (en desarrollo no hace falta: Vite hace proxy de /api):
+CORS_ALLOWED_ORIGINS = ['http://localhost:5173']   # requiere django-cors-headers
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = ['http://localhost:5173']
+```
+
+**Pregunta:** ¿el frontend y el backend se servirán desde el mismo dominio (por ejemplo, con un proxy) o desde dominios distintos? De eso depende `SameSite` y CORS.
+
+### 1.3 Endpoints
+
+| Método y ruta | Cuerpo | Respuesta esperada |
+|---|---|---|
+| `GET /api/auth/csrf/` | — | 204, y entrega la cookie `csrftoken` (decorador `ensure_csrf_cookie`) |
+| `POST /api/auth/login/` | `{ "email", "password" }` | 200 `{ "user": {...} }` · 401 credenciales malas · 403 usuario desactivado |
+| `POST /api/auth/logout/` | — | 204 (invalida la sesión en el servidor) |
+| `GET /api/auth/me/` | — | 200 `{ "user": {...} }` · 401 sin sesión. **También sirve de "ping"**: el frontend lo llama cada ~5 min mientras el usuario trabaja para renovar la sesión |
+| `POST /api/auth/change-password/` | `{ "current_password", "new_password" }` | 204 · 400 con error por campo |
+| `POST /api/auth/password-reset/` | `{ "email" }` | **202 siempre igual**, exista o no el correo |
+| `POST /api/auth/password-reset/confirm/` | `{ "token", "new_password" }` | 204 · 400 `{ "token": [...] }` si venció o ya se usó |
+
+`user` = `{ "id", "nombre", "email", "rol", "is_active", "last_login", "must_change_password" }`.
+
+### 1.4 Detalles que el frontend da por hechos
+
+1. **Mensajes de error en español** (RF31). Con `LANGUAGE_CODE = 'en-us'` los mensajes de DRF y de los validadores de contraseña salen en inglés. Sugerencia: `LANGUAGE_CODE = 'es-co'` y `TIME_ZONE = 'America/Bogota'`. El frontend traduce solo cuatro mensajes por defecto de DRF; el resto debe venir ya en español.
+2. **Formato de error de DRF:** `{ "detail": "..." }` o `{ "campo": ["mensaje"] }`. El frontend los convierte en errores por campo.
+3. **Usuario desactivado:** `authenticate()` de Django devuelve `None` para un usuario inactivo, igual que con una clave mala. Para poder responder 403 *"Tu usuario está desactivado. Contacta al administrador."* hay que comprobar `is_active` aparte (sin revelar nada si la contraseña es incorrecta).
+4. **Un 403 por CSRF** debe distinguirse de un 403 por falta de permiso. Sugerencia: `CSRF_FAILURE_VIEW` que devuelva JSON `{ "detail": "No se pudo verificar la seguridad de la solicitud. Recarga la página e intenta de nuevo." }`.
+5. **Contraseñas con Argon2** (RNF-04): `argon2-cffi` ya está instalado, pero falta `PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher', ...]`.
+6. **Reglas de contraseña** que muestra la maqueta y valida el frontend: mínimo 8 caracteres, al menos una mayúscula y al menos un número. Hay que replicarlas en `AUTH_PASSWORD_VALIDATORS` con un validador propio (Django solo trae el de longitud), con errores en español en la clave `new_password`.
+7. **Usuario con contraseña temporal** (`must_change_password = true`): el backend debería rechazar (403) todo endpoint salvo `me`, `logout` y `change-password`. El frontend ya lo obliga a la pantalla de cambio, pero la regla real es del servidor.
+8. **Roles (RF27):** un Analista que llama a un endpoint de administración recibe **403**. El frontend oculta esas pantallas, pero no es seguridad.
+9. **Seguridad menor:** `SECRET_KEY` está escrita en `settings.py` (es la de ejemplo de Django, pero conviene pasarla al `.env`), `DEBUG = True` y `ALLOWED_HOSTS = []`.
+
+### 1.5 Recuperación de contraseña: ¿cómo se prueba sin enviar correos reales?
+
+Es una de las "decisiones por cerrar" de la asignación. Propuesta:
+- En desarrollo, `EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'`: el correo se imprime en la consola del servidor.
+- El enlace del correo tiene la forma `{FRONTEND_URL}/restablecer?token=XXXX` (esa pantalla ya existe en el frontend).
+- Token de un solo uso y de vencimiento corto (por ejemplo, 30 minutos), con límite de intentos por correo/IP.
+
+**Nota:** la pantalla "Restablecer contraseña" no está en la maqueta ni en la asignación; el frontend la agregó porque sin ella el enlace del correo no tiene a dónde llevar. Hay que confirmarla con Santiago.
+
+---
+
+## 2. Para José Luis — usuarios y parámetros (RF28, RF29, RF35)
+
+### 2.1 Endpoints de usuarios (solo Administrador; un Analista recibe 403)
+
+| Método y ruta | Cuerpo | Respuesta esperada |
+|---|---|---|
+| `GET /api/users/` | — | 200 `[user, ...]` |
+| `POST /api/users/` | `{ "nombre", "email", "rol" }` | 201 `{ "user": {...}, "temporary_password": "..." }` · 400 por campo (correo repetido, rol inválido) |
+| `PATCH /api/users/:id/` | `{ "nombre"?, "email"?, "rol"?, "is_active"? }` | 200 `user` (se usa para editar **y** para activar/desactivar) |
+
+Reglas que el servidor debe imponer (el frontend ya las aplica en pantalla, pero no son seguridad):
+- Un administrador **no puede desactivarse a sí mismo** ni **cambiarse su propio rol**.
+- El correo es único (400 con el error en la clave `email`).
+- Un usuario recién creado queda con `must_change_password = true`.
+- Todo cambio de usuarios debe quedar en el log de auditoría (RF30).
+
+### 2.2 Contraseña temporal: ¿se devuelve o se envía por correo?
+
+El frontend soporta las dos opciones:
+- Si la respuesta trae `temporary_password`, se la **muestra una sola vez** al Administrador para que se la entregue al usuario.
+- Si no la trae (`null` o ausente), muestra "La contraseña temporal se envió a su correo".
+
+**Pregunta:** ¿cuál van a implementar? Si se envía por correo, ya no se devuelve en la API.
+
+### 2.3 Parámetros de conceptos de energía (RF35) — para Angel
+
+Angel construirá la pantalla. Hay que acordar el contrato antes: lista, crear, editar y activar/desactivar un código, con los campos `código`, `descripción`, `estado` y `fecha de creación`. Propuesta de rutas: `GET/POST /api/conceptos/` y `PATCH /api/conceptos/:id/`, solo Administrador.
+
+---
+
+## 3. Decisiones por cerrar (resumen para responder rápido)
+
+| # | Pregunta | Suposición del frontend |
+|---|---|---|
+| 1 | ¿Front y back en el mismo dominio? | Mismo dominio en desarrollo (proxy de Vite) |
+| 2 | ¿Vencimiento deslizante de 10 minutos (`SESSION_SAVE_EVERY_REQUEST`)? | Sí |
+| 3 | ¿`GET /auth/me/` sirve de "ping" para renovar la sesión? | Sí |
+| 4 | Campo del login | `email` |
+| 5 | Forma del usuario | `{ id, nombre, email, rol, is_active, last_login, must_change_password }` |
+| 6 | Valores de `rol` | `"Analista de Cartera"` y `"Administrador"` |
+| 7 | Contraseña temporal | Se devuelve en `temporary_password` (si no, la envían por correo) |
+| 8 | Reglas de contraseña | 8 caracteres, mayúscula y número |
+| 9 | Pantalla "Restablecer" con `?token=` | Sí, hay que confirmarla con Santiago |
+| 10 | ¿Quién arregla `LANGUAGE_CODE` a español y el modelo de usuario propio? | Dilan, antes del primer `migrate` |

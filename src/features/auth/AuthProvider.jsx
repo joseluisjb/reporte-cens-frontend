@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { setAuthHandlers } from '../../lib/api'
 import { useToast } from '../../components/ui'
 import { AuthContext } from './authContext'
-import { getCurrentUser, login as loginRequest, logout as logoutRequest } from './authService'
+import { demoSwitchProfile, getCurrentUser, login as loginRequest, logout as logoutRequest } from './authService'
 
 export default function AuthProvider({ initialUser = null, children }) {
   const toast = useToast()
@@ -44,6 +44,9 @@ export default function AuthProvider({ initialUser = null, children }) {
         setUser(null)
         setStatus('anonimo')
       },
+      // El backend dijo "no tienes permiso" (ej. se le quitó el rol). El guard por URL ya cuida
+      // las pantallas; esto avisa cuando es una acción concreta.
+      onForbidden: (e) => toast.error(e.message),
     })
     return () => setAuthHandlers({})
   }, [toast])
@@ -67,9 +70,16 @@ export default function AuthProvider({ initialUser = null, children }) {
     }
   }, [])
 
+  // Solo modo demostración con mocks (ver SwitchProfileModal).
+  const cambiarPerfilDemo = useCallback(async (rol) => {
+    const u = await demoSwitchProfile(rol)
+    setUser(u)
+    return u
+  }, [])
+
   const value = useMemo(
-    () => ({ user, status, salidaManual, login, logout }),
-    [user, status, salidaManual, login, logout],
+    () => ({ user, status, salidaManual, login, logout, cambiarPerfilDemo }),
+    [user, status, salidaManual, login, logout, cambiarPerfilDemo],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

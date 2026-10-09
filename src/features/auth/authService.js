@@ -50,3 +50,9 @@ export async function requestPasswordReset(identificador) {
 export async function confirmPasswordReset({ token, nueva }) {
   await api.post(ENDPOINTS.passwordResetConfirm, { token, new_password: nueva }, { skipAuthRedirect: true })
 }
+
+// Solo modo demostración con mocks: cambia la sesión simulada a otro perfil.
+export async function demoSwitchProfile(rol) {
+  const { data } = await api.post(ENDPOINTS.demoSwitchProfile, { rol })
+  return mapUser(data.user)
+}

@@ -23,7 +23,10 @@ cp .env.example .env
 
 | Variable | Descripción |
 |---|---|
-| `VITE_API_URL` | URL base del backend (ej. `http://localhost:8000/api`) |
+| `VITE_API_URL` | URL base del backend (`/api` usa el proxy de Vite hacia `localhost:8000`) |
+| `VITE_USE_MOCKS` | `true` usa datos simulados (MSW) |
+| `VITE_IDLE_MINUTES` | Minutos de inactividad antes de cerrar la sesión (RF26) |
+| `VITE_DEMO_MODE` | Solo desarrollo: habilita "Cambiar de perfil" |
 
 ## Ejecución
 
@@ -40,10 +43,12 @@ cp .env.example .env
 
 ```
 src/
-  api/        Clientes HTTP (envoltorio de fetch)
-  auth/       Contexto y lógica de autenticación
-  components/ Componentes reutilizables
-  pages/      Vistas por ruta
-  styles/     Tokens de diseño (variables CSS)
-  test/       Configuración de pruebas
+  app/              App, router y proveedores
+  components/ui/    Componentes reutilizables (botón, input, modal, tabla...)
+  features/         Una carpeta por módulo: auth, users, extraction, parameters, audit
+  lib/api/          Cliente HTTP (axios) y manejo global de 401/403
+  mocks/            Datos simulados (MSW) mientras no existan los endpoints reales
+  test/             Configuración de pruebas (Vitest + Testing Library)
 ```
+
+Los tokens de marca (colores, fuentes, radios, sombras) viven en `src/index.css`, bloque `@theme`.

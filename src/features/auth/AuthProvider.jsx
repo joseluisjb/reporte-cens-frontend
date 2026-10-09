@@ -1,22 +1,75 @@
-// TEMPORAL (paso 4): usuario ficticio para poder ver el layout.
-// El paso 6 lo reemplaza por la sesión real (login, GET /me, cierre de sesión).
-// En desarrollo, ?rol=analista muestra la vista de Analista de Cartera.
-import { useMemo } from 'react'
+// Sesión de la aplicación (RF25). La sesión real es una cookie HttpOnly que maneja el navegador;
+// aquí solo se guarda QUIÉN es el usuario (que responde el backend) y el estado de carga.
+//
+// status: 'cargando' (preguntando al backend si hay sesión) | 'autenticado' | 'anonimo'
+// `initialUser` es solo para pruebas: arranca ya autenticado sin consultar al backend.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { setAuthHandlers } from '../../lib/api'
+import { useToast } from '../../components/ui'
 import { AuthContext } from './authContext'
-import { ROLES } from './roles'
+import { getCurrentUser, login as loginRequest, logout as logoutRequest } from './authService'
 
-const ADMIN = { nombre: 'Rosa Martínez', correo: 'rmartinez@cens.com.co', rol: ROLES.ADMIN }
-const ANALISTA = { nombre: 'Juan Pérez', correo: 'jperez@cens.com.co', rol: ROLES.ANALISTA }
+export default function AuthProvider({ initialUser = null, children }) {
+  const toast = useToast()
+  const [user, setUser] = useState(initialUser)
+  const [status, setStatus] = useState(initialUser ? 'autenticado' : 'cargando')
+  // true tras cerrar sesión a propósito: así el login no "devuelve" a la pantalla de la que saliste.
+  const [salidaManual, setSalidaManual] = useState(false)
+  const userRef = useRef(user)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
 
-function usuarioInicial() {
-  const analista = import.meta.env.DEV && new URLSearchParams(window.location.search).get('rol') === 'analista'
-  return analista ? ANALISTA : ADMIN
-}
+  // Al abrir la app (o recargar) se pregunta si la cookie de sesión sigue vigente.
+  useEffect(() => {
+    if (initialUser) return undefined
+    let cancelado = false
+    getCurrentUser()
+      .then((u) => {
+        if (cancelado) return
+        setUser(u)
+        setStatus(u ? 'autenticado' : 'anonimo')
+      })
+      .catch(() => !cancelado && setStatus('anonimo'))
+    return () => {
+      cancelado = true
+    }
+  }, [initialUser])
 
-export default function AuthProvider({ initialUser, children }) {
+  // Cualquier 401 en la app (sesión vencida o invalidada) devuelve al login.
+  useEffect(() => {
+    setAuthHandlers({
+      onUnauthorized: () => {
+        if (userRef.current) toast.error('Tu sesión expiró. Inicia sesión de nuevo.')
+        setUser(null)
+        setStatus('anonimo')
+      },
+    })
+    return () => setAuthHandlers({})
+  }, [toast])
+
+  const login = useCallback(async (identificador, password) => {
+    const u = await loginRequest(identificador, password)
+    setSalidaManual(false)
+    setUser(u)
+    setStatus('autenticado')
+    return u
+  }, [])
+
+  const logout = useCallback(async () => {
+    setSalidaManual(true)
+    try {
+      await logoutRequest()
+    } finally {
+      // Aunque el backend no responda, en este equipo la sesión local se cierra.
+      setUser(null)
+      setStatus('anonimo')
+    }
+  }, [])
+
   const value = useMemo(
-    () => ({ user: initialUser ?? usuarioInicial(), logout: () => {} }),
-    [initialUser],
+    () => ({ user, status, salidaManual, login, logout }),
+    [user, status, salidaManual, login, logout],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -1,12 +1,16 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import BrandPreviewPage from './BrandPreviewPage'
+import { BrowserRouter } from 'react-router-dom'
+import { ToastProvider } from '../components/ui'
+import AuthProvider from '../features/auth/AuthProvider'
+import AppRoutes from './AppRoutes'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<BrandPreviewPage />} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   )
 }

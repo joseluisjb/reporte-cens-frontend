@@ -1,0 +1,103 @@
+import { changePassword, confirmPasswordReset, getCurrentUser, login, logout, requestPasswordReset } from '../features/auth/authService'
+import { MSG_CREDENCIALES, reglasIncumplidas } from '../features/auth/authConfig'
+import { ROLES } from '../features/auth/roles'
+import { createUser, listUsers, setUserActive, updateUser } from '../features/users/usersService'
+import { TOKEN_RECUPERACION_VALIDO } from '../mocks/db'
+
+describe('authService', () => {
+  test('login correcto devuelve el usuario en el formato de la interfaz', async () => {
+    const u = await login('rmartinez@cens.com.co', 'Admin12345')
+    expect(u).toMatchObject({ nombre: 'Rosa Martínez', correo: 'rmartinez@cens.com.co', rol: ROLES.ADMIN, estado: 'Activo', debeCambiarPassword: false })
+    expect(u.ultimoAcceso).toBeInstanceOf(Date)
+    expect(u).not.toHaveProperty('password')
+  })
+
+  test('credenciales incorrectas dan el mensaje de la maqueta', async () => {
+    await expect(login('rmartinez@cens.com.co', 'mala')).rejects.toThrow(MSG_CREDENCIALES)
+    await expect(login('nadie@cens.com.co', 'Admin12345')).rejects.toThrow(MSG_CREDENCIALES)
+  })
+
+  test('un usuario desactivado no entra y se le explica por qué', async () => {
+    await expect(login('avargas@cens.com.co', 'Cartera123')).rejects.toMatchObject({ status: 403, message: /desactivado/i })
+  })
+
+  test('el usuario con contraseña temporal queda marcado para cambiarla', async () => {
+    const u = await login('mgomez@cens.com.co', 'Temporal123')
+    expect(u.debeCambiarPassword).toBe(true)
+  })
+
+  test('sin sesión getCurrentUser devuelve null; con sesión, el usuario; tras logout, null', async () => {
+    expect(await getCurrentUser()).toBeNull()
+    await login('jperez@cens.com.co', 'Analista123')
+    expect((await getCurrentUser()).nombre).toBe('Juan Pérez')
+    await logout()
+    expect(await getCurrentUser()).toBeNull()
+  })
+
+  test('cambiar la contraseña temporal quita la marca de primer ingreso', async () => {
+    await login('mgomez@cens.com.co', 'Temporal123')
+    await changePassword({ actual: 'Temporal123', nueva: 'Nueva12345' })
+    expect((await getCurrentUser()).debeCambiarPassword).toBe(false)
+    await logout()
+    expect((await login('mgomez@cens.com.co', 'Nueva12345')).nombre).toBe('María Gómez')
+  })
+
+  test('una contraseña nueva débil o una actual errónea se reportan por campo', async () => {
+    await login('mgomez@cens.com.co', 'Temporal123')
+    await expect(changePassword({ actual: 'Temporal123', nueva: 'corta' })).rejects.toMatchObject({ fieldErrors: { new_password: expect.stringMatching(/mínimo 8/i) } })
+    await expect(changePassword({ actual: 'x', nueva: 'Nueva12345' })).rejects.toMatchObject({ fieldErrors: { current_password: expect.any(String) } })
+  })
+
+  test('recuperar contraseña responde igual con un correo que no existe', async () => {
+    await expect(requestPasswordReset('nadie@cens.com.co')).resolves.toBeUndefined()
+    await expect(requestPasswordReset('jperez@cens.com.co')).resolves.toBeUndefined()
+  })
+
+  test('el enlace de recuperación con token inválido se rechaza', async () => {
+    await expect(confirmPasswordReset({ token: 'malo', nueva: 'Nueva12345' })).rejects.toMatchObject({ fieldErrors: { token: expect.any(String) } })
+    await expect(confirmPasswordReset({ token: TOKEN_RECUPERACION_VALIDO, nueva: 'Nueva12345' })).resolves.toBeUndefined()
+  })
+})
+
+describe('reglas de contraseña', () => {
+  test('devuelve las reglas que no se cumplen', () => {
+    expect(reglasIncumplidas('abc')).toEqual(['Mínimo 8 caracteres', 'Al menos una letra mayúscula', 'Al menos un número'])
+    expect(reglasIncumplidas('Abcdefg1')).toEqual([])
+    expect(reglasIncumplidas('abcdefgh1')).toEqual(['Al menos una letra mayúscula'])
+  })
+})
+
+describe('usersService', () => {
+  test('el Administrador lista los usuarios', async () => {
+    await login('rmartinez@cens.com.co', 'Admin12345')
+    const usuarios = await listUsers()
+    expect(usuarios).toHaveLength(7)
+    expect(usuarios[3]).toMatchObject({ nombre: 'Ana Lucía Vargas', estado: 'Inactivo', activo: false })
+  })
+
+  test('el Analista recibe 403 y sin sesión 401', async () => {
+    await expect(listUsers()).rejects.toMatchObject({ status: 401 })
+    await login('jperez@cens.com.co', 'Analista123')
+    await expect(listUsers()).rejects.toMatchObject({ status: 403 })
+  })
+
+  test('crear usuario devuelve la contraseña temporal y el usuario debe cambiarla', async () => {
+    await login('rmartinez@cens.com.co', 'Admin12345')
+    const { user, passwordTemporal } = await createUser({ nombre: 'Laura Díaz', correo: 'ldiaz@cens.com.co', rol: ROLES.ANALISTA })
+    expect(user).toMatchObject({ nombre: 'Laura Díaz', debeCambiarPassword: true, estado: 'Activo' })
+    expect(passwordTemporal).toBeTruthy()
+  })
+
+  test('crear usuario valida campos y correo repetido por campo', async () => {
+    await login('rmartinez@cens.com.co', 'Admin12345')
+    await expect(createUser({ nombre: '', correo: '', rol: ROLES.ANALISTA })).rejects.toMatchObject({ fieldErrors: { nombre: expect.any(String), email: expect.any(String) } })
+    await expect(createUser({ nombre: 'Otra Juana', correo: 'jperez@cens.com.co', rol: ROLES.ANALISTA })).rejects.toMatchObject({ fieldErrors: { email: 'Ya existe un usuario con ese correo.' } })
+  })
+
+  test('editar y desactivar un usuario', async () => {
+    await login('rmartinez@cens.com.co', 'Admin12345')
+    expect((await updateUser(3, { nombre: 'Carlos A. Sánchez' })).nombre).toBe('Carlos A. Sánchez')
+    const off = await setUserActive(3, false)
+    expect(off).toMatchObject({ activo: false, estado: 'Inactivo' })
+  })
+})

@@ -52,3 +52,37 @@ src/
 ```
 
 Los tokens de marca (colores, fuentes, radios, sombras) viven en `src/index.css`, bloque `@theme`.
+
+## Cliente HTTP, servicios y mocks
+
+- **Cliente único** (`src/lib/api/client.js`, axios): sesión por cookie HttpOnly de Django + token CSRF (`X-CSRFToken`). No se guarda nada sensible en `localStorage`. Maneja 401/403 de forma global (`setAuthHandlers`) y convierte todo error en un `ApiError` con mensaje en español y errores por campo (`fieldErrors`).
+- **Servicios por módulo** (`features/<modulo>/*Service.js`): las pantallas llaman solo a estas funciones, nunca a axios. Para agregar un servicio nuevo, sigue el ejemplo de `features/users/usersService.js`.
+- **Rutas del backend** en un solo archivo: `src/lib/api/endpoints.js`.
+- **Mocks (MSW)** en `src/mocks/`: con `VITE_USE_MOCKS=true` responden las llamadas con datos ficticios. Con `false` se pasa al backend real **sin tocar las pantallas** y los mocks no entran al build. Las pruebas usan los mismos handlers.
+- Para agregar un mock: crea el handler en `src/mocks/handlers.js` (o en un archivo propio que se sume a `handlers`).
+
+### Cuentas de prueba (solo con mocks, todas ficticias)
+
+| Correo | Contraseña | Caso |
+|---|---|---|
+| `rmartinez@cens.com.co` | `Admin12345` | Administrador |
+| `jperez@cens.com.co` | `Analista123` | Analista de Cartera |
+| `mgomez@cens.com.co` | `Temporal123` | Primer ingreso (debe cambiar la contraseña) |
+| `avargas@cens.com.co` | `Cartera123` | Usuario desactivado |
+
+### Contrato propuesto con el backend (por confirmar con Dilan y José Luis)
+
+| Método y ruta | Cuerpo | Respuesta |
+|---|---|---|
+| `GET /auth/csrf/` | — | 204, entrega la cookie `csrftoken` |
+| `POST /auth/login/` | `{ email, password }` | 200 `{ user }` · 401 credenciales · 403 usuario desactivado |
+| `POST /auth/logout/` | — | 204 |
+| `GET /auth/me/` | — | 200 `{ user }` · 401 sin sesión |
+| `POST /auth/change-password/` | `{ current_password, new_password }` | 204 · 400 por campo |
+| `POST /auth/password-reset/` | `{ email }` | 202, siempre igual (no revela si el correo existe) |
+| `POST /auth/password-reset/confirm/` | `{ token, new_password }` | 204 · 400 |
+| `GET /users/` | — | 200 `[user]` (solo Administrador, 403 al Analista) |
+| `POST /users/` | `{ nombre, email, rol }` | 201 `{ user, temporary_password }` |
+| `PATCH /users/:id/` | `{ nombre?, email?, rol?, is_active? }` | 200 `user` |
+
+`user` = `{ id, nombre, email, rol, is_active, last_login, must_change_password }`. El traductor a la interfaz está en `features/users/userMapper.js`.

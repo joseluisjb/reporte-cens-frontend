@@ -13,8 +13,9 @@ export default function AuthProvider({ initialUser = null, children }) {
   const toast = useToast()
   const [user, setUser] = useState(initialUser)
   const [status, setStatus] = useState(initialUser ? 'autenticado' : 'cargando')
-  // true tras cerrar sesión a propósito: así el login no "devuelve" a la pantalla de la que saliste.
-  const [salidaManual, setSalidaManual] = useState(false)
+  // Por qué se salió: 'manual' | 'inactividad' | 'expirada' | null. El login lo muestra, y tras una
+  // salida manual no "devuelve" a la pantalla de la que saliste.
+  const [motivoSalida, setMotivoSalida] = useState(null)
   const userRef = useRef(user)
   useEffect(() => {
     userRef.current = user
@@ -40,7 +41,7 @@ export default function AuthProvider({ initialUser = null, children }) {
   useEffect(() => {
     setAuthHandlers({
       onUnauthorized: () => {
-        if (userRef.current) toast.error('Tu sesión expiró. Inicia sesión de nuevo.')
+        if (userRef.current) setMotivoSalida('expirada')
         setUser(null)
         setStatus('anonimo')
       },
@@ -53,14 +54,14 @@ export default function AuthProvider({ initialUser = null, children }) {
 
   const login = useCallback(async (identificador, password) => {
     const u = await loginRequest(identificador, password)
-    setSalidaManual(false)
+    setMotivoSalida(null)
     setUser(u)
     setStatus('autenticado')
     return u
   }, [])
 
-  const logout = useCallback(async () => {
-    setSalidaManual(true)
+  const logout = useCallback(async (motivo) => {
+    setMotivoSalida(motivo === 'inactividad' ? 'inactividad' : 'manual')
     try {
       await logoutRequest()
     } finally {
@@ -78,8 +79,8 @@ export default function AuthProvider({ initialUser = null, children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, salidaManual, login, logout, cambiarPerfilDemo }),
-    [user, status, salidaManual, login, logout, cambiarPerfilDemo],
+    () => ({ user, status, motivoSalida, login, logout, cambiarPerfilDemo }),
+    [user, status, motivoSalida, login, logout, cambiarPerfilDemo],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

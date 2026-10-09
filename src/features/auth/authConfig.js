@@ -15,6 +15,12 @@ export const IDENTIFICADOR = {
 
 export const MSG_CREDENCIALES = 'Usuario o contraseña incorrectos.'
 
+// Motivos por los que se vuelve al login sin que el usuario lo haya pedido. Se muestran en el login.
+export const MSG_SALIDA = {
+  inactividad: 'Tu sesión se cerró por inactividad. Inicia sesión de nuevo.',
+  expirada: 'Tu sesión expiró. Inicia sesión de nuevo.',
+}
+
 // Reglas de contraseña de la maqueta (pantalla de cambio obligatorio). Confirmar con José Luis.
 export const REGLAS_PASSWORD = [
   { id: 'largo', texto: 'Mínimo 8 caracteres', cumple: (p) => p.length >= 8 },

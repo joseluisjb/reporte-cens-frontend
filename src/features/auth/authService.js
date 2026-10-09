@@ -36,6 +36,13 @@ export async function getCurrentUser() {
   }
 }
 
+// Renueva la sesión del servidor (Django mide la inactividad por peticiones). Se llama mientras el
+// usuario trabaja y al pulsar "Seguir conectado". Si la sesión ya venció, el 401 sí dispara el
+// manejo global (vuelve al login), a diferencia de getCurrentUser.
+export async function keepAlive() {
+  await api.get(ENDPOINTS.me)
+}
+
 // Cambio obligatorio de contraseña temporal en el primer ingreso (RF28).
 export async function changePassword({ actual, nueva }) {
   await api.post(ENDPOINTS.changePassword, { current_password: actual, new_password: nueva })

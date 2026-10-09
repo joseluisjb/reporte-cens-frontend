@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Alert, Button, Input, PasswordField, TextLink } from '../../components/ui'
 import { RUTA_INICIAL } from '../../app/navigation'
+import logo from '../../assets/brand/logo-nexovolt.png'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { IDENTIFICADOR, MSG_SALIDA } from './authConfig'
 import { useAuth } from './authContext'
@@ -74,9 +75,7 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center p-8">
         <form onSubmit={enviar} noValidate className="flex w-full max-w-95 flex-col" aria-label="Iniciar sesión">
           <h1 className="sr-only">Iniciar sesión en NexoVolt</h1>
-          <div aria-hidden="true" className="mb-8 font-hd text-[34px] font-bold text-bosque">
-            Nexo<span className="text-citrico">Volt</span>
-          </div>
+          <img src={logo} alt="NexoVolt, desarrollo de software" width="448" height="344" className="mx-auto mb-6 h-auto w-56" />
           {MSG_SALIDA[motivoSalida] && (
             <div className="mb-5">
               <Alert tone="aviso">{MSG_SALIDA[motivoSalida]}</Alert>

@@ -1,8 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import App from '../app/App'
+import { screen } from '@testing-library/react'
+import { renderApp } from './renderApp'
 
-test('renderiza la página de marca en la ruta raíz', () => {
-  render(<App />)
-  expect(screen.getByRole('heading', { name: /nexovolt/i })).toBeInTheDocument()
-  expect(screen.getByText(/colores y tipografías de marca/i)).toBeInTheDocument()
+test('una ruta desconocida redirige al inicio', async () => {
+  renderApp('/no-existe')
+  expect(await screen.findByRole('heading', { name: /bienvenido, rosa/i })).toBeInTheDocument()
 })

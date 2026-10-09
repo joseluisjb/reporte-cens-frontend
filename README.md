@@ -86,3 +86,8 @@ Los tokens de marca (colores, fuentes, radios, sombras) viven en `src/index.css`
 | `PATCH /users/:id/` | `{ nombre?, email?, rol?, is_active? }` | 200 `user` |
 
 `user` = `{ id, nombre, email, rol, is_active, last_login, must_change_password }`. El traductor a la interfaz está en `features/users/userMapper.js`.
+
+### Probar la recuperación de contraseña con los mocks
+
+El correo no se envía de verdad. Con los mocks, el enlace de restablecimiento válido es:
+`http://localhost:5173/restablecer?token=token-de-prueba` (cualquier otro token se rechaza).

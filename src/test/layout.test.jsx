@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ANALISTA, renderApp } from './renderApp'
+import { ANALISTA, renderApp, renderConSesion } from './renderApp'
 
 const menuPrincipal = () => screen.getByRole('navigation', { name: 'Navegación principal' })
 
@@ -31,10 +31,11 @@ describe('menú lateral por rol', () => {
   })
 
   test('navegar por el menú cambia la pantalla y el título de la pestaña', async () => {
-    renderApp('/panel')
-    await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /gestión de usuarios/i }))
+    await renderConSesion('/panel')
+    await userEvent.click(await within(await screen.findByRole('navigation', { name: 'Navegación principal' })).findByRole('link', { name: /gestión de usuarios/i }))
     expect(await screen.findByRole('heading', { name: 'Usuarios del Sistema' })).toBeInTheDocument()
     expect(document.title).toBe('NexoVolt — Usuarios del Sistema')
+    await screen.findByText('Juan Pérez') // espera a que termine la carga antes de cerrar la prueba
   })
 })
 

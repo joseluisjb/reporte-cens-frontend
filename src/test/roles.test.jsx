@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server'
-import { ADMIN, ANALISTA, renderApp } from './renderApp'
+import { ADMIN, ANALISTA, renderApp, renderConSesion } from './renderApp'
 
 const menu = () => screen.queryByRole('navigation', { name: 'Navegación principal' })
 
@@ -48,9 +48,10 @@ describe('el Administrador abre todo', () => {
     ['/auditoria', 'Log de Auditoría del Sistema'],
     ['/parametrizacion', 'Códigos de Concepto de Energía'],
   ])('%s', async (ruta, titulo) => {
-    renderApp(ruta, ADMIN)
+    await renderConSesion(ruta)
     expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Acceso restringido' })).not.toBeInTheDocument()
+    if (ruta === '/usuarios') await screen.findByText('Juan Pérez') // deja terminar la carga de la lista
   })
 })
 

@@ -16,6 +16,7 @@ describe('Cambiar de perfil (solo demostración)', () => {
     await userEvent.click(within(dialogo).getByRole('radio', { name: /rosa martínez/i }))
     await userEvent.click(confirmar)
     expect(await screen.findByRole('heading', { name: 'Usuarios del Sistema' })).toBeInTheDocument()
+    await screen.findByText('Juan Pérez') // deja terminar la carga de la lista
     expect(screen.getByText(/ahora estás usando el perfil: rosa martínez · administrador/i)).toBeInTheDocument()
   })
 

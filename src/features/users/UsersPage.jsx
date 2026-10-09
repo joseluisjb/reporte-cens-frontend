@@ -98,15 +98,15 @@ export default function UsersPage() {
           {usuarios.length === 0 ? (
             <EmptyState>Aún no hay usuarios registrados.</EmptyState>
           ) : (
-            <Table>
+            <Table caption="Usuarios del sistema">
               <thead>
                 <tr>
-                  <th>Nombre completo</th>
-                  <th>Correo corporativo</th>
-                  <th>Rol</th>
-                  <th>Estado</th>
-                  <th>Último acceso</th>
-                  <th>Acciones</th>
+                  <th scope="col">Nombre completo</th>
+                  <th scope="col">Correo corporativo</th>
+                  <th scope="col">Rol</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Último acceso</th>
+                  <th scope="col">Acciones</th>
                 </tr>
               </thead>
               <tbody>

@@ -1,9 +1,10 @@
 import { useId, useState } from 'react'
 import Icon from './Icon'
+import { describedByIds } from './cx'
 import { CONTROL, FieldError, FieldLabel } from './Field'
 
 // Campo de contraseña con botón mostrar/ocultar.
-export default function PasswordField({ label, error, id, className, ...rest }) {
+export default function PasswordField({ label, error, describedBy, id, className, ...rest }) {
   const auto = useId()
   const inputId = id ?? auto
   const errId = `${inputId}-err`
@@ -17,7 +18,7 @@ export default function PasswordField({ label, error, id, className, ...rest }) 
           type={visible ? 'text' : 'password'}
           className={`${CONTROL} pr-11`}
           aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? errId : undefined}
+          aria-describedby={describedByIds(error && errId, describedBy)}
           {...rest}
         />
         <button

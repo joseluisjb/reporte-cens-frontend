@@ -4,6 +4,8 @@ import { server } from '../mocks/server'
 import { resetMockDb } from '../mocks/db'
 import { resetCsrf } from '../lib/api'
 
+document.documentElement.lang = 'es' // en la app real lo define index.html
+
 // Margen para máquinas lentas o con varios archivos de prueba en paralelo.
 configure({ asyncUtilTimeout: 4000 })
 

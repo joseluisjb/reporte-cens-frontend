@@ -1,8 +1,8 @@
 import { cx } from './cx'
 
 const TONES = {
-  ok: 'bg-green-100 text-bosque',
-  off: 'bg-slate-100 text-muted',
+  ok: 'bg-green-100 text-bosque-d',
+  off: 'bg-slate-100 text-slate-600',
   admin: 'bg-blue-50 text-blue-700',
 }
 

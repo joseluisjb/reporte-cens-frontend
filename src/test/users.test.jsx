@@ -142,7 +142,7 @@ describe('activar y desactivar', () => {
   test('desactivar pide confirmación (con el foco en Cancelar) y cancelar no cambia nada', async () => {
     await abrirUsuarios()
     await userEvent.click(fila('Carlos Sánchez').getByRole('switch'))
-    const dialogo = screen.getByRole('dialog', { name: 'Desactivar usuario' })
+    const dialogo = screen.getByRole('alertdialog', { name: 'Desactivar usuario' })
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
     expect(fila('Carlos Sánchez').getByText('Activo')).toBeInTheDocument()

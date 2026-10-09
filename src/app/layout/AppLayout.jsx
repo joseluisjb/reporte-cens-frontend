@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { Icon, Spinner, useToast } from '../../components/ui'
 import { useAuth } from '../../features/auth/authContext'
 import ProfileMenu from './ProfileMenu'
+import RouteAnnouncer from './RouteAnnouncer'
 import Sidebar from './Sidebar'
 
 // Estructura de toda pantalla interna: barra lateral + barra superior + contenido.
@@ -34,6 +35,7 @@ export default function AppLayout() {
       >
         Saltar al contenido
       </a>
+      <RouteAnnouncer />
       {menuAbierto && (
         <div className="fixed inset-0 z-40 bg-slate-900/45 md:hidden" onClick={() => setMenuAbierto(false)} />
       )}
@@ -57,7 +59,7 @@ export default function AppLayout() {
           </button>
           <ProfileMenu user={user} onLogout={cerrarSesion} />
         </header>
-        <main id="contenido" key={pathname} className="p-5 md:p-8">
+        <main id="contenido" key={pathname} tabIndex={-1} className="p-5 outline-none md:p-8">
           <Suspense
             fallback={
               <div role="status" aria-label="Cargando" className="flex justify-center p-12">

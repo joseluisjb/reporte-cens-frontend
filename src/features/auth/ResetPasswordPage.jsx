@@ -76,8 +76,10 @@ export default function ResetPasswordPage() {
       <form onSubmit={enviar} noValidate>
         <PasswordField
           ref={nuevaRef}
+          describedBy="requisitos-password"
           className="mb-4.5"
           label="Nueva contraseña"
+          required
           autoComplete="new-password"
           value={valores.nueva}
           onChange={cambiar('nueva')}
@@ -86,12 +88,13 @@ export default function ResetPasswordPage() {
         <PasswordField
           ref={repetirRef}
           label="Confirmar nueva contraseña"
+          required
           autoComplete="new-password"
           value={valores.repetir}
           onChange={cambiar('repetir')}
           error={errores.repetir}
         />
-        <PasswordRequirements password={valores.nueva} />
+        <PasswordRequirements id="requisitos-password" password={valores.nueva} />
         {errorGeneral && (
           <div className="mb-4">
             <Alert>{errorGeneral}</Alert>

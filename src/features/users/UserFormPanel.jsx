@@ -69,9 +69,9 @@ export default function UserFormPanel({ usuario, esYo = false, onClose, onGuarda
       }
     >
       <form id="form-usuario" onSubmit={enviar} noValidate>
-        <Input ref={nombreRef} label="Nombre completo" autoComplete="off" value={valores.nombre} onChange={cambiar('nombre')} error={errores.nombre} />
-        <Input ref={correoRef} className="mt-5" label="Correo corporativo" type="email" autoComplete="off" value={valores.correo} onChange={cambiar('correo')} error={errores.correo} />
-        <Select ref={rolRef} className="mt-5" label="Rol" value={valores.rol} onChange={cambiar('rol')} error={errores.rol} disabled={esYo}>
+        <Input ref={nombreRef} label="Nombre completo" required autoComplete="off" value={valores.nombre} onChange={cambiar('nombre')} error={errores.nombre} />
+        <Input ref={correoRef} className="mt-5" label="Correo corporativo" required type="email" autoComplete="off" value={valores.correo} onChange={cambiar('correo')} error={errores.correo} />
+        <Select ref={rolRef} className="mt-5" label="Rol" required value={valores.rol} onChange={cambiar('rol')} error={errores.rol} disabled={esYo}>
           {Object.values(ROLES).map((r) => (
             <option key={r}>{r}</option>
           ))}

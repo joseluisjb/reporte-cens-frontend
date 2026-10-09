@@ -148,7 +148,7 @@ Se importan juntos: `import { Button, Input, Modal } from '../../components/ui'`
 | `IconButton` | Botón de solo icono (editar). Exige `label` |
 | `Input`, `Select`, `PasswordField` | Campos con etiqueta y error accesible |
 | `SearchBox`, `FilterSelect` | Búsqueda y filtro de las tablas |
-| `Table`, `EmptyState` | Tabla con el estilo de la maqueta |
+| `Table` (`caption`), `EmptyState` | Tabla con el estilo de la maqueta. Pasa `caption` y usa `<th scope="col">` |
 | `Badge` (ok, off, admin), `Chip`, `Switch` | Estados y activar/desactivar |
 | `Card`, `PageHeader` | Contenedores y encabezado de página |
 | `Modal` (`side` = panel lateral), `ConfirmDialog` | Diálogos accesibles (foco, Escape). `ConfirmDialog` para desactivar o eliminar |
@@ -186,6 +186,8 @@ Dos trampas que ya nos pasaron:
 
 1. **Si tu pantalla pide datos, la prueba debe esperar a que lleguen** (`await screen.findByText('...')`) **antes de terminar**. Si no, la petición queda en vuelo, el mock limpia la sesión y esa respuesta (401) desloguea a la prueba siguiente: fallos aleatorios.
 2. Con `renderApp(ruta, usuarioFijo)` el servidor simulado **no tiene sesión**: cualquier llamada a la API recibe 401. Para pantallas con datos usa `renderConSesion`.
+
+**Accesibilidad:** agrega tu pantalla a `src/test/accesibilidad.test.jsx` (3 líneas con `expectAccesible()`) y lee `docs/ACCESIBILIDAD.md`. Para texto verde sobre fondo claro usa `text-bosque-d`, no `text-bosque` (no alcanza el contraste mínimo).
 
 Antes de abrir el PR:
 

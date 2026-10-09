@@ -38,6 +38,7 @@ cp .env.example .env
 | `npm test` | Ejecuta las pruebas una vez |
 | `npm run test:watch` | Ejecuta las pruebas en modo vigilancia |
 | `npm run lint` | Analiza el código con Oxlint |
+| `npm run test:cov` | Pruebas con informe de cobertura |
 
 ## Estructura principal
 
@@ -96,3 +97,4 @@ El correo no se envía de verdad. Con los mocks, el enlace de restablecimiento v
 
 - [`docs/GUIA_EQUIPO.md`](docs/GUIA_EQUIPO.md): cómo agregar una pantalla, hablar con la API, hacer formularios, probar y abrir un PR.
 - [`docs/PENDIENTES_BACKEND.md`](docs/PENDIENTES_BACKEND.md): lo que el frontend espera del backend y las decisiones por cerrar con Dilan y José Luis.
+- [`docs/ACCESIBILIDAD.md`](docs/ACCESIBILIDAD.md): resultados de la revisión de accesibilidad, contraste y lista de revisión manual.

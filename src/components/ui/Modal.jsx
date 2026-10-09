@@ -6,9 +6,11 @@ const FOCUSABLE =
   'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]'
 
 // Diálogo accesible: aria-modal, foco inicial, trampa de Tab, Escape y clic fuera para cerrar,
-// y devuelve el foco al elemento que lo abrió (o a `returnFocusRef` si ese ya no existe). `initialFocusRef` elige qué recibe el foco al abrir. `side` lo muestra como panel lateral.
-export default function Modal({ open, onClose, title, subtitle, footer, side = false, returnFocusRef, initialFocusRef, children }) {
+// y devuelve el foco al elemento que lo abrió (o a `returnFocusRef` si ese ya no existe). `initialFocusRef` elige qué recibe el foco al abrir. `alert` lo marca como alertdialog (un aviso
+// que exige respuesta, ej. confirmar o "¿sigues ahí?"): el lector de pantalla lo lee completo al abrirse. `side` lo muestra como panel lateral.
+export default function Modal({ open, onClose, title, subtitle, footer, side = false, alert = false, returnFocusRef, initialFocusRef, children }) {
   const titleId = useId()
+  const bodyId = useId()
   const dlgRef = useRef(null)
   const onCloseRef = useRef(onClose)
   const returnRef = useRef(returnFocusRef)
@@ -64,9 +66,10 @@ export default function Modal({ open, onClose, title, subtitle, footer, side = f
     >
       <div
         ref={dlgRef}
-        role="dialog"
+        role={alert ? 'alertdialog' : 'dialog'}
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={alert ? bodyId : undefined}
         className={cx(
           'flex w-full flex-col overflow-hidden bg-white shadow-dlg',
           side ? 'h-screen max-w-105' : 'max-h-[90vh] max-w-140 rounded-dlg',
@@ -78,7 +81,7 @@ export default function Modal({ open, onClose, title, subtitle, footer, side = f
           </h2>
           {subtitle && <p className="mt-1 text-[13px] text-muted">{subtitle}</p>}
         </div>
-        <div className="flex-1 overflow-auto px-7 py-[18px]">{children}</div>
+        <div id={bodyId} className="flex-1 overflow-auto px-7 py-[18px]">{children}</div>
         {footer && (
           <div className="flex justify-end gap-2.5 border-t border-slate-100 px-7 pt-4 pb-6">{footer}</div>
         )}

@@ -102,17 +102,17 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
   test('a los 9 minutos aparece el aviso y a los 10 se cierra la sesión con el motivo en el login', async () => {
     await entrar()
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
 
     await pasar(9 * MIN)
-    const aviso = await screen.findByRole('dialog', { name: '¿Sigues ahí?' })
+    const aviso = await screen.findByRole('alertdialog', { name: '¿Sigues ahí?' })
     expect(aviso).toHaveTextContent(/60 segundos|59 segundos/)
     expect(screen.getByRole('button', { name: 'Seguir conectado' })).toHaveFocus()
 
     await pasar(1 * MIN)
     expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument()
     expect(screen.getByText(MSG_SALIDA.inactividad)).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
   test('"Seguir conectado" mantiene la sesión', async () => {
@@ -121,7 +121,7 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
     await pasar(9 * MIN)
     fireEvent.click(await screen.findByRole('button', { name: 'Seguir conectado' }))
     await pasar(5 * MIN)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
   })
 
@@ -129,9 +129,9 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
     await entrar()
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
     await pasar(9 * MIN)
-    await screen.findByRole('dialog', { name: '¿Sigues ahí?' })
+    await screen.findByRole('alertdialog', { name: '¿Sigues ahí?' })
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
   test('"Cerrar sesión ahora" cierra como cierre manual (sin mensaje de inactividad)', async () => {

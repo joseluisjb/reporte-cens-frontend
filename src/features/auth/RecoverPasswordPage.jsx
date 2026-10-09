@@ -59,6 +59,7 @@ export default function RecoverPasswordPage() {
           ref={inputRef}
           className="mb-5"
           label={IDENTIFICADOR.etiquetaCorporativo}
+          required
           type={IDENTIFICADOR.tipoInput}
           placeholder={IDENTIFICADOR.placeholder}
           autoComplete={IDENTIFICADOR.autoComplete}

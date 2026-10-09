@@ -1,14 +1,17 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Badge, Icon } from '../../components/ui'
+import SwitchProfileModal from '../../features/auth/SwitchProfileModal'
 import { ROLES } from '../../features/auth/roles'
+import { DEMO_ACTIVO } from '../../lib/config'
 
 const ITEM =
   'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-green-50 hover:text-bosque focus-visible:bg-green-50 focus-visible:text-bosque'
 
 // Menú de perfil de la barra superior. Teclado: flechas, Inicio/Fin, Escape.
-// Aquí se enganchan después "Cambiar de perfil" (solo modo demo).
+// "Cambiar de perfil" solo aparece en modo demostración (VITE_DEMO_MODE con mocks).
 export default function ProfileMenu({ user, onLogout }) {
   const [open, setOpen] = useState(false)
+  const [cambiando, setCambiando] = useState(false)
   const rootRef = useRef(null)
   const btnRef = useRef(null)
   const menuRef = useRef(null)
@@ -76,6 +79,23 @@ export default function ProfileMenu({ user, onLogout }) {
             <span className="mb-1.5 text-xs text-muted">{user.correo}</span>
             <Badge tone={user.rol === ROLES.ADMIN ? 'admin' : 'ok'}>{user.rol}</Badge>
           </div>
+          {DEMO_ACTIVO && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false)
+                  setCambiando(true)
+                }}
+                className={ITEM}
+              >
+                <Icon name="swap" />
+                Cambiar de perfil
+              </button>
+              <div role="separator" className="my-1.5 h-px bg-slate-100" />
+            </>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -89,6 +109,9 @@ export default function ProfileMenu({ user, onLogout }) {
             Cerrar sesión
           </button>
         </div>
+      )}
+      {DEMO_ACTIVO && (
+        <SwitchProfileModal open={cambiando} onClose={() => setCambiando(false)} returnFocusRef={btnRef} />
       )}
     </div>
   )

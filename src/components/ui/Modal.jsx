@@ -6,18 +6,21 @@ const FOCUSABLE =
   'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]'
 
 // Diálogo accesible: aria-modal, foco inicial, trampa de Tab, Escape y clic fuera para cerrar,
-// y devuelve el foco al elemento que lo abrió. `side` lo muestra como panel lateral.
-export default function Modal({ open, onClose, title, subtitle, footer, side = false, children }) {
+// y devuelve el foco al elemento que lo abrió (o a `returnFocusRef` si ese ya no existe). `side` lo muestra como panel lateral.
+export default function Modal({ open, onClose, title, subtitle, footer, side = false, returnFocusRef, children }) {
   const titleId = useId()
   const dlgRef = useRef(null)
   const onCloseRef = useRef(onClose)
+  const returnRef = useRef(returnFocusRef)
   useEffect(() => {
     onCloseRef.current = onClose
+    returnRef.current = returnFocusRef
   })
 
   useEffect(() => {
     if (!open) return undefined
     const previous = document.activeElement
+    const destinoFoco = () => returnRef.current?.current ?? previous
     document.body.style.overflow = 'hidden'
     const dlg = dlgRef.current
     const first =
@@ -47,7 +50,8 @@ export default function Modal({ open, onClose, title, subtitle, footer, side = f
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
-      if (previous && document.contains(previous)) previous.focus()
+      const destino = destinoFoco()
+      if (destino && document.contains(destino)) destino.focus()
     }
   }, [open])
 

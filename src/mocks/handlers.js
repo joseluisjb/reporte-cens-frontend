@@ -78,6 +78,15 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  // Solo demostración: alterna entre un Analista y un Administrador ficticios.
+  http.post(url(ENDPOINTS.demoSwitchProfile), async ({ request }) => {
+    const { rol } = await request.json()
+    const u = db.usuarios.find((x) => x.rol === rol && x.is_active && !x.must_change_password)
+    if (!u) return error(404, { detail: 'No existe un perfil de demostración para ese rol.' })
+    guardarSesion(u.id)
+    return HttpResponse.json({ user: publico(u) })
+  }),
+
   http.get(url(ENDPOINTS.users), async () => {
     await espera()
     const { respuesta } = exigirSesion(true)

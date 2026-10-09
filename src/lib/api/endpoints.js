@@ -10,4 +10,6 @@ export const ENDPOINTS = {
   passwordResetConfirm: '/auth/password-reset/confirm/',
   users: '/users/',
   user: (id) => `/users/${id}/`,
+  // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
+  demoSwitchProfile: '/demo/switch-profile/',
 }

@@ -15,7 +15,7 @@ Cada punto trae una **suposición** del frontend. Si es correcta, basta responde
 El backend aún no tiene migraciones. **El modelo de usuario propio debe definirse antes del primer `migrate`**; cambiarlo después es muy doloroso en Django.
 
 - `AUTH_USER_MODEL = 'usuarios.Usuario'`, con el correo como identificador de login (`USERNAME_FIELD = 'email'`).
-- Campos que el frontend consume: `nombre`, `email`, `rol` (`'Analista de Cartera'` o `'Administrador'`), `is_active`, `last_login`, `must_change_password`.
+- Campos que el frontend consume: `nombre`, `email`, `rol` (código `'ANALISTA_CARTERA'` o `'ADMINISTRADOR'`; el frontend lo traduce al texto en `userMapper`), `is_active`, `last_login`, `must_change_password`.
 - `rest_framework` y `usuarios` no están en `INSTALLED_APPS`.
 
 ### 1.2 Sesión: cookie de Django + CSRF (decisión tomada con el coordinador)
@@ -82,22 +82,18 @@ Es una de las "decisiones por cerrar" de la asignación. Propuesta:
 | Método y ruta | Cuerpo | Respuesta esperada |
 |---|---|---|
 | `GET /api/users/` | — | 200 `[user, ...]` |
-| `POST /api/users/` | `{ "nombre", "email", "rol" }` | 201 `{ "user": {...}, "temporary_password": "..." }` · 400 por campo (correo repetido, rol inválido) |
+| `POST /api/users/` | `{ "nombre", "email", "rol" }` | 201 `{ "user": {...}, "temporary_password": null }` (la contraseña se envía por correo) · 400 por campo (correo repetido, rol inválido) |
 | `PATCH /api/users/:id/` | `{ "nombre"?, "email"?, "rol"?, "is_active"? }` | 200 `user` (se usa para editar **y** para activar/desactivar) |
 
 Reglas que el servidor debe imponer (el frontend ya las aplica en pantalla, pero no son seguridad):
-- Un administrador **no puede desactivarse a sí mismo** ni **cambiarse su propio rol**.
+- Un administrador **no puede desactivarse a sí mismo** ni **cambiarse su propio rol** (400 con `{ "is_active": [...] }` o `{ "rol": [...] }`). Los mocks del frontend ya simulan estas dos reglas.
 - El correo es único (400 con el error en la clave `email`).
 - Un usuario recién creado queda con `must_change_password = true`.
 - Todo cambio de usuarios debe quedar en el log de auditoría (RF30).
 
-### 2.2 Contraseña temporal: ¿se devuelve o se envía por correo?
+### 2.2 Contraseña temporal
 
-El frontend soporta las dos opciones:
-- Si la respuesta trae `temporary_password`, se la **muestra una sola vez** al Administrador para que se la entregue al usuario.
-- Si no la trae (`null` o ausente), muestra "La contraseña temporal se envió a su correo".
-
-**Pregunta:** ¿cuál van a implementar? Si se envía por correo, ya no se devuelve en la API.
+**Resuelto: se envía por correo** y la API no la devuelve (`temporary_password` en `null` o ausente); el frontend muestra "La contraseña temporal se envió a su correo". El diálogo que la muestra una sola vez queda como respaldo: solo aparece si algún día la respuesta la trajera. En los mocks el correo se simula (consola del navegador, `[Correo simulado]`).
 
 ### 2.3 Parámetros de conceptos de energía (RF35) — para Angel
 
@@ -114,8 +110,8 @@ Angel construirá la pantalla. Hay que acordar el contrato antes: lista, crear, 
 | 3 | ¿`GET /auth/me/` sirve de "ping" para renovar la sesión? | Sí |
 | 4 | Campo del login | `email` |
 | 5 | Forma del usuario | `{ id, nombre, email, rol, is_active, last_login, must_change_password }` |
-| 6 | Valores de `rol` | `"Analista de Cartera"` y `"Administrador"` |
-| 7 | Contraseña temporal | Se devuelve en `temporary_password` (si no, la envían por correo) |
+| 6 | Valores de `rol` | Códigos `"ANALISTA_CARTERA"` y `"ADMINISTRADOR"` (resuelto en el contrato 0.2) |
+| 7 | Contraseña temporal | Resuelto: se envía por correo; `temporary_password` llega en `null` |
 | 8 | Reglas de contraseña | 8 caracteres, mayúscula y número |
 | 9 | Pantalla "Restablecer" con `?token=` | Sí, hay que confirmarla con Santiago |
 | 10 | ¿Quién arregla `LANGUAGE_CODE` a español y el modelo de usuario propio? | Dilan, antes del primer `migrate` |

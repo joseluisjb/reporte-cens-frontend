@@ -138,8 +138,20 @@ describe('backend caído o con errores', () => {
   })
 })
 
-describe('contraseña temporal recién creada', () => {
+describe('contraseña temporal devuelta por el backend (respaldo)', () => {
+  // El backend real la envía por correo; estas pruebas simulan que algún día la devolviera.
+  const devolverClave = () =>
+    server.use(
+      http.post('/api/users/', () =>
+        HttpResponse.json(
+          { user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true }, temporary_password: 'Clave-Temp-01' },
+          { status: 201 },
+        ),
+      ),
+    )
+
   async function crearUsuario(usuario) {
+    devolverClave()
     await renderConSesion('/usuarios')
     await screen.findByText('Juan Pérez')
     await usuario.click(boton('Crear usuario'))
@@ -154,7 +166,7 @@ describe('contraseña temporal recién creada', () => {
     await crearUsuario(usuario)
     await usuario.click(boton('Copiar contraseña'))
     expect(await screen.findByText('Contraseña copiada.')).toBeInTheDocument()
-    expect(await navigator.clipboard.readText()).toBe('Temporal123')
+    expect(await navigator.clipboard.readText()).toBe('Clave-Temp-01')
   })
 
   test('si no se puede copiar lo dice', async () => {
@@ -168,7 +180,7 @@ describe('contraseña temporal recién creada', () => {
   test('si el backend NO devuelve la contraseña (la envía por correo) lo avisa en vez de mostrarla', async () => {
     server.use(
       http.post('/api/users/', () =>
-        HttpResponse.json({ user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@cens.com.co', rol: 'Analista de Cartera', is_active: true, last_login: null, must_change_password: true } }, { status: 201 }),
+        HttpResponse.json({ user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } }, { status: 201 }),
       ),
     )
     await renderConSesion('/usuarios')

@@ -2,26 +2,35 @@
 // Responde como lo haría DRF: errores en { detail } o { campo: ['mensaje'] }.
 import { delay, http, HttpResponse } from 'msw'
 import { reglasIncumplidas } from '../features/auth/authConfig'
-import { ROLES } from '../features/auth/roles'
+import { CODIGOS_ROL } from '../features/auth/roles'
 import { API_URL } from '../lib/config'
 import { ENDPOINTS } from '../lib/api/endpoints'
-import { db, guardarSesion, persistir, publico, TOKEN_RECUPERACION_VALIDO, usuarioActual } from './db'
+import { CLAVE_TEMPORAL_MOCK, db, guardarSesion, persistir, publico, TOKEN_RECUPERACION_VALIDO, usuarioActual } from './db'
 
 const url = (ruta) => `${API_URL}${ruta}`
 const espera = () => delay(import.meta.env.MODE === 'test' ? 0 : 400)
 const error = (status, cuerpo) => HttpResponse.json(cuerpo, { status })
 const sinSesion = () => error(401, { detail: 'Authentication credentials were not provided.' })
 const sinPermiso = () => error(403, { detail: 'You do not have permission to perform this action.' })
+const MSG_ROL_INVALIDO = 'Selecciona un rol válido.'
+const rolValido = (rol) => Object.values(CODIGOS_ROL).includes(rol)
 const mensajePassword = (nueva) => {
   const faltan = reglasIncumplidas(nueva ?? '')
   return faltan.length ? { new_password: [`La contraseña debe cumplir: ${faltan.join('; ').toLowerCase()}.`] } : null
+}
+
+// Simula el correo saliente (en Django, el EmailBackend de consola): queda en db.correos y, fuera de
+// las pruebas, se imprime en la consola del navegador.
+function enviarCorreoSimulado({ para, asunto, cuerpo }) {
+  db.correos.push({ para, asunto, cuerpo })
+  if (import.meta.env.MODE !== 'test') console.info(`[Correo simulado] Para: ${para} · Asunto: ${asunto} · ${cuerpo}`)
 }
 
 // Devuelve { usuario } o { respuesta } con el error. exigeAdmin → 403 para el Analista.
 function exigirSesion(exigeAdmin = false) {
   const usuario = usuarioActual()
   if (!usuario) return { respuesta: sinSesion() }
-  if (exigeAdmin && usuario.rol !== ROLES.ADMIN) return { respuesta: sinPermiso() }
+  if (exigeAdmin && usuario.rol !== CODIGOS_ROL.ADMIN) return { respuesta: sinPermiso() }
   return { usuario }
 }
 
@@ -82,7 +91,7 @@ export const handlers = [
 
   // Solo demostración: alterna entre un Analista y un Administrador ficticios.
   http.post(url(ENDPOINTS.demoSwitchProfile), async ({ request }) => {
-    const { rol } = await request.json()
+    const { rol } = await request.json() // código del backend
     const u = db.usuarios.find((x) => x.rol === rol && x.is_active && !x.must_change_password)
     if (!u) return error(404, { detail: 'No existe un perfil de demostración para ese rol.' })
     guardarSesion(u.id)
@@ -104,18 +113,23 @@ export const handlers = [
     if (!nombre?.trim()) errores.nombre = ['Ingresa el nombre completo.']
     if (!email?.trim()) errores.email = ['Ingresa el correo corporativo.']
     else if (db.usuarios.some((u) => u.email.toLowerCase() === email.toLowerCase())) errores.email = ['Ya existe un usuario con ese correo.']
-    if (!Object.values(ROLES).includes(rol)) errores.rol = ['Selecciona un rol válido.']
+    if (!rolValido(rol)) errores.rol = [MSG_ROL_INVALIDO]
     if (Object.keys(errores).length) return error(400, errores)
-    const temporal = 'Temporal123'
-    const u = { id: db.siguienteId++, nombre: nombre.trim(), email: email.trim(), rol, is_active: true, last_login: null, must_change_password: true, password: temporal }
+    const u = { id: db.siguienteId++, nombre: nombre.trim(), email: email.trim(), rol, is_active: true, last_login: null, must_change_password: true, password: CLAVE_TEMPORAL_MOCK }
     db.usuarios.push(u)
     persistir()
-    return HttpResponse.json({ user: publico(u), temporary_password: temporal }, { status: 201 })
+    enviarCorreoSimulado({
+      para: u.email,
+      asunto: 'Tu cuenta en NexoVolt',
+      cuerpo: `Hola ${u.nombre}, tu contraseña temporal es ${CLAVE_TEMPORAL_MOCK}. Deberás cambiarla en tu primer ingreso.`,
+    })
+    // La contraseña temporal va por correo: la API no la devuelve (contrato 0.2).
+    return HttpResponse.json({ user: publico(u), temporary_password: null }, { status: 201 })
   }),
 
   http.patch(url('/users/:id/'), async ({ request, params }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { usuario, respuesta } = exigirSesion(true)
     if (respuesta) return respuesta
     const u = db.usuarios.find((x) => x.id === Number(params.id))
     if (!u) return error(404, { detail: 'Not found.' })
@@ -123,6 +137,10 @@ export const handlers = [
     if (cambios.email && db.usuarios.some((x) => x.id !== u.id && x.email.toLowerCase() === cambios.email.toLowerCase())) {
       return error(400, { email: ['Ya existe un usuario con ese correo.'] })
     }
+    if (cambios.rol !== undefined && !rolValido(cambios.rol)) return error(400, { rol: [MSG_ROL_INVALIDO] })
+    // Reglas del servidor sobre el propio usuario (el formulario envía el mismo rol al editarse a sí mismo).
+    if (u.id === usuario.id && cambios.is_active === false) return error(400, { is_active: ['No puedes desactivar tu propio usuario.'] })
+    if (u.id === usuario.id && cambios.rol !== undefined && cambios.rol !== u.rol) return error(400, { rol: ['No puedes cambiar tu propio rol.'] })
     for (const campo of ['nombre', 'email', 'rol', 'is_active']) {
       if (cambios[campo] !== undefined) u[campo] = cambios[campo]
     }

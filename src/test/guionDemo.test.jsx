@@ -4,6 +4,7 @@
 // volviendo a montar la app (la sesión y los datos ficticios sobreviven, como en el navegador).
 import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { ultimoCorreo } from '../mocks/db'
 import { renderApp } from './renderApp'
 
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
@@ -49,16 +50,16 @@ test('recorrido completo del guion: administrador crea un usuario, que cambia su
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
   expect(within(menuPrincipal()).getAllByRole('link')).toHaveLength(5)
 
-  // 2:00 crear usuario con contraseña temporal que se muestra una vez
+  // 2:00 crear usuario: la contraseña temporal se envía por correo (simulado)
   await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /gestión de usuarios/i }))
   await screen.findByText('Juan Pérez')
   await userEvent.click(boton('Crear usuario'))
   await userEvent.type(screen.getByLabelText('Nombre completo'), 'Laura Díaz')
   await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
   await userEvent.click(screen.getByRole('dialog').querySelector('button[type=submit]'))
-  const creado = await screen.findByRole('dialog', { name: 'Usuario creado' })
-  expect(within(creado).getByLabelText('Contraseña temporal')).toHaveTextContent('Temporal123')
-  await userEvent.click(within(creado).getByRole('button', { name: 'Listo' }))
+  expect(await screen.findByText(/la contraseña temporal se envió a su correo/i)).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Usuario creado' })).not.toBeInTheDocument()
+  expect(ultimoCorreo().para).toBe('ldiaz@cens.com.co')
 
   // 3:00 editar y desactivar con confirmación
   await userEvent.click(screen.getByRole('button', { name: 'Editar a Carlos Sánchez' }))

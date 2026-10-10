@@ -3,6 +3,52 @@
 Para Angel (extracción, parametrización) y Omar (formularios de usuarios, auditoría, validación de formularios).
 La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hecha: **tu trabajo es rellenar tu página, no reconstruir la estructura**.
 
+## Estado actual y qué tiene en cuenta cada uno (10/10/2026)
+
+**Para todos**
+- **El backend real todavía no se puede usar.** No existe el login (lo hace Dilan) y, sin usuario autenticado, los endpoints de negocio responden 403. Se trabaja con `VITE_USE_MOCKS=true` y las cuentas ficticias del README.
+- **Roles.** En la interfaz `user.rol` es el texto (`ROLES.ADMIN`, `ROLES.ANALISTA`). El backend usa los códigos `ADMINISTRADOR` y `ANALISTA_CARTERA`, y la traducción la hacen los mappers (sección 8).
+- **El contrato manda:** `docs/contrato/openapi.yaml`, versión 0.4. Si cambias un mock, agrega su caso en `src/test/contrato.test.js`: esa prueba falla si el mock no cumple el contrato.
+- **El manual de TransUnion va primero.** Donde el backend se aparta del manual, el contrato y los mocks siguen al manual. Las diferencias están en `docs/contrato/DISCREPANCIAS.md`. Sector: **Servicios** (estados de la Tabla 4b).
+- **Contraste AA:**
+  - fondos con texto blanco: `bg-bosque-d`;
+  - texto verde sobre fondo claro: `text-bosque-d`;
+  - bordes de controles: `border-gris-d`.
+  
+  `src/test/contraste.test.js` lo vigila. Cada pantalla nueva se agrega a `accesibilidad.test.jsx` (sección 9).
+
+**Angel (RF35, RF1–RF5)**
+- La capa de datos de parametrización y extracción **ya existe y está probada**: servicio, mapper, catálogos, mocks y pruebas (detalle en la sección 5). Puedes usarla o cambiarla. Las pantallas son tuyas: `ParametersPage.jsx`, `ExtractionPage.jsx` y la tarjeta "Última extracción" del inicio, que se completa con `getLatestCut()`.
+- **Diferencias con la maqueta:**
+  - La extracción es **síncrona**: no hay barra de 5 pasos consultando el estado.
+  - El ciclo es **BORRADOR → VALIDADO → ENVIADO**.
+  - El resultado no trae columna "Concepto".
+  - Un corte puede traer obligaciones **02 Saldada** con todo en cero.
+- La **identificación ya llega enmascarada**. No la muestres completa.
+- Pendientes con José Luis:
+  - Falta la **fecha de creación del concepto** (diferencia B): tu tabla de la fila 36 la pide y el mapper devuelve `null`.
+  - Falta versionar el SQL de las vistas `V_CALCULO_CORTE` y `V_VALIDACION_CORTE` (A1 de `DISCREPANCIAS.md`), donde puedes apoyar como DBA.
+
+**Omar (RF28–RF31, pruebas y datos de prueba)**
+- **Auditoría (RF30).**
+  - El mock de `/api/auditoria/` lo deja Johan. **El servicio y el mapper los haces tú** en `features/audit/`, con la receta de la sección 5.
+  - Paginación con `limite` y `desplazamiento`, y respuesta `{ total, resultados }`.
+  - Filtros: `desde`, `hasta`, `usuario` (id), `tipo_accion` y `modulo`.
+  - `rol` llega como código: tradúcelo con `rolATexto`.
+  - Es solo para el Administrador: el Analista recibe 403.
+  - Es una propuesta: Dilan aún no la construye.
+- **Formularios.**
+  - Los de usuarios, cambio y recuperación de contraseña **ya existen y tienen pruebas**: mejóralos, no los reescribas.
+  - La contraseña temporal **se envía por correo**; el diálogo que la mostraba queda como respaldo.
+  - Falta el **componente reutilizable de RF31** (sección 6).
+  - En `ChangePasswordPage` el enlace "Cerrar sesión" pasó a `text-bosque-d` por contraste.
+- **Datos y pruebas (filas 46 a 48).** `src/mocks/datos/` y `src/mocks/db.js` traen datos ficticios que te sirven de modelo para el script de datos de prueba:
+  - obligaciones en todos los tramos de mora;
+  - saldadas y una castigada;
+  - usuarios de cada rol.
+  
+  Para las pruebas funcionales de HU-D está `docs/GUION_DEMO.md`.
+
 ## 1. Primeros pasos
 
 ```

@@ -1,0 +1,10 @@
+# Reglas de lint del contrato. Uso: npx @redocly/cli lint openapi.yaml
+extends:
+  - recommended
+rules:
+  # Django (APPEND_SLASH) y el frontend usan barra final: /users/, /auth/login/...
+  no-path-trailing-slash: off
+  # Contrato interno del curso, sin licencia.
+  info-license: off
+  # /auth/csrf/ solo responde 204.
+  operation-4xx-response: off

@@ -60,6 +60,13 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('inicio (Administrador) con la tarjeta de usuarios activos cargada', async () => {
+    await renderConSesion('/panel')
+    const tarjeta = await screen.findByRole('region', { name: 'Usuarios activos' })
+    await within(tarjeta).findByText('6')
+    await expectAccesible()
+  })
+
   test('gestión de usuarios con datos', async () => {
     await renderConSesion('/usuarios')
     await screen.findByText('Juan Pérez')

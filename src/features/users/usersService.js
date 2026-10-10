@@ -24,3 +24,10 @@ export async function setUserActive(id, activo) {
   const { data } = await api.patch(ENDPOINTS.user(id), { is_active: activo })
   return mapUser(data)
 }
+
+// Cuenta los usuarios activos para la tarjeta del inicio (RF27, solo Administrador). Es una tarjeta
+// secundaria: con skipAuthRedirect un fallo (401/403) no cierra la sesión ni muestra avisos.
+export async function countActiveUsers() {
+  const { data } = await api.get(ENDPOINTS.users, { skipAuthRedirect: true })
+  return data.map(mapUser).filter((u) => u.activo).length
+}

@@ -52,6 +52,7 @@ describe('el Administrador abre todo', () => {
     expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Acceso restringido' })).not.toBeInTheDocument()
     if (ruta === '/usuarios') await screen.findByText('Juan Pérez') // deja terminar la carga de la lista
+    if (ruta === '/parametrizacion') await screen.findByText('CUOTA FINANCIACION ENERGIA')
   })
 })
 

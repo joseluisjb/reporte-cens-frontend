@@ -12,13 +12,13 @@ export default function Switch({ checked, onChange, label, disabled }) {
     >
       {checked ? (
         <svg width="30" height="17" viewBox="0 0 36 20" aria-hidden="true">
-          <rect x="1" y="1" width="34" height="18" rx="9" fill="#0D9648" stroke="#0D9648" />
+          <rect x="1" y="1" width="34" height="18" rx="9" className="fill-bosque stroke-bosque" />
           <circle cx="26" cy="10" r="6" fill="#fff" />
         </svg>
       ) : (
         <svg width="30" height="17" viewBox="0 0 36 20" aria-hidden="true">
-          <rect x="1" y="1" width="34" height="18" rx="9" fill="none" stroke="#A1A1A5" strokeWidth="2" />
-          <circle cx="10" cy="10" r="6" fill="#A1A1A5" />
+          <rect x="1" y="1" width="34" height="18" rx="9" fill="none" className="stroke-gris-d" strokeWidth="2" />
+          <circle cx="10" cy="10" r="6" className="fill-gris-d" />
         </svg>
       )}
     </button>

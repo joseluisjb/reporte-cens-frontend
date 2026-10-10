@@ -7,7 +7,7 @@ export default function FilterSelect({ label, className, children, ...rest }) {
     <div className={cx('relative inline-block', className)}>
       <select
         aria-label={label}
-        className="cursor-pointer appearance-none rounded-ctl border border-gris bg-white py-[9px] pr-9 pl-3.5 text-[13px] text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bosque"
+        className="cursor-pointer appearance-none rounded-ctl border border-gris-d bg-white py-[9px] pr-9 pl-3.5 text-[13px] text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bosque"
         {...rest}
       >
         {children}

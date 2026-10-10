@@ -19,7 +19,7 @@ export function FieldError({ id, children }) {
 }
 
 export const CONTROL =
-  'w-full rounded-ctl border border-gris bg-white px-4 py-3 text-sm text-ink placeholder:text-slate-500 ' +
+  'w-full rounded-ctl border border-gris-d bg-white px-4 py-3 text-sm text-ink placeholder:text-slate-500 ' +
   'focus:border-bosque focus:ring-1 focus:ring-bosque focus-visible:outline-none ' +
   'aria-[invalid=true]:border-error aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-error ' +
   'disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400'

@@ -6,7 +6,7 @@ export default function SearchBox({ label = 'Buscar', className, ...rest }) {
   return (
     <div
       className={cx(
-        'flex w-70 max-w-full items-center gap-2 rounded-ctl border border-gris bg-white px-3.5 py-[9px] text-muted focus-within:border-bosque focus-within:ring-1 focus-within:ring-bosque',
+        'flex w-70 max-w-full items-center gap-2 rounded-ctl border border-gris-d bg-white px-3.5 py-[9px] text-muted focus-within:border-bosque focus-within:ring-1 focus-within:ring-bosque',
         className,
       )}
     >

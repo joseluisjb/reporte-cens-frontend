@@ -106,7 +106,7 @@ export default function ChangePasswordPage() {
       <button
         type="button"
         onClick={() => logout()}
-        className="mt-4 block w-full cursor-pointer text-center text-sm font-medium text-bosque hover:underline"
+        className="mt-4 block w-full cursor-pointer text-center text-sm font-medium text-bosque-d hover:underline"
       >
         Cerrar sesión
       </button>

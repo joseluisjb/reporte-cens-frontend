@@ -72,22 +72,13 @@ Los tokens de marca (colores, fuentes, radios, sombras) viven en `src/index.css`
 | `mgomez@cens.com.co` | `Temporal123` | Primer ingreso (debe cambiar la contraseña) |
 | `avargas@cens.com.co` | `Cartera123` | Usuario desactivado |
 
-### Contrato propuesto con el backend (por confirmar con Dilan y José Luis)
+### Contrato con el backend
 
-| Método y ruta | Cuerpo | Respuesta |
-|---|---|---|
-| `GET /auth/csrf/` | — | 204, entrega la cookie `csrftoken` |
-| `POST /auth/login/` | `{ email, password }` | 200 `{ user }` · 401 credenciales · 403 usuario desactivado |
-| `POST /auth/logout/` | — | 204 |
-| `GET /auth/me/` | — | 200 `{ user }` · 401 sin sesión |
-| `POST /auth/change-password/` | `{ current_password, new_password }` | 204 · 400 por campo |
-| `POST /auth/password-reset/` | `{ email }` | 202, siempre igual (no revela si el correo existe) |
-| `POST /auth/password-reset/confirm/` | `{ token, new_password }` | 204 · 400 |
-| `GET /users/` | — | 200 `[user]` (solo Administrador, 403 al Analista) |
-| `POST /users/` | `{ nombre, email, rol }` | 201 `{ user, temporary_password }` |
-| `PATCH /users/:id/` | `{ nombre?, email?, rol?, is_active? }` | 200 `user` |
+El contrato acordado está en [`docs/contrato/openapi.yaml`](docs/contrato/openapi.yaml) (OpenAPI 3.0, versión 0.2). Su explicación y las diferencias con el backend están en [`docs/contrato/README.md`](docs/contrato/README.md).
 
-`user` = `{ id, nombre, email, rol, is_active, last_login, must_change_password }`. El traductor a la interfaz está en `features/users/userMapper.js`.
+- Para verlo en el navegador: `npx @redocly/cli@1 preview-docs docs/contrato/openapi.yaml`.
+- El frontend adapta los nombres del backend solo en los mappers (por ejemplo `features/users/userMapper.js`).
+- Las preguntas pendientes para el backend están en [`docs/PENDIENTES_BACKEND.md`](docs/PENDIENTES_BACKEND.md).
 
 ### Probar la recuperación de contraseña con los mocks
 
@@ -98,5 +89,6 @@ El correo no se envía de verdad. Con los mocks, el enlace de restablecimiento v
 
 - [`docs/GUIA_EQUIPO.md`](docs/GUIA_EQUIPO.md): cómo agregar una pantalla, hablar con la API, hacer formularios, probar y abrir un PR.
 - [`docs/PENDIENTES_BACKEND.md`](docs/PENDIENTES_BACKEND.md): lo que el frontend espera del backend y las decisiones por cerrar con Dilan y José Luis.
+- [`docs/contrato/`](docs/contrato/): contrato OpenAPI 0.2 con el backend (`openapi.yaml`) y su explicación (`README.md`).
 - [`docs/ACCESIBILIDAD.md`](docs/ACCESIBILIDAD.md): resultados de la revisión de accesibilidad, contraste y lista de revisión manual.
 - [`docs/GUION_DEMO.md`](docs/GUION_DEMO.md): guion de 10 minutos para la reunión de aceptación con CENS (HU-D).

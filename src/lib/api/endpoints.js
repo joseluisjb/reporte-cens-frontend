@@ -1,5 +1,5 @@
-// Rutas del backend. PROPUESTAS: Dilan (autenticación) y José Luis (usuarios) aún no las han
-// implementado. Cuando las confirmen, se corrigen solo aquí. Ver README, sección "Contrato propuesto".
+// Rutas del contrato `docs/contrato/openapi.yaml` (versión 0.2). La autenticación (Dilan) y los
+// usuarios (José Luis) aún no existen en el backend; si cambian, se corrigen solo aquí.
 export const ENDPOINTS = {
   csrf: '/auth/csrf/',
   login: '/auth/login/',

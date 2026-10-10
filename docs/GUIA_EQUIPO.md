@@ -155,7 +155,7 @@ Se importan juntos: `import { Button, Input, Modal } from '../../components/ui'`
 | `useToast()` → `toast.success(msg)` / `toast.error(msg)` | Avisos abajo al centro |
 | `Alert` (`tone`: error, aviso), `Spinner`, `TextLink`, `Icon` | Avisos en línea, carga, enlaces, iconos |
 
-Tokens de marca en `src/index.css` (bloque `@theme`): `bg-bosque`, `text-citrico`, `text-muted`, `font-hd`, `rounded-card`... Úsalos en vez de colores sueltos. Para resaltar una fila recién creada o editada: `className="fila-resaltada"` unos segundos (ver `UsersPage.jsx`).
+Tokens de marca en `src/index.css` (bloque `@theme`): `bg-bosque`, `text-citrico`, `text-muted`, `font-hd`, `rounded-card`... Úsalos en vez de colores sueltos. Contraste: `bg-bosque-d` para superficies con texto blanco (`bosque` solo para texto grande, iconos y decoración), `bosque-dd` para su hover y `border-gris-d` para el borde de los controles de formulario. Para resaltar una fila recién creada o editada: `className="fila-resaltada"` unos segundos (ver `UsersPage.jsx`).
 
 Ayudas de formato en `lib/format.js`: `formatearFechaHora`, `formatearCOP` ($1.276.016), `formatearFechaISO` (30/09/2026), `formatearFechaISOLarga` (30 de septiembre de 2026), `plural`.
 
@@ -187,7 +187,7 @@ Dos trampas que ya nos pasaron:
 1. **Si tu pantalla pide datos, la prueba debe esperar a que lleguen** (`await screen.findByText('...')`) **antes de terminar**. Si no, la petición queda en vuelo, el mock limpia la sesión y esa respuesta (401) desloguea a la prueba siguiente: fallos aleatorios.
 2. Con `renderApp(ruta, usuarioFijo)` el servidor simulado **no tiene sesión**: cualquier llamada a la API recibe 401. Para pantallas con datos usa `renderConSesion`.
 
-**Accesibilidad:** agrega tu pantalla a `src/test/accesibilidad.test.jsx` (3 líneas con `expectAccesible()`) y lee `docs/ACCESIBILIDAD.md`. Para texto verde sobre fondo claro usa `text-bosque-d`, no `text-bosque` (no alcanza el contraste mínimo).
+**Accesibilidad:** agrega tu pantalla a `src/test/accesibilidad.test.jsx` (3 líneas con `expectAccesible()`) y lee `docs/ACCESIBILIDAD.md`. Para texto verde sobre fondo claro usa `text-bosque-d`, no `text-bosque` (no alcanza el contraste mínimo). Para fondos verdes con texto blanco usa `bg-bosque-d` y para bordes de campos `border-gris-d`; `src/test/contraste.test.js` protege estos pares.
 
 Antes de abrir el PR:
 

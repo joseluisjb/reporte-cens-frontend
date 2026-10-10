@@ -6,7 +6,7 @@ import { ROLES } from '../../features/auth/roles'
 import { NAV_ITEMS } from '../navigation'
 
 const ITEM =
-  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-sm font-medium text-white hover:bg-white/8 focus-visible:outline-white'
+  'flex w-full items-center gap-2.5 px-5 py-3 text-left text-sm font-medium text-white hover:bg-black/10 focus-visible:outline-white'
 
 // Barra lateral. Muestra solo las opciones que el rol puede abrir.
 // En pantallas angostas es un panel que se abre desde la barra superior.
@@ -16,7 +16,7 @@ export default function Sidebar({ rol, open, onNavigate, onLogout }) {
     <aside
       id="sidebar"
       className={cx(
-        'flex w-65 shrink-0 flex-col bg-bosque py-6 text-white',
+        'flex w-65 shrink-0 flex-col bg-bosque-d py-6 text-white',
         'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:transition-transform',
         open ? 'max-md:translate-x-0' : 'max-md:invisible max-md:-translate-x-full',
         'md:sticky md:top-0 md:h-screen md:self-start',
@@ -34,7 +34,7 @@ export default function Sidebar({ rol, open, onNavigate, onLogout }) {
             key={i.path}
             to={i.path}
             onClick={onNavigate}
-            className={({ isActive }) => cx(ITEM, isActive && 'bg-white/16 font-semibold opacity-100')}
+            className={({ isActive }) => cx(ITEM, isActive && 'bg-black/20 font-semibold opacity-100')}
           >
             <Icon name={i.icon} />
             <span>{i.label}</span>

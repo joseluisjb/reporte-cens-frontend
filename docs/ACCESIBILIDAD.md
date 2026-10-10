@@ -9,7 +9,7 @@ Las pantallas de Angel y Omar deben cumplir lo mismo: ver la sección 5.
 |---|---|---|
 | Etiquetas, roles, referencias ARIA, estructura, nombres de botones y enlaces | **axe-core** sobre 14 pantallas y diálogos reales (`src/test/accesibilidad.test.jsx`) | 0 violaciones |
 | Teclado (Tab, Enter, Escape, flechas), foco atrapado en diálogos, retorno del foco, enlace "Saltar al contenido" | Pruebas automáticas (`src/test/teclado.test.jsx`) | Pasan |
-| Contraste de colores | Cálculo con la fórmula WCAG sobre cada par de colores usado (jsdom no mide colores) | Corregido salvo lo de la sección 3 |
+| Contraste de colores | Cálculo con la fórmula WCAG sobre cada par de colores usado (jsdom no mide colores) | Corregido (sección 3); protegido por `src/test/contraste.test.js` |
 | Lector de pantalla y navegador reales | **Revisión manual** (sección 4) | Pendiente de hacer por una persona |
 
 Para correr las pruebas: `npm test`. Cobertura: `npm run test:cov` (98 % de líneas al cerrar este paso).
@@ -43,21 +43,21 @@ Mínimo AA: 4,5:1 para texto normal y 3:1 para texto grande y componentes de int
 
 `bosque-d` (#0A7A3A) es el mismo verde oscuro que la maqueta ya usa al pasar el cursor sobre un botón, así que el cambio casi no se nota.
 
-### Limitaciones conocidas (decisión de marca, no resuelta)
+### Contraste del verde de marca (resuelto)
 
-Estas dos combinaciones **siguen por debajo de 4,5:1** porque usan el verde institucional `#0D9648` como fondo, que viene definido por la marca y por la maqueta aprobada:
+El verde institucional `#0D9648` (`bosque`) da solo 3,84:1 con texto blanco. El 10/10/2026 Johan decidió usar el verde oscuro `bosque-d` (#0A7A3A) en todo fondo con texto blanco normal, y bordes de campo más oscuros. El verde de marca se conserva para texto grande, iconos y usos decorativos.
 
-| Par | Contraste | Dónde |
+| Qué cambió | Antes | Ahora |
 |---|---|---|
-| Texto blanco sobre verde de marca | 3,84:1 | Botones primarios (texto de 14–16 px) y menú lateral |
-| Borde gris de marca `#A1A1A5` sobre blanco | 2,57:1 | Borde de los campos de formulario (WCAG pide 3:1) |
+| Botones primarios y menú lateral: texto blanco sobre el fondo | 3,84 ✗ (`bosque`) | **5,44** ✓ (`bosque-d`) |
+| Hover del botón primario | `bosque-d` | `bosque-dd` (#08622E): **7,51** ✓ |
+| Menú lateral, ítem con el cursor encima / ítem activo | blanco translúcido sobre `bosque` | negro 10 % / 20 % sobre `bosque-d`: **6,38** / **7,51** ✓ |
+| Borde de los campos de formulario (`Input`, `Select`, `SearchBox`, `FilterSelect`) y interruptor apagado | 2,57 ✗ (`gris` #A1A1A5) | **4,10** sobre blanco y **3,92** sobre el fondo ✓ (`gris-d` #7D7D81; piden 3:1) |
+| Enlace "Cerrar sesión" de Cambiar contraseña (14 px) | 3,84 ✗ (`text-bosque`) | **5,44** ✓ (`text-bosque-d`) |
 
-Opciones, de menor a mayor impacto visual:
-1. **Dejarlo** y documentarlo (la marca manda). Es lo que hay hoy.
-2. **Botones primarios con `bosque-d`** (#0A7A3A, 5,44:1) en vez del verde de marca, y el borde de los campos un tono más oscuro. Cambio de dos líneas en `buttonClasses.js` y `Field.jsx`.
-3. Además, un verde más oscuro en el menú lateral.
+**Excepción que se mantiene:** el panel verde del login usa `bosque` con texto blanco **grande y en negrita**, donde WCAG pide 3:1 y hay 3,84:1 ✓. Los iconos decorativos en `text-bosque` o `text-citrico` tampoco cambian.
 
-Esto se decide con el cliente o el docente: no se cambió por cuenta propia para no alejarse de la maqueta aprobada.
+`src/test/contraste.test.js` calcula estos pares con la fórmula WCAG sobre los tokens reales de `src/index.css` y comprueba que botones, menú lateral e interruptor usen las clases nuevas: si alguien cambia un token o vuelve a poner `bg-bosque` con texto blanco, la prueba falla.
 
 ## 4. Revisión manual pendiente (necesita una persona)
 
@@ -83,4 +83,4 @@ test('parametrización', async () => {
 })
 ```
 
-Reglas rápidas: todo campo con `label`; todo botón de solo icono con `label` (`IconButton`); tablas con `caption` y `<th scope="col">`; colores solo de los tokens (`text-bosque-d` para texto verde sobre fondo claro, no `text-bosque`); diálogos con `Modal` o `ConfirmDialog`; nunca transmitir información solo con color.
+Reglas rápidas: todo campo con `label`; todo botón de solo icono con `label` (`IconButton`); tablas con `caption` y `<th scope="col">`; colores solo de los tokens (`text-bosque-d` para texto verde sobre fondo claro, no `text-bosque`; `bg-bosque-d` para superficies con texto blanco; `border-gris-d` para el borde de los controles de formulario, `border-line` solo para separadores decorativos); diálogos con `Modal` o `ConfirmDialog`; nunca transmitir información solo con color.

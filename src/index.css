@@ -4,9 +4,11 @@
    Todo el equipo usa estas clases: bg-bosque, text-citrico, font-hd, rounded-card, etc. */
 @theme {
   --color-bosque: #0d9648;
-  --color-bosque-d: #0a7a3a;
+  --color-bosque-d: #0a7a3a; /* fondo con texto blanco (botón primario, menú lateral) y texto verde sobre claro: 5,44:1 */
+  --color-bosque-dd: #08622e; /* hover del botón primario */
   --color-citrico: #9fcf67;
   --color-gris: #a1a1a5;
+  --color-gris-d: #7d7d81; /* borde de campos y controles (mínimo 3:1 sobre blanco y sobre el fondo) */
   --color-ink: #1e293b;
   --color-muted: #64748b;
   --color-line: #e2e8f0;

@@ -8,7 +8,7 @@ const SIZES = {
   lg: 'p-3.5 text-base',
 }
 const VARIANTS = {
-  primary: 'bg-bosque text-white enabled:hover:bg-bosque-d',
+  primary: 'bg-bosque-d text-white enabled:hover:bg-bosque-dd',
   outline: 'bg-white text-bosque-d border-bosque enabled:hover:bg-green-50',
   ghost: 'bg-white text-slate-700 border-gris enabled:hover:bg-slate-50',
   danger: 'bg-error-d text-white enabled:hover:bg-red-800',

@@ -3,6 +3,8 @@
 // Se llama a la API por el cliente real (`api`), con `validateStatus` abierto para recibir también
 // el cuerpo de los errores tal cual.
 import { api } from '../lib/api'
+import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
+import { db } from '../mocks/db'
 import { expectCumpleContrato } from './contrato'
 
 const ADMIN = ['rmartinez@cens.com.co', 'Admin12345'] // id 2
@@ -30,6 +32,11 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     expect(() => expectCumpleContrato('get', '/users/', 200, [{ id: 1, nombre: 'A', email: 'no-es-correo', rol: 'JEFE', is_active: true, last_login: '2026-09-30T08:14:00', must_change_password: false }])).toThrow()
     expect(() => expectCumpleContrato('delete', '/grupos-conceptos/{id}/', 204, { detail: 'x' })).toThrow(/no declara cuerpo/)
     expect(() => expectCumpleContrato('get', '/conceptos/', 418, {})).toThrow(/no define/)
+    // validar 409: ErrorCorrectivo exige `detail` y que cada elemento de `errores` tenga `regla` y `mensaje`
+    expect(() => expectCumpleContrato('post', '/extracciones/{id}/validar/', 409, { detail: 'x', errores: [{ basura: 1 }] })).toThrow(/no cumple el contrato/)
+    expect(() => expectCumpleContrato('post', '/extracciones/{id}/validar/', 409, { errores: [] })).toThrow()
+    expect(() => expectCumpleContrato('post', '/extracciones/{id}/validar/', 409, { detail: 'x' })).not.toThrow()
+    expect(() => expectCumpleContrato('post', '/extracciones/{id}/validar/', 409, { detail: 'x', errores: [{ regla: 'R', mensaje: 'M' }] })).not.toThrow()
     // y acepta las formas válidas, incluido `nullable` (observacion y last_login en null)
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 30, descripcion: 'A', activo: true, observacion: null }])).not.toThrow()
     expect(() => expectCumpleContrato('get', '/auth/me/', 200, { user: { id: 7, nombre: 'A', email: 'a@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } })).not.toThrow()
@@ -145,5 +152,124 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     await verifica('delete', '/grupos-conceptos/{id}/', 204, { url: '/grupos-conceptos/1/' })
     await verifica('delete', '/grupos-conceptos/{id}/', 404, { url: '/grupos-conceptos/1/' })
     await verifica('delete', '/grupos-conceptos/{id}/', 409, { url: '/grupos-conceptos/2/' })
+  })
+})
+
+// Extracción y ciclo de corte (contrato 0.4). Se fija el "hoy" del mock en 2026-10-10 (solo `Date`).
+describe('conformidad de los mocks de extracción con el contrato', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-10T12:00:00-05:00'))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  test('GET /extracciones/ 200 cumple CorteResumen[] (Analista y Administrador) y 401 sin sesión', async () => {
+    await verifica('get', '/extracciones/', 401)
+    await entrar(ANALISTA)
+    const lista = await verifica('get', '/extracciones/', 200)
+    expect(lista.map((c) => c.id)).toEqual([2, 1])
+    await entrar(ADMIN)
+    await verifica('get', '/extracciones/', 200)
+  })
+
+  test('GET /extracciones/ultima/ 200 cumple CorteResumen y 204 no trae cuerpo', async () => {
+    await verifica('get', '/extracciones/ultima/', 401)
+    await entrar(ANALISTA)
+    const ultimo = await verifica('get', '/extracciones/ultima/', 200)
+    expect(ultimo.id).toBe(2)
+    db.cortes = []
+    await verifica('get', '/extracciones/ultima/', 204)
+    await verifica('get', '/extracciones/', 200)
+  })
+
+  test('GET /extracciones/{id}/ 200 cumple CorteResumen; 404 (inexistente y no numérico)', async () => {
+    await entrar(ANALISTA)
+    await verifica('get', '/extracciones/{id}/', 200, { url: '/extracciones/1/' })
+    await verifica('get', '/extracciones/{id}/', 200, { url: '/extracciones/2/' })
+    await verifica('get', '/extracciones/{id}/', 404, { url: '/extracciones/999/' })
+    await verifica('get', '/extracciones/{id}/', 404, { url: '/extracciones/abc/' })
+  })
+
+  test('POST /extracciones/ 201 cumple CorteResumen (con y sin grupo)', async () => {
+    await entrar(ADMIN)
+    const conGrupo = await verifica('post', '/extracciones/', 201, { datos: { fecha_corte: '2026-09-30', grupo_id: 1 } }) // reemplaza el BORRADOR
+    expect(conGrupo.grupo).toEqual({ id: 1, nombre: 'Energía financiada' })
+    const sinGrupo = await verifica('post', '/extracciones/', 201, { datos: { fecha_corte: '2026-09-30', grupo_id: null } })
+    expect(sinGrupo.grupo).toBeNull() // cubre el caso nullable de verdad
+    expect(sinGrupo.ejecutada_por).toBe('Rosa Martínez')
+  })
+
+  test('POST /extracciones/ 400 (por campo y con detail), 404 y 409 (cada caso)', async () => {
+    await verifica('post', '/extracciones/', 401, { datos: { fecha_corte: '2026-09-30' } })
+    await entrar(ANALISTA)
+    await verifica('post', '/extracciones/', 400, { datos: {} }) // fecha_corte: [...]
+    await verifica('post', '/extracciones/', 400, { datos: { fecha_corte: '30/09/2026' } })
+    await verifica('post', '/extracciones/', 400, { datos: { fecha_corte: '2026-09-30', grupo_id: 0 } }) // grupo_id: [...]
+    await verifica('post', '/extracciones/', 400, { datos: { fecha_corte: '2099-01-01' } }) // { detail }
+    await verifica('post', '/extracciones/', 404, { datos: { fecha_corte: '2026-10-05', grupo_id: 999 } })
+    await verifica('post', '/extracciones/', 409, { datos: { fecha_corte: '2026-10-05', grupo_id: 3 } }) // grupo inactivo
+    await verifica('post', '/extracciones/', 409, { datos: { fecha_corte: '2026-08-31' } }) // estado fijo
+    await verifica('post', '/extracciones/', 409, { datos: { fecha_corte: '2026-10-05' } }) // otro BORRADOR
+    db.cortes = db.cortes.filter((c) => c.id !== 2)
+    await verifica('post', '/extracciones/', 409, { datos: { fecha_corte: '2026-08-15' } }) // no posterior al último enviado (A9)
+  })
+
+  test('POST /extracciones/{id}/validar/ 200 cumple CorteValidado; 409 detail y 409 con errores; 404', async () => {
+    await verifica('post', '/extracciones/{id}/validar/', 401, { url: '/extracciones/2/validar/' })
+    await entrar(ANALISTA)
+    await verifica('post', '/extracciones/{id}/validar/', 404, { url: '/extracciones/999/validar/' })
+
+    forzarErrorCorrectivo(2)
+    const bloqueado = await llamar('post', '/extracciones/2/validar/')
+    expect(bloqueado.status).toBe(409)
+    expectCumpleContrato('post', '/extracciones/{id}/validar/', 409, bloqueado.data)
+    expect(bloqueado.data.errores.length).toBeGreaterThan(0) // el caso ErrorCorrectivo, no solo ErrorDetail
+    db.cortesConErrorForzado = []
+
+    const validado = await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    expect(validado.estado).toBe('VALIDADO')
+    expect(validado.advertencias.length).toBeGreaterThan(0)
+    await verifica('post', '/extracciones/{id}/validar/', 409, { url: '/extracciones/2/validar/' }) // ya no es BORRADOR
+  })
+
+  test('POST /extracciones/{id}/registrar-envio/ 200 cumple CorteResumen; 400 (detail y campo), 404 y 409', async () => {
+    await verifica('post', '/extracciones/{id}/registrar-envio/', 401, { url: '/extracciones/2/registrar-envio/' })
+    await entrar(ANALISTA)
+    await verifica('post', '/extracciones/{id}/registrar-envio/', 409, { url: '/extracciones/2/registrar-envio/' }) // sigue en BORRADOR
+    await verifica('post', '/extracciones/{id}/registrar-envio/', 404, { url: '/extracciones/999/registrar-envio/' })
+    await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    await verifica('post', '/extracciones/{id}/registrar-envio/', 400, { url: '/extracciones/2/registrar-envio/', datos: { fecha_envio: '2099-01-01' } }) // { detail }
+    await verifica('post', '/extracciones/{id}/registrar-envio/', 400, { url: '/extracciones/2/registrar-envio/', datos: { fecha_envio: 'ayer' } }) // { fecha_envio: [...] }
+    const enviado = await verifica('post', '/extracciones/{id}/registrar-envio/', 200, { url: '/extracciones/2/registrar-envio/', datos: { fecha_envio: '2026-10-09' } })
+    expect(enviado.estado).toBe('ENVIADO')
+  })
+
+  test('POST /extracciones/{id}/registrar-envio/ 200 sin cuerpo', async () => {
+    await entrar(ADMIN)
+    await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    const res = await api.request({ method: 'post', url: '/extracciones/2/registrar-envio/', validateStatus: () => true })
+    expect(res.status).toBe(200)
+    expectCumpleContrato('post', '/extracciones/{id}/registrar-envio/', 200, res.data)
+  })
+
+  test('GET /extracciones/{id}/obligaciones/ 200 cumple ListaPaginada de ObligacionCorte; 400, 404 y 401', async () => {
+    await verifica('get', '/extracciones/{id}/obligaciones/', 401, { url: '/extracciones/1/obligaciones/' })
+    await entrar(ANALISTA)
+    const pagina = await verifica('get', '/extracciones/{id}/obligaciones/', 200, { url: '/extracciones/1/obligaciones/' })
+    expect(pagina.total).toBe(24)
+    expect(pagina.resultados).toHaveLength(20)
+    const ultima = await verifica('get', '/extracciones/{id}/obligaciones/', 200, { url: '/extracciones/1/obligaciones/?limite=100&desplazamiento=20' })
+    expect(ultima.resultados).toHaveLength(4)
+    const todas = await verifica('get', '/extracciones/{id}/obligaciones/', 200, { url: '/extracciones/2/obligaciones/?limite=500' })
+    expect(todas.resultados.some((o) => o.estado_tu === '02')).toBe(true) // cubre Saldada (Tabla 4b '02') y Castigada '06'
+    expect(todas.resultados.some((o) => o.estado_tu === '06')).toBe(true)
+    const noEnteros = await verifica('get', '/extracciones/{id}/obligaciones/', 400, { url: '/extracciones/1/obligaciones/?limite=abc' })
+    expect(noEnteros.detail).toBe('Los parámetros limite y desplazamiento deben ser enteros.')
+    const sinLimite = await verifica('get', '/extracciones/{id}/obligaciones/', 400, { url: '/extracciones/1/obligaciones/?limite=0' })
+    expect(sinLimite.detail).toBe('El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.')
+    const negativo = await verifica('get', '/extracciones/{id}/obligaciones/', 400, { url: '/extracciones/1/obligaciones/?desplazamiento=-1' })
+    expect(negativo.detail).toBe(sinLimite.detail)
+    await verifica('get', '/extracciones/{id}/obligaciones/', 404, { url: '/extracciones/999/obligaciones/' })
+    await verifica('get', '/extracciones/{id}/obligaciones/', 404, { url: '/extracciones/abc/obligaciones/' })
   })
 })

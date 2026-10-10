@@ -335,12 +335,16 @@ describe('persistencia de la base simulada', () => {
     expect(db.grupos.map((g) => g.nombre)).toContain('Grupo persistido')
     expect(db.grupos.map((g) => g.id)).not.toContain(1)
     expect(db.siguienteGrupoId).toBe(5)
-    expect(db.cortes).toEqual([{ id: 1, grupo_id: 2, estado: 'BORRADOR' }])
+    expect(db.cortes.map((c) => [c.id, c.grupo_id, c.estado])).toEqual([
+      [1, 1, 'ENVIADO'],
+      [2, 2, 'BORRADOR'],
+    ])
+    expect(db.siguienteCorteId).toBe(3)
   })
 
   test('una base guardada sin conceptos se completa con los iniciales', async () => {
     const guardada = { usuarios: [{ id: 1, nombre: 'Juan Pérez', email: 'jperez@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: false, password: 'Analista123' }], siguienteId: 8 }
-    sessionStorage.setItem('nexovolt-mock-db-v2', JSON.stringify(guardada))
+    sessionStorage.setItem('nexovolt-mock-db-v3', JSON.stringify(guardada))
 
     vi.resetModules()
     const { db } = await import('../mocks/db')
@@ -354,6 +358,6 @@ describe('persistencia de la base simulada', () => {
     ])
     expect(db.grupos.map((g) => g.id)).toEqual([1, 2, 3])
     expect(db.siguienteGrupoId).toBe(4)
-    expect(db.cortes).toHaveLength(1)
+    expect(db.cortes).toHaveLength(2)
   })
 })

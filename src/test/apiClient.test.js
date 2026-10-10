@@ -47,6 +47,30 @@ describe('mensajes de error', () => {
     expect(e.message).toBe('Tu usuario está desactivado.')
   })
 
+  test('un 409 con errores conserva la lista y no la trata como campos', () => {
+    const cuerpo = { detail: 'El corte tiene errores correctivos que deben resolverse.', errores: [{ regla: 'SIN_IDENTIFICACION', mensaje: 'Falta el tipo o el número de identificación' }] }
+    const e = toApiError({ response: { status: 409, data: cuerpo } })
+    expect(e.message).toBe('El corte tiene errores correctivos que deben resolverse.')
+    expect(e.fieldErrors).toEqual({})
+    expect(e.datos).toEqual(cuerpo)
+    expect(e.datos.errores).toEqual([{ regla: 'SIN_IDENTIFICACION', mensaje: 'Falta el tipo o el número de identificación' }])
+  })
+
+  test('conserva code y no lo trata como campo', () => {
+    const e = toApiError({ response: { status: 403, data: { detail: 'No tienes permiso para realizar esta acción.', code: 'permission_denied' } } })
+    expect(e.code).toBe('permission_denied')
+    expect(e.fieldErrors).toEqual({})
+    expect(e.datos).toEqual({ detail: 'No tienes permiso para realizar esta acción.', code: 'permission_denied' })
+  })
+
+  test('sin cuerpo, datos y code quedan en null', async () => {
+    server.use(http.get(URL, () => new HttpResponse(null, { status: 404 })))
+    const e = await api.get(RUTA).catch((x) => x)
+    expect(e).toMatchObject({ status: 404, code: null, datos: null, fieldErrors: {} })
+    expect(toApiError({ response: { status: 500, data: 'Traceback (most recent call last)...' } })).toMatchObject({ code: null, datos: null })
+    expect(toApiError({})).toMatchObject({ status: 0, code: null, datos: null })
+  })
+
   test('un 500 muestra un mensaje genérico, sin detalles técnicos', async () => {
     server.use(http.get(URL, () => HttpResponse.text('Traceback (most recent call last)...', { status: 500 })))
     await expect(api.get(RUTA)).rejects.toMatchObject({ status: 500, message: 'Ocurrió un error en el servidor. Intenta de nuevo más tarde.' })

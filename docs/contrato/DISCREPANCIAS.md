@@ -36,6 +36,16 @@ Johan decidió que CENS reporta como **Sector Real Servicios** (paquete SSR, Tab
 - El tipo de reporte (total o parcial) en el corte.
 - Que se guarden los campos del reporte.
 
+## Mensajes y rangos que el backend debe definir (frontend y mocks ya los usan)
+
+Son diferencias de forma, no del manual. Los mocks y los ejemplos del contrato 0.4 usan los textos de la derecha; el backend de hoy responde otra cosa:
+
+| ID | Tema | Backend (`cf07754`) | Contrato y mocks | Propuesta |
+|---|---|---|---|---|
+| M1 | Mensajes de validación de los campos de `POST /extracciones/` y `registrar-envio` | Textos por defecto de DRF; con `LANGUAGE_CODE` en `es-co` salen como "Este campo es requerido." o "La fecha tiene un formato incorrecto..." | `Selecciona una fecha de corte.`, `La fecha de corte no es válida.`, `El grupo de conceptos no es válido.` y `La fecha de envío no es válida.` | **Personalizar los mensajes del serializador** (`error_messages`); si no, al corregir el idioma saldrán los textos genéricos de DRF |
+| M2 | Rango de `limite` y `desplazamiento` (obligaciones, detalle de reporte y auditoría) | No valida el rango (un valor negativo produce 500) | `400` con `El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.` si `limite` < 1 o `desplazamiento` < 0; `Los parámetros limite y desplazamiento deben ser enteros.` si no son enteros | Validar el rango con ese mensaje propio |
+| M3 | Máximo de `limite` | Sin máximo | Un `limite` mayor que 100 se **recorta a 100** | Recortar el límite a 100 |
+
 ## Requerimientos abiertos (no son errores del backend)
 
 Los documentos del proyecto tienen versiones distintas de algunas reglas, así que el backend todavía no puede acertarlas:

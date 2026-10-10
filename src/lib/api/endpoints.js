@@ -1,4 +1,4 @@
-// Rutas del contrato `docs/contrato/openapi.yaml` (versión 0.2). La autenticación (Dilan) y los
+// Rutas del contrato `docs/contrato/openapi.yaml` (versión 0.4). La autenticación (Dilan) y los
 // usuarios (José Luis) aún no existen en el backend; si cambian, se corrigen solo aquí.
 export const ENDPOINTS = {
   csrf: '/auth/csrf/',
@@ -15,6 +15,13 @@ export const ENDPOINTS = {
   concepto: (codigo) => `/conceptos/${codigo}/`,
   gruposConceptos: '/grupos-conceptos/',
   grupoConceptos: (id) => `/grupos-conceptos/${id}/`,
+  // Extracción de cartera y ciclo de corte (RF1–RF5, RF7, RF44): ya implementado en el backend.
+  extracciones: '/extracciones/',
+  extraccion: (id) => `/extracciones/${id}/`,
+  extraccionUltima: '/extracciones/ultima/',
+  validarExtraccion: (id) => `/extracciones/${id}/validar/`,
+  registrarEnvio: (id) => `/extracciones/${id}/registrar-envio/`,
+  obligacionesCorte: (id) => `/extracciones/${id}/obligaciones/`,
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

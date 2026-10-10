@@ -118,6 +118,39 @@ Diferencias abiertas que afectan a estas rutas (detalle y propuesta en [`contrat
 
 También quedan O (códigos repetidos en un grupo, que los mocks rechazan con 400) y P (código no numérico en la ruta, que los mocks responden con 404).
 
+### 2.4 Extracción de cartera y ciclo de corte (RF1–RF5, RF7, RF44) — para José Luis y Angel
+
+**Estado: ya implementado en el backend** (`reporte-cens-backend`, rama `dev`, commit `cf07754`, revisado el 10/10/2026). Angel construye la pantalla sobre `features/extraction/extractionService.js`, que ya funciona contra los mocks. Rutas (ambos roles): `GET/POST /api/extracciones/`, `GET /api/extracciones/ultima/` (204 sin cuerpo si no hay cortes), `GET /api/extracciones/{id}/`, `GET /api/extracciones/{id}/obligaciones/` (`limite`, `desplazamiento`), `POST /api/extracciones/{id}/validar/` y `POST /api/extracciones/{id}/registrar-envio/`. Es síncrono (201 al generar, sin consulta de estado).
+
+**Lo que los mocks hacen distinto del backend de hoy.** Siguen el manual de TransUnion (Sector Real v34, sector **Servicios**, decisión de Johan del 10/10/2026) y el contrato 0.4; el detalle de cada punto está en [`contrato/DISCREPANCIAS.md`](contrato/DISCREPANCIAS.md):
+- **A2.** El corte incluye las obligaciones **saldadas** desde el corte anterior (`estado_tu` `02`, saldo, mora y cuotas en `0`, `edad_mora` `00`); el backend hoy las excluye. Pendiente de confirmar por Santiago (RF1 dice "solo vigentes").
+- **A3.** Tipo de identificación con el código de la Tabla 2 (`01` cédula, `02` NIT...), no `"CC"`. Los mocks de extracción no lo simulan porque `ObligacionCorte` no trae `tipo_id_tu`: aplica a los endpoints del historial, que aún no se simulan (el catálogo ya está en `catalogosTU.js`).
+- **A4.** Estado de la obligación con la Tabla 4b de Servicios (`01` Vigente, `02` Saldada, `03` Dudoso recaudo...; no existen `05` ni `09`); el backend no declara la tabla ni valida los códigos. `edad_mora` sigue la Tabla 9 (`00` a `14`) y se calcula a partir de `dias_mora`.
+- **A9.** La fecha de corte debe ser **posterior** a la del último corte `ENVIADO`; si no, `409` "La fecha de corte debe ser posterior a la del último corte enviado." El backend solo rechaza la fecha futura.
+
+**Para José Luis: textos y rangos que el contrato 0.4 ya fija** (detalle en [`contrato/DISCREPANCIAS.md`](contrato/DISCREPANCIAS.md), filas M1 a M3):
+- **Mensajes del serializador.** Hay que personalizarlos (`error_messages`): `fecha_corte` ausente → `Selecciona una fecha de corte.`; formato inválido → `La fecha de corte no es válida.`; `grupo_id` → `El grupo de conceptos no es válido.`; `fecha_envio` inválida → `La fecha de envío no es válida.`. Si no, al corregir `LANGUAGE_CODE` saldrán los textos genéricos de DRF.
+- **Rango de `limite` y `desplazamiento`.** Validarlo con su propio mensaje: `limite` menor que 1 o `desplazamiento` negativo → `400` `El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.`; si no son enteros se mantiene `Los parámetros limite y desplazamiento deben ser enteros.`
+- **Máximo de `limite`.** Un `limite` mayor que 100 se recorta a 100.
+- **`409` de validar.** Con errores correctivos responde `{ detail, errores: [{ regla, mensaje }] }`; si el corte no está en BORRADOR, solo `{ detail }` (ambos validan contra `ErrorCorrectivo`).
+
+**Diferencias del contrato (filas Q a AA de [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)).**
+
+Los mocks ya las implementan como se espera:
+- **Q.** `numero_identificacion` sale completa (dato personal; los mocks la entregan completa, como el backend); el frontend la enmascara en pantalla. Se propone enmascararla o restringirla en el backend.
+- **R.** `edad_mora`, `tipo_id_tu` y `estado_tu` son textos sin validar; los mocks de extracción devuelven siempre códigos válidos de las tablas del manual (`edad_mora` coherente con `dias_mora`).
+- **S.** Un `id` no numérico produce 500 (los mocks responden `404` "Corte no encontrado."); `limite` y `desplazamiento` sin validar (los mocks dan `400` si no son enteros, `limite` mínimo 1, `desplazamiento` mínimo 0 y `limite` se recorta a 100).
+- **U.** `validar` sin filtrar por corte: los mocks validan el corte pedido.
+- **V.** Fechas en formatos distintos: los mocks devuelven `fecha_corte` como `AAAA-MM-DD` y `fecha_ejecucion` con `-05:00`.
+- **Y.** `ejecutada_por` siempre `null` (no hay usuario autenticado); los mocks devuelven el nombre de quien generó el corte.
+- **AA (solo una parte).** `registrar-envio` valida la fecha antes de comprobar que el corte existe; los mocks comprueban primero el `404`.
+
+Siguen abiertas, sin cambio en los mocks:
+- **W.** El `409` sugiere "eliminar" un BORRADOR, pero no hay endpoint para eliminarlo ni anularlo; los mocks tampoco lo tienen y repiten el mismo mensaje.
+- **X.** `docs/API.md` dice que `registrar-envio` devuelve `errores` y el código no: es solo de documentación.
+- **Z.** "Último estado" de un deudor sin mirar el estado del corte: es del historial, que aún no se simula.
+- **AA (el resto).** Un corte `ANULADO` de la misma fecha bloquea la generación con `409` (los mocks hacen lo mismo que el backend) y no se valida `fecha_envio >= fecha_corte`.
+
 ---
 
 ## 3. Decisiones por cerrar (resumen para responder rápido)

@@ -60,8 +60,9 @@ info:
     `{ total, resultados }`, con `total` igual al número de registros que cumplen el filtro. Los
     listados pequeños o acotados devuelven un **arreglo plano** sin paginar: `/users/`,
     `/conceptos/`, `/grupos-conceptos/`, `/extracciones/`, `/historial/reportes/` y
-    `/historial/deudores/` (máximo 50). El backend aún no valida el rango de `limite` y
-    `desplazamiento` (el contrato pide `limite` de 1 a 100 y `desplazamiento` desde 0).
+    `/historial/deudores/` (máximo 50). El contrato pide `limite` de 1 a 100 (un valor mayor se
+    recorta a 100) y `desplazamiento` desde 0; fuera de rango responde `400` con su propio mensaje.
+    El backend aún no valida el rango ni recorta el límite.
 
     **Datos reservados.** Los datos de CENS son confidenciales: el log de auditoría no guarda
     contraseñas ni datos personales completos. El backend devuelve hoy `numero_identificacion`
@@ -704,10 +705,13 @@ paths:
                   value: { detail: 'La fecha de corte no puede ser futura.' }
                 fecha_corte_faltante:
                   summary: Falta la fecha de corte
-                  value: { fecha_corte: ['Este campo es requerido.'] }
+                  value: { fecha_corte: ['Selecciona una fecha de corte.'] }
                 fecha_corte_invalida:
                   summary: Fecha de corte con formato inválido
-                  value: { fecha_corte: ['La fecha tiene un formato incorrecto. Use uno de los siguientes formatos: YYYY-MM-DD.'] }
+                  value: { fecha_corte: ['La fecha de corte no es válida.'] }
+                grupo_invalido:
+                  summary: "`grupo_id` menor que 1 o no entero"
+                  value: { grupo_id: ['El grupo de conceptos no es válido.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -847,11 +851,17 @@ paths:
                     valor_saldo: 0
                     n_creditos: 1
         '400':
-          description: '`limite` o `desplazamiento` no son enteros.'
+          description: '`limite` o `desplazamiento` no son enteros, o están fuera de rango (`limite` menor que 1 o `desplazamiento` negativo).'
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
-              example: { detail: 'Los parámetros limite y desplazamiento deben ser enteros.' }
+              examples:
+                no_enteros:
+                  summary: No son números enteros
+                  value: { detail: 'Los parámetros limite y desplazamiento deben ser enteros.' }
+                fuera_de_rango:
+                  summary: "`limite` menor que 1 o `desplazamiento` negativo"
+                  value: { detail: 'El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -905,10 +915,7 @@ paths:
           description: El corte no está en `BORRADOR` o tiene errores correctivos.
           content:
             application/json:
-              schema:
-                anyOf:
-                  - $ref: '#/components/schemas/ErrorDetail'
-                  - $ref: '#/components/schemas/ErrorCorrectivo'
+              schema: { $ref: '#/components/schemas/ErrorCorrectivo' }
               examples:
                 no_borrador:
                   summary: El corte ya no está en BORRADOR
@@ -968,7 +975,7 @@ paths:
                   value: { detail: 'La fecha de envío no puede ser futura.' }
                 fecha_invalida:
                   summary: Fecha de envío con formato inválido
-                  value: { fecha_envio: ['La fecha tiene un formato incorrecto. Use uno de los siguientes formatos: YYYY-MM-DD.'] }
+                  value: { fecha_envio: ['La fecha de envío no es válida.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -1081,11 +1088,17 @@ paths:
                     n_creditos: 1
                     fecha_ultimo_pago: null
         '400':
-          description: '`limite` o `desplazamiento` no son enteros.'
+          description: '`limite` o `desplazamiento` no son enteros, o están fuera de rango (`limite` menor que 1 o `desplazamiento` negativo).'
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
-              example: { detail: 'Los parámetros limite y desplazamiento deben ser enteros.' }
+              examples:
+                no_enteros:
+                  summary: No son números enteros
+                  value: { detail: 'Los parámetros limite y desplazamiento deben ser enteros.' }
+                fuera_de_rango:
+                  summary: "`limite` menor que 1 o `desplazamiento` negativo"
+                  value: { detail: 'El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -1300,15 +1313,16 @@ components:
       name: limite
       in: query
       description: |
-        Máximo de filas a devolver. Por defecto 20. El contrato pide mínimo 1 y propone máximo 100;
-        el backend **aún no valida el rango** (diferencias N y S del README).
+        Máximo de filas a devolver. Por defecto 20. Debe ser un entero de 1 a 100: un valor menor
+        que 1 responde `400` y **un valor mayor que 100 se recorta a 100**. El backend **aún no
+        valida el rango ni pone el máximo** (diferencias N y S del README).
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
     Desplazamiento:
       name: desplazamiento
       in: query
       description: |
-        Cuántas filas saltarse (desde 0). Por defecto 0. El contrato pide mínimo 0; el backend
-        **aún no valida el rango** (diferencia S del README).
+        Cuántas filas saltarse (desde 0). Por defecto 0. Un valor negativo responde `400`; el
+        backend **aún no valida el rango** (diferencia S del README).
       schema: { type: integer, minimum: 0, default: 0 }
 
   responses:
@@ -1595,15 +1609,19 @@ components:
               description: Reglas informativas que no bloquean la validación. Puede ser `[]`.
               items: { $ref: '#/components/schemas/ReglaMensaje' }
     ErrorCorrectivo:
-      description: "`409` de `validar`: el corte tiene reglas correctivas sin resolver y sigue en `BORRADOR`."
-      allOf:
-        - $ref: '#/components/schemas/ErrorDetail'
-        - type: object
-          required: [errores]
-          properties:
-            errores:
-              type: array
-              items: { $ref: '#/components/schemas/ReglaMensaje' }
+      type: object
+      required: [detail]
+      description: |
+        `409` de `validar`. Siempre trae `detail`. Cuando el corte tiene reglas correctivas sin
+        resolver (y sigue en `BORRADOR`) trae además `errores`; cuando el corte no está en `BORRADOR`
+        solo trae `detail`.
+      properties:
+        detail: { type: string, description: Mensaje en español para mostrar al usuario. }
+        code: { type: string, description: Identificador estable del error (opcional). }
+        errores:
+          type: array
+          description: Reglas correctivas que fallaron. Solo está cuando el `409` es por errores correctivos.
+          items: { $ref: '#/components/schemas/ReglaMensaje' }
     RegistrarEnvioRequest:
       type: object
       description: Cuerpo opcional; también se acepta sin cuerpo o `{}`.

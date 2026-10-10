@@ -1,7 +1,7 @@
 // Base de datos FICTICIA para los mocks. Todos los datos y contraseñas son inventados.
 // Vive en memoria y se copia a sessionStorage (solo en los mocks, nunca en producción) para que
 // una recarga de la página no borre lo creado durante una demostración; cerrar la pestaña la reinicia.
-// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de ejemplo.
+// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de extracción de ejemplo.
 // Los roles se guardan como CÓDIGO del backend (`ANALISTA_CARTERA`, `ADMINISTRADOR`), igual que el contrato.
 // Cuentas de prueba (solo con VITE_USE_MOCKS=true; el rol se muestra aquí como texto):
 //   rmartinez@cens.com.co / Admin12345      → Administrador
@@ -11,7 +11,7 @@
 import { CODIGOS_ROL } from '../features/auth/roles'
 
 const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
-const DB_KEY = 'nexovolt-mock-db-v2' // solo mocks: usuarios ficticios y sus contraseñas de prueba (v2: roles como código)
+const DB_KEY = 'nexovolt-mock-db-v3' // solo mocks: usuarios ficticios y sus contraseñas de prueba (v2: roles como código; v3: cortes completos)
 
 // Contraseña temporal que el backend simulado "envía por correo" a cada usuario nuevo.
 export const CLAVE_TEMPORAL_MOCK = 'Temporal123'
@@ -43,11 +43,17 @@ const gruposIniciales = () => [
   { id: 3, nombre: 'Grupo de prueba inactivo', activo: false, conceptos: [9001], creado: '2026-10-05' },
 ]
 
-// Cortes (extracciones) mínimos: solo sirven para que eliminar un grupo asociado a un BORRADOR dé 409.
-const cortesIniciales = () => [{ id: 1, grupo_id: 2, estado: 'BORRADOR' }]
+// Cortes (extracciones, RF1–RF5). Guardan lo que el backend guarda: `grupo_nombre` es una FOTO del nombre
+// del grupo al generar el corte (renombrar el grupo después no reescribe el historial). Las obligaciones
+// no se guardan: se generan al pedirlas (mocks/datos/obligaciones.js). `fecha_envio` y `observacion`
+// no salen en el resumen del corte (CorteResumen).
+const cortesIniciales = () => [
+  { id: 1, fecha_corte: '2026-08-31', fecha_ejecucion: '2026-09-01T08:05:00-05:00', grupo_id: 1, grupo_nombre: 'Energía financiada', estado: 'ENVIADO', fecha_envio: '2026-09-03', ejecutada_por: 'Juan Pérez', observacion: null },
+  { id: 2, fecha_corte: '2026-09-30', fecha_ejecucion: '2026-10-01T07:40:00-05:00', grupo_id: 2, grupo_nombre: 'Solo cuota de energía', estado: 'BORRADOR', fecha_envio: null, ejecutada_por: 'Juan Pérez', observacion: null },
+]
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -56,6 +62,7 @@ const inicial = () => ({
   grupos: gruposIniciales(),
   siguienteGrupoId: 4,
   cortes: cortesIniciales(),
+  siguienteCorteId: 3,
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que
@@ -71,8 +78,9 @@ function leerBase() {
   return base
 }
 
-// `correos` (bandeja del correo simulado) vive solo en memoria: no se guarda en sessionStorage.
-export const db = { ...leerBase(), sesionId: leerSesion(), correos: [] }
+// `correos` (bandeja del correo simulado) y `cortesConErrorForzado` (cortes a los que las pruebas
+// les fuerzan un error correctivo al validar) viven solo en memoria: no se guardan en sessionStorage.
+export const db = { ...leerBase(), sesionId: leerSesion(), correos: [], cortesConErrorForzado: [] }
 export const ultimoCorreo = () => db.correos.at(-1) ?? null
 
 // Llamar después de cada cambio en las colecciones de db (usuarios, conceptos, grupos...).
@@ -109,6 +117,7 @@ export const publico = ({ password: _password, ...u }) => u // nunca se devuelve
 export function resetMockDb() {
   Object.assign(db, inicial())
   db.correos = []
+  db.cortesConErrorForzado = []
   try {
     sessionStorage.removeItem(DB_KEY)
   } catch {

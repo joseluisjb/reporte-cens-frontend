@@ -26,3 +26,12 @@ export function formatearFechaISOLarga(iso) {
 
 // plural(1, 'obligación', 'obligaciones') → '1 obligación'
 export const plural = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`
+
+// '1000000001' → '******0001'. Dato personal (Habeas Data): solo se ven los últimos 4 dígitos.
+// Con 4 caracteres o menos se oculta todo; sin valor devuelve "—".
+export function enmascararIdentificacion(numero) {
+  const texto = String(numero ?? '').trim()
+  if (!texto) return '—'
+  if (texto.length <= 4) return '*'.repeat(texto.length)
+  return '*'.repeat(texto.length - 4) + texto.slice(-4)
+}

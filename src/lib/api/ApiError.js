@@ -1,11 +1,17 @@
 // Error uniforme de la API. Las pantallas muestran `message` (siempre en español) y, en
 // formularios, `fieldErrors` ({ campo: 'mensaje' }) para marcar cada campo.
+// Además conserva:
+//   - `code`: identificador estable del error si el backend lo manda (ej. `permission_denied`), o null.
+//   - `datos`: el cuerpo de la respuesta tal cual (objeto), o null si no había. Sirve para lo que no
+//     es un campo, como la lista `errores` del 409 de validar un corte: `err.datos?.errores`.
 export class ApiError extends Error {
-  constructor(message, { status = 0, fieldErrors = {} } = {}) {
+  constructor(message, { status = 0, fieldErrors = {}, code = null, datos = null } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.fieldErrors = fieldErrors
+    this.code = code
+    this.datos = datos
   }
 }
 
@@ -28,6 +34,9 @@ const DRF_EN_ESPANOL = {
 }
 
 const aTexto = (v) => (Array.isArray(v) ? v.filter(Boolean).join(' ') : typeof v === 'string' ? v : '')
+const esObjetoPlano = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+// Una lista de objetos (ej. `errores: [{ regla, mensaje }]`) no es el mensaje de un campo.
+const esListaDeObjetos = (v) => Array.isArray(v) && v.some(esObjetoPlano)
 
 // Convierte un error de axios en ApiError. Formato DRF: { detail } o { campo: ['mensaje'] }.
 export function toApiError(error) {
@@ -38,8 +47,11 @@ export function toApiError(error) {
   const { status, data } = res
   const fieldErrors = {}
   let detail = ''
+  let code = null
   if (data && typeof data === 'object') {
+    if (typeof data.code === 'string') code = data.code
     for (const [campo, valor] of Object.entries(data)) {
+      if (campo === 'code' || campo === 'errores' || esListaDeObjetos(valor)) continue // no son campos del formulario
       const texto = aTexto(valor)
       if (!texto) continue
       if (campo === 'detail') detail = texto
@@ -53,5 +65,5 @@ export function toApiError(error) {
   if (status >= 500) message = MENSAJE_SERVIDOR
   else if (status === 401) message = MENSAJES_POR_ESTADO[401]
   else message = detail || MENSAJES_POR_ESTADO[status] || MENSAJES_POR_ESTADO[400]
-  return new ApiError(message, { status, fieldErrors })
+  return new ApiError(message, { status, fieldErrors, code, datos: esObjetoPlano(data) ? data : null })
 }

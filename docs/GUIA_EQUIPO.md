@@ -121,7 +121,29 @@ Hazlo siempre en este orden, como en `features/users/`:
 >
 > Detalles: el concepto aún no trae fecha de creación (`fechaCreacion` llega `null`; diferencia B del contrato); el grupo trae `creado` como texto `YYYY-MM-DD`, se muestra con `formatearFechaISO`; `conceptos` de un grupo es la lista de códigos y **reemplaza** la anterior al editar.
 
-**Errores:** todo error llega como `ApiError` con `message` en español y `fieldErrors` ({ campo: 'mensaje' }). En una pantalla:
+> **Extracción (Angel, RF1–RF5, RF7, RF44):** el servicio, el mapper, el catálogo de TransUnion, los mocks y las pruebas **ya existen**; solo falta la pantalla (`features/extraction/ExtractionPage.jsx`) y la tarjeta "Última extracción" del inicio. Todo en `features/extraction/extractionService.js` (ambos roles pueden usar todas las funciones):
+> - `listCuts()` (registro de extracciones, del más reciente al más antiguo), `getLatestCut()` (el último corte, o `null` si aún no hay ninguno), `getCut(id)`.
+> - `generateCut({ fechaCorte, grupoId = null })`: crea el corte en BORRADOR. `fechaCorte` es `'YYYY-MM-DD'`; `grupoId` es opcional (`null` = todos los conceptos reportables).
+> - `validateCut(id)` → `{ corte, advertencias: [{ regla, mensaje }] }`; `registerSubmission(id, { fechaEnvio })` (la fecha es opcional, sin ella se usa hoy).
+> - `listCutObligations(id, { limite = 20, desplazamiento = 0 })` → `{ items, total }` (`limite` de 1 a 100).
+>
+> Detalles: **es síncrono**, `generateCut` responde cuando el corte ya está generado; no hay que consultar el estado cada cierto tiempo (nada de polling). El ciclo es BORRADOR → (validar) → VALIDADO → (registrar envío) → ENVIADO, y solo puede haber un BORRADOR a la vez. El corte trae `esBorrador`, `esValidado` y `esEnviado` para habilitar o no los botones. `fechaCorte` es texto `YYYY-MM-DD` (se muestra con `formatearFechaISO`); `fechaEjecucion` es `Date` (`formatearFechaHora`); el dinero se muestra con `formatearCOP`.
+>
+> **Validar con errores:** si el corte tiene reglas correctivas sin resolver, `validateCut` lanza un `ApiError` con `status` 409 y el corte sigue en BORRADOR. La lista de reglas **no** está en `fieldErrors`, está en `err.datos?.errores` (`[{ regla, mensaje }]`):
+>
+> ```js
+> try { await validateCut(id) }
+> catch (err) {
+>   if (err.status === 409 && err.datos?.errores) mostrarLista(err.datos.errores) // reglas que bloquean
+>   else toast.error(err.message)                                                  // p. ej. "El corte no está en estado BORRADOR."
+> }
+> ```
+>
+> **Identificación enmascarada:** el mapper entrega `identificacion` ya enmascarada (`******0001`); el número completo es un dato personal y nunca llega a la pantalla (no lo reconstruyas ni lo registres). Los códigos vienen con su texto: `estado.descripcion` (Tabla 4b) y `edadMora.descripcion` (Tabla 9). Los catálogos (`TABLA_9`, `ESTADOS_OBLIGACION`, `TIPOS_IDENTIFICACION`) y sus funciones están en `features/extraction/catalogosTU.js`. Para marcar campos del formulario usa `mapCorteFieldErrors(err.fieldErrors)` (`fechaCorte`, `grupoId`, `fechaEnvio`).
+>
+> Los datos de los mocks siguen el manual de TransUnion (sector Servicios): el corte incluye obligaciones **Saldadas** (`estado.codigo === '02'`, con saldo y mora en 0), que el backend de hoy todavía no entrega; ver `docs/PENDIENTES_BACKEND.md`, sección 2.4.
+
+**Errores:** todo error llega como `ApiError` con `message` en español y `fieldErrors` ({ campo: 'mensaje' }), `code` (identificador estable si el backend lo manda, o `null`) y `datos` (el cuerpo de la respuesta, o `null`). En una pantalla:
 
 ```js
 try { await createConcept(datos) }
@@ -164,7 +186,7 @@ Se importan juntos: `import { Button, Input, Modal } from '../../components/ui'`
 
 Tokens de marca en `src/index.css` (bloque `@theme`): `bg-bosque`, `text-citrico`, `text-muted`, `font-hd`, `rounded-card`... Úsalos en vez de colores sueltos. Contraste: `bg-bosque-d` para superficies con texto blanco (`bosque` solo para texto grande, iconos y decoración), `bosque-dd` para su hover y `border-gris-d` para el borde de los controles de formulario. Para resaltar una fila recién creada o editada: `className="fila-resaltada"` unos segundos (ver `UsersPage.jsx`).
 
-Ayudas de formato en `lib/format.js`: `formatearFechaHora`, `formatearCOP` ($1.276.016), `formatearFechaISO` (30/09/2026), `formatearFechaISOLarga` (30 de septiembre de 2026), `plural`.
+Ayudas de formato en `lib/format.js`: `formatearFechaHora`, `formatearCOP` ($1.276.016), `formatearFechaISO` (30/09/2026), `formatearFechaISOLarga` (30 de septiembre de 2026), `plural`, `enmascararIdentificacion` (`******0001`).
 
 **La referencia visual es la maqueta** (`NexoVolt_Mockups_Iteracion1_v2.html`): mismos textos, estados, validaciones e iconos.
 

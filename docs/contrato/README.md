@@ -2,7 +2,7 @@
 
 Acuerdo entre frontend y backend sobre **cómo se hablan**: rutas, qué se envía, qué se responde y qué errores existen. Está escrito como **OpenAPI 3.0** en [`openapi.yaml`](openapi.yaml), el formato estándar que entiende DRF (`drf-spectacular`), Swagger y Postman.
 
-**Estado: BORRADOR para revisión** de José Luis y Dilan. Parte de lo que el frontend ya construyó y probó contra mocks (autenticación y usuarios) y propone lo que falta (conceptos, extracción, historial, auditoría). Cada operación dice en su descripción si está *implementado en el frontend* o es *propuesta*. Está contrastado con las actas de CENS, el catálogo de conceptos y el Manual Sector Real v34.
+**Estado: BORRADOR 0.2 para revisión** de José Luis y Dilan. Parte de lo que el frontend ya construyó y probó contra mocks (autenticación y usuarios), se **alinea con lo que José Luis ya implementó** en `reporte-cens-backend` (rama `dev`: conceptos, grupos de conceptos y salud; su propia referencia está en `docs/API.md` de ese repo) y propone lo que falta (extracción, historial, auditoría). Cada operación dice en su descripción si está *implementado en el frontend* o es *propuesta*. Está contrastado con las actas de CENS, el catálogo de conceptos y el Manual Sector Real v34.
 
 ## Cómo verlo
 
@@ -23,7 +23,9 @@ También se puede pegar `openapi.yaml` en <https://editor.swagger.io>. No contie
 | Autenticación | `GET /auth/csrf/` · `POST /auth/login/` · `POST /auth/logout/` · `GET /auth/me/` · `POST /auth/change-password/` | RF25, RF26 | Dilan | Todos | Implementado en el frontend |
 | Recuperación | `POST /auth/password-reset/` · `POST /auth/password-reset/confirm/` | RF29 | José Luis | Público | Implementado en el frontend |
 | Usuarios | `GET`, `POST /users/` · `PATCH /users/{id}/` | RF28 | José Luis | Administrador | Implementado en el frontend |
-| Conceptos de energía | `GET`, `POST /conceptos/` · `PATCH /conceptos/{id}/` | RF35 | José Luis (API) · Angel (tabla) | Administrador | Propuesta |
+| Utilidades | `GET /salud/` | — | José Luis | Público | Implementado en el backend |
+| Conceptos de energía | `GET`, `POST /conceptos/` · `PATCH /conceptos/{codigo}/` | RF35 | José Luis (API) · Angel (tabla) | Lectura: ambos · escritura: Administrador | Implementado en el backend (permisos por ajustar) |
+| Grupos de conceptos | `GET`, `POST /grupos-conceptos/` · `GET`, `PATCH`, `DELETE /grupos-conceptos/{id}/` | RF43 | José Luis | Lectura: ambos · escritura: Administrador | Implementado en el backend (permisos por ajustar) |
 | Extracción | `GET`, `POST /extracciones/` · `GET /extracciones/{id}/` · `GET /extracciones/{id}/obligaciones/` | RF1–RF5, RF7 | José Luis · Clara | Analista y Administrador | Propuesta |
 | Historial | `GET /historial/reportes/` · `GET /historial/deudores/` | RF6, RF8 | José Luis · Clara | Analista y Administrador | Borrador |
 | Auditoría | `GET /auditoria/` | RF30 | Dilan | Administrador | Propuesta |
@@ -36,7 +38,25 @@ Transversales que el contrato fija para todos los endpoints: sesión por cookie 
 
 ## Fuera del contrato (aparece en la maqueta, no en el alcance)
 
-Grupos de conceptos, "Cambiar datos", "Cambiar de perfil", "Exportar resumen" y "Exportar log". La extracción usa **todos los códigos activos**. `POST /demo/switch-profile/` existe solo en los mocks del frontend. Si CENS o el docente piden alguno de estos, primero se agregan al alcance y después al contrato.
+"Cambiar datos", "Cambiar de perfil", "Exportar resumen" y "Exportar log". `POST /demo/switch-profile/` existe solo en los mocks del frontend. Si CENS o el docente piden alguno de estos, primero se agregan al alcance y después al contrato.
+
+Los **grupos de conceptos** dejaron de estar fuera: el backend ya implementó RF43 y la extracción se ejecuta eligiendo un grupo (`grupo_id`). RF43 no aparece en la Planificación de Alcance Global (RF1–RF42) ni en la Asignación: hay que documentarlo y confirmar que está aprobado.
+
+## Diferencias con lo implementado en el backend
+
+El contrato 0.2 ya adopta lo que José Luis construyó. Estas son las diferencias que **quedan por resolver** (revisado en `origin/dev` el 10/10/2026):
+
+| # | Backend hoy | Lo que piden la documentación o el frontend | Propuesta |
+|---|---|---|---|
+| A | `GET/POST/PATCH` de conceptos y grupos permitidos a **Analista y Administrador**. | Parametrización es solo del Administrador (Acta 3, RF27, maqueta con la etiqueta ADMIN). El Analista sí necesita **leer** los grupos para elegir uno al extraer. | Lectura para ambos; crear, editar y eliminar solo Administrador. |
+| B | `NV_CONCEPTO_REPORTABLE` no tiene fecha de creación. | RF35 (Asignación, ficha de Angel) pide mostrar código, descripción, estado y **fecha de creación**. | Agregar la columna `FECHA_CREACION`, o quitar el requisito. Responsable: Angel y Clara (tabla). |
+| C | La extracción se modela como un **corte** (`NV_CORTE`, con `GRUPO_ID` y `ESTADO`, por ejemplo `BORRADOR`). | El contrato propone `/extracciones/` con estados `en_proceso`, `completada` y `fallida`. | Acordar el nombre del recurso y los estados. Puede que el estado del *corte* (negocio) y el de la *ejecución* (técnico) sean dos cosas distintas. |
+| D | `repositorio.py` lee `NEXOVOLT.V_DEUDOR_VIGENTE` y `V_CREDITO_REPORTABLE`. Esas vistas **no traen nombre ni identificación del deudor**, solo `CLIENTE_ID`. | La pantalla de resultados muestra el nombre del deudor; el archivo de TransUnion exige identificación. | Definir de dónde sale el nombre y la identificación (otra tabla o vista). |
+| E | Los conflictos responden `409` con `{ detail }`. | El primer borrador usaba `400` con error por campo. | El contrato adopta `409`. |
+| F | Conceptos y grupos usan `activo` (booleano). Usuarios usarán `is_active` (convención de Django). | — | Se mantiene la diferencia; el frontend la absorbe en sus mappers. |
+| G | Sin búsqueda ni paginación en conceptos y grupos. | El borrador proponía `?buscar=`. | Se quita; el frontend filtra en el cliente. |
+| H | `usuarios/models.py` vacío y `docs/API.md` dice "Autenticación: pendiente de RF25". Roles como códigos `ANALISTA_CARTERA` y `ADMINISTRADOR`. | El frontend asumía los textos "Analista de Cartera" y "Administrador". | El contrato usa los códigos del backend; el frontend los traduce. Dilan lo confirma al construir la autenticación. |
+| I | El código del concepto es un entero de 1 a 9999. | El primer borrador lo trataba como texto. | Entero, como el backend. |
 
 ## Decisiones por cerrar
 
@@ -45,7 +65,7 @@ Grupos de conceptos, "Cambiar datos", "Cambiar de perfil", "Exportar resumen" y 
 | 1 | ~~Base de datos propia de la app~~ **Resuelta: Oracle** (la del wallet). El contrato no depende de esto; sí la implementación: `settings.py` ya apunta a Oracle, y además hace falta la conexión de solo lectura a la base comercial de CENS (VPN). | José Luis | Oracle; definir el modelo de usuario propio antes del primer `migrate` |
 | 2 | ~~Contraseña temporal~~ **Resuelta: se envía por correo.** `POST /users/` ya no devuelve la contraseña (`temporary_password` en `null` o ausente). En desarrollo el correo sale por consola. | José Luis | Envío por correo; el frontend ya muestra "La contraseña temporal se envió a su correo" |
 | 3 | Extracción **asíncrona** (`202` + consulta periódica del estado) en vez de bloquear la petición. La maqueta muestra 5 pasos con progreso. | José Luis | Asíncrona, con `409` si ya hay una en curso |
-| 4 | La maqueta muestra **un concepto por fila**, pero una obligación consolidada puede sumar varios. Además, los códigos reales son **numéricos** (`30`, `94`), no `ENE-001`. | Clara · Angel | `conceptos: [codigo]` (arreglo de texto, sin formato fijo) |
+| 4 | Una obligación consolidada puede sumar varios conceptos. Los códigos reales son **numéricos** (`30`, `94`), enteros de 1 a 9999. | Clara · Angel | `conceptos: [codigo]` (arreglo de enteros) |
 | 5 | ~~Tabla 9 completa~~ **Resuelta** con el Manual v34: códigos `00` a `14`. Las descripciones de la maqueta ("Mora 30", "Mora 90") coinciden. | — | `edad_mora: { codigo (enum 00–14), descripcion }` |
 | 6 | ¿Un Analista ve todas las extracciones o solo las suyas? | José Luis · Santiago | Todas (la maqueta muestra el log general) |
 | 7 | Campo `code` estable en los errores generales para distinguir `403` por permisos, por CSRF y por contraseña temporal. | Dilan | Sí; el frontend lo usaría para mostrar el mensaje correcto |
@@ -56,7 +76,12 @@ Grupos de conceptos, "Cambiar datos", "Cambiar de perfil", "Exportar resumen" y 
 | 12 | **Obligación por proceso, no por deudor.** El Acta 2 y el manual lo indican; RF4 y RF5 dicen "por deudor". El contrato ya devuelve una fila por obligación (proceso). | Clara · José Luis | Una fila por financiación; el número se deriva del proceso y es permanente (máx. 20 caracteres) |
 | 13 | **Campos pendientes de la lista de CENS** (22 campos): identificación, fecha límite, valor inicial, de mora y de cuota, cuotas en mora, categoría de servicio `04`. Están en `Obligacion` marcados *(pendiente)*. Correo y celular quedan fuera de la API. | Clara · Santiago | Confirmar cuáles se muestran en la Iteración 1 y si CENS es entidad atípica o no atípica |
 | 14 | **¿Quién ejecuta la extracción?** El Acta 3 dice que el Analista; el contrato deja entrar también al Administrador. | José Luis · Santiago | Pendiente de CENS; si solo el Analista, el Administrador recibe `403` |
-| 15 | ~~Qué define "energía"~~ **Resuelta en el diseño:** la define la tabla de parámetros de RF35, en la base Oracle de la aplicación, que mantiene el Administrador (Angel crea la tabla y José Luis expone la API). El catálogo de CENS sugiere sembrarla con `30` (cuota) y `94` (interés). Queda validar esa lista inicial con Sergio. No cambia el contrato. | Angel · José Luis · Sergio | `codigo` libre; sembrar la tabla con `30` y `94` y validar |
+| 15 | ~~Qué define "energía"~~ **Resuelta en el diseño:** la define la tabla `NV_CONCEPTO_REPORTABLE` (columna `REPORTABLE`) en la base Oracle de la aplicación, agrupada en **grupos de conceptos** (RF43) que se eligen al extraer. El catálogo de CENS sugiere sembrarla con `30` (cuota) y `94` (interés). Queda validar esa lista inicial con Sergio. | Angel · José Luis · Sergio | Sembrar la tabla con `30` y `94` y validar |
+| 16 | **RF43 (grupos de conceptos)** está implementado pero no figura en la Planificación ni en la Asignación. | Santiago · José Luis | Documentarlo como requerimiento y confirmar con CENS (¿está en el acta de los mockups, que falta?) |
+| 17 | Permisos de escritura de conceptos y grupos (diferencia A). | José Luis | Solo Administrador para escribir |
+| 18 | Fecha de creación del concepto (diferencia B). | Angel · Clara | Agregar la columna |
+| 19 | Recurso y estados de la extracción: `corte` o `extraccion` (diferencia C). | José Luis | Acordar nombre y estados |
+| 20 | Origen del nombre y de la identificación del deudor (diferencia D). | José Luis · Clara | Otra vista o tabla del esquema `NEXOVOLT` |
 
 Los puntos de sesión, `LANGUAGE_CODE`, Argon2 y modelo de usuario propio ya están detallados en [`../PENDIENTES_BACKEND.md`](../PENDIENTES_BACKEND.md) y siguen vigentes.
 

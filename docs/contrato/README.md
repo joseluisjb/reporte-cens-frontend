@@ -8,10 +8,10 @@ Acuerdo entre frontend y backend sobre **cómo se hablan**: rutas, qué se enví
 
 ```bash
 # Documentación navegable en el navegador
-npx @redocly/cli preview-docs docs/contrato/openapi.yaml
+npx @redocly/cli@1 preview-docs docs/contrato/openapi.yaml
 
 # Validar que el archivo esté bien escrito
-npx @redocly/cli lint docs/contrato/openapi.yaml --config docs/contrato/redocly.yaml
+npx @redocly/cli@1 lint docs/contrato/openapi.yaml --config docs/contrato/redocly.yaml
 ```
 
 También se puede pegar `openapi.yaml` en <https://editor.swagger.io>. No contiene datos reales.
@@ -57,6 +57,13 @@ El contrato 0.2 ya adopta lo que José Luis construyó. Estas son las diferencia
 | G | Sin búsqueda ni paginación en conceptos y grupos. | El borrador proponía `?buscar=`. | Se quita; el frontend filtra en el cliente. |
 | H | `usuarios/models.py` vacío y `docs/API.md` dice "Autenticación: pendiente de RF25". Roles como códigos `ANALISTA_CARTERA` y `ADMINISTRADOR`. | El frontend asumía los textos "Analista de Cartera" y "Administrador". | El contrato usa los códigos del backend; el frontend los traduce. Dilan lo confirma al construir la autenticación. |
 | I | El código del concepto es un entero de 1 a 9999. | El primer borrador lo trataba como texto. | Entero, como el backend. |
+| J | No hay autenticación ni campo `rol` en `request.user` (`usuarios/models.py` vacío, sin `AUTH_USER_MODEL`); `EsAnalistaOAdministrador` lee `getattr(request.user, "rol", None)`, así que hoy **todo** endpoint de conceptos y grupos respondería 403 (deducido del código; confirmar con un login real). | Que los permisos funcionen con el usuario real. | Dilan: modelo de usuario con `rol` antes del primer `migrate`. |
+| K | Con `SessionAuthentication` como primera clase, un anónimo recibe **403** "Authentication credentials were not provided." y no 401. | El contrato usa 401 para "sin sesión o sesión vencida" (el frontend cierra la sesión con 401). | `authenticate_header` propio o un `EXCEPTION_HANDLER` que devuelva 401 con `code: not_authenticated`. |
+| L | `LANGUAGE_CODE = "en-us"`: las validaciones de DRF salen en inglés (por ejemplo "This field is required."). | RF31: mensajes en español. | `LANGUAGE_CODE = "es-co"`; los mocks del frontend ya responden en español. |
+| M | `TIME_ZONE = "UTC"`; `creado` de los grupos sale de `SYSDATE` de Oracle. | Fechas en hora de Colombia. | `TIME_ZONE = "America/Bogota"` y generar la fecha en Django (`timezone.localdate()`) en vez de `SYSDATE`, que sigue el reloj del servidor Oracle. |
+| N | Sin `DEFAULT_PAGINATION_CLASS`. | Listados paginados `{count, next, previous, results}` con `?page` y `?page_size`. | `PageNumberPagination` con `page_size_query_param = "page_size"` y `max_page_size = 100`. |
+| O | Códigos repetidos en `conceptos` de un grupo (`[30, 30]`) no se validan; el detalle tiene llave compuesta, posible 500. | Error claro. | Rechazar repetidos con 400 (`uniqueItems`). |
+| P | `PATCH /conceptos/abc/` (código no numérico) llega a Oracle; posible 500. | 404. | Validar el código en la ruta (`<int:codigo>` o un `lookup_value_regex`). |
 
 ## Decisiones por cerrar
 
@@ -76,7 +83,7 @@ El contrato 0.2 ya adopta lo que José Luis construyó. Estas son las diferencia
 | 12 | **Obligación por proceso, no por deudor.** El Acta 2 y el manual lo indican; RF4 y RF5 dicen "por deudor". El contrato ya devuelve una fila por obligación (proceso). | Clara · José Luis | Una fila por financiación; el número se deriva del proceso y es permanente (máx. 20 caracteres) |
 | 13 | **Campos pendientes de la lista de CENS** (22 campos): identificación, fecha límite, valor inicial, de mora y de cuota, cuotas en mora, categoría de servicio `04`. Están en `Obligacion` marcados *(pendiente)*. Correo y celular quedan fuera de la API. | Clara · Santiago | Confirmar cuáles se muestran en la Iteración 1 y si CENS es entidad atípica o no atípica |
 | 14 | **¿Quién ejecuta la extracción?** El Acta 3 dice que el Analista; el contrato deja entrar también al Administrador. | José Luis · Santiago | Pendiente de CENS; si solo el Analista, el Administrador recibe `403` |
-| 15 | ~~Qué define "energía"~~ **Resuelta en el diseño:** la define la tabla `NV_CONCEPTO_REPORTABLE` (columna `REPORTABLE`) en la base Oracle de la aplicación, agrupada en **grupos de conceptos** (RF43) que se eligen al extraer. El catálogo de CENS sugiere sembrarla con `30` (cuota) y `94` (interés). Queda validar esa lista inicial con Sergio. | Angel · José Luis · Sergio | Sembrar la tabla con `30` y `94` y validar |
+| 15 | ~~Qué define "energía"~~ **Resuelta en el diseño:** la define la tabla `NV_CONCEPTO_REPORTABLE` (columna `REPORTABLE`) en la base Oracle de la aplicación, agrupada en **grupos de conceptos** (RF43) que se eligen al extraer. El catálogo de CENS sugiere sembrarla con `30` (cuota) y `94` (interés). Queda validar esa lista inicial con el contacto de cartera de CENS. | Angel · José Luis · contacto de cartera de CENS | Sembrar la tabla con `30` y `94` y validar |
 | 16 | **RF43 (grupos de conceptos)** está implementado pero no figura en la Planificación ni en la Asignación. | Santiago · José Luis | Documentarlo como requerimiento y confirmar con CENS (¿está en el acta de los mockups, que falta?) |
 | 17 | Permisos de escritura de conceptos y grupos (diferencia A). | José Luis | Solo Administrador para escribir |
 | 18 | Fecha de creación del concepto (diferencia B). | Angel · Clara | Agregar la columna |

@@ -1,5 +1,5 @@
 // Gestión de usuarios (RF28). Solo Administrador: un Analista recibe 403 del backend.
-// Contrato propuesto por confirmar con José Luis (ver README).
+// Contrato: docs/contrato/openapi.yaml (0.2). El backend aún no implementa usuarios.
 import { api, ENDPOINTS } from '../../lib/api'
 import { mapUser } from './userMapper'
 

@@ -2,7 +2,7 @@
 
 Lo que el frontend **ya espera** del backend y lo que hay que confirmar. El frontend está construido y probado contra una API simulada; cuando los endpoints reales existan, se apaga `VITE_USE_MOCKS` y se corrigen solo `src/lib/api/endpoints.js` y los mappers.
 
-Dónde está todo: contrato completo en el `README.md` (sección "Contrato propuesto"), la API simulada en `src/mocks/handlers.js`.
+Dónde está todo: contrato en `docs/contrato/openapi.yaml` (explicación en `docs/contrato/README.md`), la API simulada en `src/mocks/handlers.js`.
 
 Cada punto trae una **suposición** del frontend. Si es correcta, basta responder "ok"; si no, dígannos cuál es y se ajusta aquí.
 

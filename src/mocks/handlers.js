@@ -1,4 +1,4 @@
-// Simula el backend Django según el contrato PROPUESTO (lib/api/endpoints.js).
+// Simula el backend Django según el contrato `docs/contrato/openapi.yaml` (0.2); rutas en lib/api/endpoints.js.
 // Responde como lo haría DRF: errores en { detail } o { campo: ['mensaje'] }.
 import { delay, http, HttpResponse } from 'msw'
 import { reglasIncumplidas } from '../features/auth/authConfig'

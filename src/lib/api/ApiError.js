@@ -18,6 +18,8 @@ const MENSAJES_POR_ESTADO = {
 }
 const MENSAJE_RED = 'No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.'
 const MENSAJE_SERVIDOR = 'Ocurrió un error en el servidor. Intenta de nuevo más tarde.'
+// El servidor respondió 200 pero no es la API (ej. un sitio estático que devuelve index.html).
+export const MENSAJE_RESPUESTA_INVALIDA = 'No se pudo conectar con el servidor de NexoVolt. Intenta de nuevo más tarde.'
 
 // Mensajes por defecto de Django REST Framework (vienen en inglés) → español.
 const DRF_EN_ESPANOL = {

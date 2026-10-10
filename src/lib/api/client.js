@@ -6,7 +6,7 @@
 import axios from 'axios'
 import { API_URL } from '../config'
 import { ENDPOINTS } from './endpoints'
-import { toApiError } from './ApiError'
+import { ApiError, MENSAJE_RESPUESTA_INVALIDA, toApiError } from './ApiError'
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -46,8 +46,21 @@ api.interceptors.request.use(async (config) => {
   return config
 })
 
+// Una respuesta con cuerpo que no es JSON no viene de la API (ej. un sitio estático sin backend
+// responde index.html con 200 a cualquier /api/...). Se rechaza con status 0, igual que "sin
+// conexión": no es un 401/403, así que no dispara el manejo global, y los servicios no intentan
+// leer campos de un texto. Los cuerpos vacíos (204) pasan.
+const tieneCuerpo = (data) => data != null && data !== ''
+const esJson = (respuesta) => String(respuesta.headers?.['content-type'] ?? '').toLowerCase().includes('application/json')
+const esperaJson = (config) => !config?.responseType || config.responseType === 'json'
+
 api.interceptors.response.use(
-  (respuesta) => respuesta,
+  (respuesta) => {
+    if (esperaJson(respuesta.config) && tieneCuerpo(respuesta.data) && !esJson(respuesta)) {
+      return Promise.reject(new ApiError(MENSAJE_RESPUESTA_INVALIDA, { status: 0 }))
+    }
+    return respuesta
+  },
   (error) => {
     const apiError = toApiError(error)
     const config = error?.config ?? {}

@@ -58,6 +58,36 @@ describe('mensajes de error', () => {
   })
 })
 
+describe('respuestas que no son de la API', () => {
+  const HTML = '<!doctype html><html></html>'
+  const html = () => new HttpResponse(HTML, { status: 200, headers: { 'Content-Type': 'text/html' } })
+
+  test('una respuesta HTML (sitio sin backend) da un error claro y no un TypeError', async () => {
+    const onUnauthorized = vi.fn()
+    const onForbidden = vi.fn()
+    setAuthHandlers({ onUnauthorized, onForbidden })
+    server.use(
+      http.get(URL, () => html()),
+      http.post(URL, () => html()),
+    )
+    const mensaje = 'No se pudo conectar con el servidor de NexoVolt. Intenta de nuevo más tarde.'
+    for (const e of [await api.get(RUTA).catch((x) => x), await api.post(RUTA, {}).catch((x) => x)]) {
+      expect(e).toBeInstanceOf(ApiError)
+      expect(e).toMatchObject({ status: 0, message: mensaje })
+    }
+    expect(onUnauthorized).not.toHaveBeenCalled()
+    expect(onForbidden).not.toHaveBeenCalled()
+  })
+
+  test('una respuesta 204 sin cuerpo sigue funcionando', async () => {
+    server.use(
+      http.get('/api/auth/csrf/', () => new HttpResponse(null, { status: 204 })),
+      http.post(URL, () => new HttpResponse(null, { status: 204 })),
+    )
+    await expect(api.post(RUTA, {})).resolves.toMatchObject({ status: 204 })
+  })
+})
+
 describe('token CSRF', () => {
   test('antes de la primera petición que modifica datos pide el token, una sola vez', async () => {
     let pedidos = 0

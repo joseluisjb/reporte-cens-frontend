@@ -1,10 +1,12 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { listUsers } from '../features/users/usersService'
 import { login as loginRequest } from '../features/auth/authService'
 import { MSG_CREDENCIALES } from '../features/auth/authConfig'
 import { MSG_PASSWORD_VACIA, validarLogin } from '../features/auth/loginValidation'
 import { guardarSesion } from '../mocks/db'
+import { server } from '../mocks/server'
 import { ADMIN, renderApp } from './renderApp'
 
 const correo = () => screen.getByLabelText('Correo electrónico')
@@ -75,6 +77,26 @@ describe('pantalla de login', () => {
     await screen.findByRole('button', { name: 'Iniciar sesión' })
     await iniciar('avargas@cens.com.co', 'Cartera123')
     expect(await screen.findByRole('alert')).toHaveTextContent(/desactivado/i)
+  })
+
+  test('si el servidor responde HTML, el login muestra un mensaje claro', async () => {
+    const html = () => new HttpResponse('<!doctype html><html></html>', { status: 200, headers: { 'Content-Type': 'text/html' } })
+    server.use(
+      http.get('/api/auth/csrf/', html),
+      http.get('/api/auth/me/', html),
+      http.post('/api/auth/login/', html),
+    )
+    renderApp('/login', null)
+    await screen.findByRole('button', { name: 'Iniciar sesión' })
+    await iniciar('rmartinez@cens.com.co', 'Admin12345')
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo conectar con el servidor de NexoVolt')
+    expect(screen.queryByText(/cannot read properties/i)).not.toBeInTheDocument()
+  })
+
+  test('el campo de contraseña no tiene placeholder (parecería texto ya escrito)', async () => {
+    renderApp('/login', null)
+    await screen.findByRole('button', { name: 'Iniciar sesión' })
+    expect(clave()).not.toHaveAttribute('placeholder')
   })
 
   test('el ojo muestra y oculta la contraseña', async () => {

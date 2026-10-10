@@ -89,7 +89,7 @@ export default function CatalogPage() {
           <Input label="Correo electrónico" type="email" placeholder="nombre@cens.com.co" />
           <Input label="Con error" defaultValue="correo-invalido" error="Ingresa un correo válido, por ejemplo nombre@cens.com.co." />
           <Input label="Deshabilitado" defaultValue="No editable" disabled />
-          <PasswordField label="Contraseña" placeholder="••••••••••••" />
+          <PasswordField label="Contraseña" />
           <Select label="Rol" defaultValue="Analista de Cartera">
             <option>Analista de Cartera</option>
             <option>Administrador</option>

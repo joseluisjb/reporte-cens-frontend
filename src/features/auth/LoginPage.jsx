@@ -97,7 +97,6 @@ export default function LoginPage() {
             className="mt-5"
             label="Contraseña"
             required
-            placeholder="••••••••••••"
             autoComplete="current-password"
             value={valores.password}
             onChange={cambiar('password')}

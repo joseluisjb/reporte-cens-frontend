@@ -261,12 +261,12 @@ paths:
       tags: [Usuarios]
       summary: Crear usuario (RF28)
       description: |
-        Crea el usuario con `must_change_password = true` y genera una **contraseña temporal**.
-        El correo es único. Queda en el log de auditoría. *Implementado en el frontend.*
-
-        **Decisión pendiente:** si la temporal se muestra al Administrador (`temporary_password` en
-        la respuesta, que el frontend muestra una sola vez) o se envía por correo (la respuesta
-        trae `temporary_password: null`). El frontend soporta ambas.
+        Crea el usuario con `must_change_password = true` y genera una **contraseña temporal que se
+        envía por correo** al usuario (decisión del equipo). La respuesta **no** incluye la
+        contraseña: `temporary_password` viene en `null` o ausente, y el frontend muestra "La
+        contraseña temporal se envió a su correo". En desarrollo el correo sale por consola
+        (`EmailBackend` de consola). El correo es único. Queda en el log de auditoría.
+        *Implementado en el frontend.*
       operationId: usersCreate
       x-roles: [Administrador]
       requestBody:
@@ -822,7 +822,7 @@ components:
         temporary_password:
           type: string
           nullable: true
-          description: Contraseña temporal, mostrada una sola vez. `null` o ausente si se envía por correo.
+          description: La contraseña temporal se envía por correo, así que el backend **no la devuelve**; llega `null` o ausente. El campo se conserva porque el frontend ya sabe mostrarla una sola vez si algún día se devolviera.
 
     # ── Conceptos de energía ──
     Concepto:

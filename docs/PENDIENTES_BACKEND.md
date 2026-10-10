@@ -15,7 +15,7 @@ Cada punto trae una **suposición** del frontend. Si es correcta, basta responde
 El backend aún no tiene migraciones. **El modelo de usuario propio debe definirse antes del primer `migrate`**; cambiarlo después es muy doloroso en Django.
 
 - `AUTH_USER_MODEL = 'usuarios.Usuario'`, con el correo como identificador de login (`USERNAME_FIELD = 'email'`).
-- Campos que el frontend consume: `nombre`, `email`, `rol` (`'Analista de Cartera'` o `'Administrador'`), `is_active`, `last_login`, `must_change_password`.
+- Campos que el frontend consume: `nombre`, `email`, `rol` (código `'ANALISTA_CARTERA'` o `'ADMINISTRADOR'`; el frontend lo traduce al texto en `userMapper`), `is_active`, `last_login`, `must_change_password`.
 - `rest_framework` y `usuarios` no están en `INSTALLED_APPS`.
 
 ### 1.2 Sesión: cookie de Django + CSRF (decisión tomada con el coordinador)
@@ -82,26 +82,74 @@ Es una de las "decisiones por cerrar" de la asignación. Propuesta:
 | Método y ruta | Cuerpo | Respuesta esperada |
 |---|---|---|
 | `GET /api/users/` | — | 200 `[user, ...]` |
-| `POST /api/users/` | `{ "nombre", "email", "rol" }` | 201 `{ "user": {...}, "temporary_password": "..." }` · 400 por campo (correo repetido, rol inválido) |
+| `POST /api/users/` | `{ "nombre", "email", "rol" }` | 201 `{ "user": {...}, "temporary_password": null }` (la contraseña se envía por correo) · 400 por campo (correo repetido, rol inválido) |
 | `PATCH /api/users/:id/` | `{ "nombre"?, "email"?, "rol"?, "is_active"? }` | 200 `user` (se usa para editar **y** para activar/desactivar) |
 
 Reglas que el servidor debe imponer (el frontend ya las aplica en pantalla, pero no son seguridad):
-- Un administrador **no puede desactivarse a sí mismo** ni **cambiarse su propio rol**.
+- Un administrador **no puede desactivarse a sí mismo** ni **cambiarse su propio rol** (400 con `{ "is_active": [...] }` o `{ "rol": [...] }`). Los mocks del frontend ya simulan estas dos reglas.
 - El correo es único (400 con el error en la clave `email`).
 - Un usuario recién creado queda con `must_change_password = true`.
 - Todo cambio de usuarios debe quedar en el log de auditoría (RF30).
 
-### 2.2 Contraseña temporal: ¿se devuelve o se envía por correo?
+### 2.2 Contraseña temporal
 
-El frontend soporta las dos opciones:
-- Si la respuesta trae `temporary_password`, se la **muestra una sola vez** al Administrador para que se la entregue al usuario.
-- Si no la trae (`null` o ausente), muestra "La contraseña temporal se envió a su correo".
+**Resuelto: se envía por correo** y la API no la devuelve (`temporary_password` en `null` o ausente); el frontend muestra "La contraseña temporal se envió a su correo". El diálogo que la muestra una sola vez queda como respaldo: solo aparece si algún día la respuesta la trajera. En los mocks el correo se simula (consola del navegador, `[Correo simulado]`).
 
-**Pregunta:** ¿cuál van a implementar? Si se envía por correo, ya no se devuelve en la API.
+### 2.3 Parámetros de conceptos de energía (RF35) y grupos de conceptos (RF43) — para Angel
 
-### 2.3 Parámetros de conceptos de energía (RF35) — para Angel
+**Estado: ya implementado en el backend** (`reporte-cens-backend`, rama `dev`, revisado el 10/10/2026). Angel construye la pantalla sobre `features/parameters/parametersService.js`, que ya funciona contra los mocks.
 
-Angel construirá la pantalla. Hay que acordar el contrato antes: lista, crear, editar y activar/desactivar un código, con los campos `código`, `descripción`, `estado` y `fecha de creación`. Propuesta de rutas: `GET/POST /api/conceptos/` y `PATCH /api/conceptos/:id/`, solo Administrador.
+| Método y ruta | Rol | Respuesta |
+|---|---|---|
+| `GET /api/conceptos/` (`?activo=true|false`) | Analista y Administrador | 200 `[{ codigo, descripcion, activo, observacion }]`, ordenado por código |
+| `POST /api/conceptos/` | Administrador | 201 concepto · 400 por campo · 409 `El código de concepto ya existe.` |
+| `PATCH /api/conceptos/{codigo}/` | Administrador | 200 concepto · 404 `Concepto no encontrado.` (no hay `DELETE` ni detalle) |
+| `GET /api/grupos-conceptos/` y `GET /api/grupos-conceptos/{id}/` | Analista y Administrador | 200 `{ id, nombre, activo, conceptos: [{ codigo, descripcion }], creado }` |
+| `POST /api/grupos-conceptos/` | Administrador | 201 grupo · 400 (concepto inexistente o inactivo) · 409 `El nombre de grupo ya existe.` |
+| `PATCH /api/grupos-conceptos/{id}/` | Administrador | 200 grupo (`conceptos` reemplaza la lista) · 404 · 409 · 400 |
+| `DELETE /api/grupos-conceptos/{id}/` | Administrador | 204 · 404 · 409 si un corte en BORRADOR usa el grupo |
+
+Diferencias abiertas que afectan a estas rutas (detalle y propuesta en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
+- **A.** Hoy el backend deja escribir también al Analista; el contrato y los mocks dan `403` a quien no sea Administrador.
+- **B.** El concepto no tiene fecha de creación (RF35 la pide): falta la columna `FECHA_CREACION` o quitar el requisito.
+- **J.** Sin modelo de usuario con `rol`, el permiso `EsAnalistaOAdministrador` respondería 403 siempre; depende de Dilan.
+- **K.** Un anónimo recibe 403 en vez de 401 (el frontend cierra la sesión con 401).
+- **L.** `LANGUAGE_CODE = "en-us"`: las validaciones de DRF salen en inglés. **Los mocks validan en español** (RF31) y el backend hoy responde en inglés; hay que poner `es-co` para que coincidan.
+
+También quedan O (códigos repetidos en un grupo, que los mocks rechazan con 400) y P (código no numérico en la ruta, que los mocks responden con 404).
+
+### 2.4 Extracción de cartera y ciclo de corte (RF1–RF5, RF7, RF44) — para José Luis y Angel
+
+**Estado: ya implementado en el backend** (`reporte-cens-backend`, rama `dev`, commit `cf07754`, revisado el 10/10/2026). Angel construye la pantalla sobre `features/extraction/extractionService.js`, que ya funciona contra los mocks. Rutas (ambos roles): `GET/POST /api/extracciones/`, `GET /api/extracciones/ultima/` (204 sin cuerpo si no hay cortes), `GET /api/extracciones/{id}/`, `GET /api/extracciones/{id}/obligaciones/` (`limite`, `desplazamiento`), `POST /api/extracciones/{id}/validar/` y `POST /api/extracciones/{id}/registrar-envio/`. Es síncrono (201 al generar, sin consulta de estado).
+
+**Lo que los mocks hacen distinto del backend de hoy.** Siguen el manual de TransUnion (Sector Real v34, sector **Servicios**, decisión de Johan del 10/10/2026) y el contrato 0.4; el detalle de cada punto está en [`contrato/DISCREPANCIAS.md`](contrato/DISCREPANCIAS.md):
+- **A2.** El corte incluye las obligaciones **saldadas** desde el corte anterior (`estado_tu` `02`, saldo, mora y cuotas en `0`, `edad_mora` `00`); el backend hoy las excluye. Pendiente de confirmar por Santiago (RF1 dice "solo vigentes").
+- **A3.** Tipo de identificación con el código de la Tabla 2 (`01` cédula, `02` NIT...), no `"CC"`. Los mocks de extracción no lo simulan porque `ObligacionCorte` no trae `tipo_id_tu`: aplica a los endpoints del historial, que aún no se simulan (el catálogo ya está en `catalogosTU.js`).
+- **A4.** Estado de la obligación con la Tabla 4b de Servicios (`01` Vigente, `02` Saldada, `03` Dudoso recaudo...; no existen `05` ni `09`); el backend no declara la tabla ni valida los códigos. `edad_mora` sigue la Tabla 9 (`00` a `14`) y se calcula a partir de `dias_mora`.
+- **A9.** La fecha de corte debe ser **posterior** a la del último corte `ENVIADO`; si no, `409` "La fecha de corte debe ser posterior a la del último corte enviado." El backend solo rechaza la fecha futura.
+
+**Para José Luis: textos y rangos que el contrato 0.4 ya fija** (detalle en [`contrato/DISCREPANCIAS.md`](contrato/DISCREPANCIAS.md), filas M1 a M3):
+- **Mensajes del serializador.** Hay que personalizarlos (`error_messages`): `fecha_corte` ausente → `Selecciona una fecha de corte.`; formato inválido → `La fecha de corte no es válida.`; `grupo_id` → `El grupo de conceptos no es válido.`; `fecha_envio` inválida → `La fecha de envío no es válida.`. Si no, al corregir `LANGUAGE_CODE` saldrán los textos genéricos de DRF.
+- **Rango de `limite` y `desplazamiento`.** Validarlo con su propio mensaje: `limite` menor que 1 o `desplazamiento` negativo → `400` `El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.`; si no son enteros se mantiene `Los parámetros limite y desplazamiento deben ser enteros.`
+- **Máximo de `limite`.** Un `limite` mayor que 100 se recorta a 100.
+- **`409` de validar.** Con errores correctivos responde `{ detail, errores: [{ regla, mensaje }] }`; si el corte no está en BORRADOR, solo `{ detail }` (ambos validan contra `ErrorCorrectivo`).
+
+**Diferencias del contrato (filas Q a AA de [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)).**
+
+Los mocks ya las implementan como se espera:
+- **Q.** `numero_identificacion` sale completa (dato personal; los mocks la entregan completa, como el backend); el frontend la enmascara en pantalla. Se propone enmascararla o restringirla en el backend.
+- **R.** `edad_mora`, `tipo_id_tu` y `estado_tu` son textos sin validar; los mocks de extracción devuelven siempre códigos válidos de las tablas del manual (`edad_mora` coherente con `dias_mora`).
+- **S.** Un `id` no numérico produce 500 (los mocks responden `404` "Corte no encontrado."); `limite` y `desplazamiento` sin validar (los mocks dan `400` si no son enteros, `limite` mínimo 1, `desplazamiento` mínimo 0 y `limite` se recorta a 100).
+- **U.** `validar` sin filtrar por corte: los mocks validan el corte pedido.
+- **V.** Fechas en formatos distintos: los mocks devuelven `fecha_corte` como `AAAA-MM-DD` y `fecha_ejecucion` con `-05:00`.
+- **Y.** `ejecutada_por` siempre `null` (no hay usuario autenticado); los mocks devuelven el nombre de quien generó el corte.
+- **AA (solo una parte).** `registrar-envio` valida la fecha antes de comprobar que el corte existe; los mocks comprueban primero el `404`.
+
+Siguen abiertas, sin cambio en los mocks:
+- **W.** El `409` sugiere "eliminar" un BORRADOR, pero no hay endpoint para eliminarlo ni anularlo; los mocks tampoco lo tienen y repiten el mismo mensaje.
+- **X.** `docs/API.md` dice que `registrar-envio` devuelve `errores` y el código no: es solo de documentación.
+- **Z.** "Último estado" de un deudor sin mirar el estado del corte: es del historial, que aún no se simula.
+- **AA (el resto).** Un corte `ANULADO` de la misma fecha bloquea la generación con `409` (los mocks hacen lo mismo que el backend) y no se valida `fecha_envio >= fecha_corte`.
 
 ---
 
@@ -114,8 +162,8 @@ Angel construirá la pantalla. Hay que acordar el contrato antes: lista, crear, 
 | 3 | ¿`GET /auth/me/` sirve de "ping" para renovar la sesión? | Sí |
 | 4 | Campo del login | `email` |
 | 5 | Forma del usuario | `{ id, nombre, email, rol, is_active, last_login, must_change_password }` |
-| 6 | Valores de `rol` | `"Analista de Cartera"` y `"Administrador"` |
-| 7 | Contraseña temporal | Se devuelve en `temporary_password` (si no, la envían por correo) |
+| 6 | Valores de `rol` | Códigos `"ANALISTA_CARTERA"` y `"ADMINISTRADOR"` (resuelto en el contrato 0.2) |
+| 7 | Contraseña temporal | Resuelto: se envía por correo; `temporary_password` llega en `null` |
 | 8 | Reglas de contraseña | 8 caracteres, mayúscula y número |
 | 9 | Pantalla "Restablecer" con `?token=` | Sí, hay que confirmarla con Santiago |
 | 10 | ¿Quién arregla `LANGUAGE_CODE` a español y el modelo de usuario propio? | Dilan, antes del primer `migrate` |

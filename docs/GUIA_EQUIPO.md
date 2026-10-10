@@ -97,24 +97,53 @@ Con eso aparece en el menú y la ruta queda protegida (sesión + rol). `adminOnl
 
 Hazlo siempre en este orden, como en `features/users/`:
 
-1. **Ruta** en `src/lib/api/endpoints.js`:
+1. **Ruta** en `src/lib/api/endpoints.js` (las de parámetros ya están: `conceptos`, `concepto(codigo)`, `gruposConceptos`, `grupoConceptos(id)`):
    ```js
    conceptos: '/conceptos/',
-   concepto: (id) => `/conceptos/${id}/`,
+   concepto: (codigo) => `/conceptos/${codigo}/`,
    ```
 2. **Servicio** `features/parameters/parametersService.js`: funciones simples que usan `api` y devuelven datos ya listos para la pantalla.
    ```js
    import { api, ENDPOINTS } from '../../lib/api'
-   export async function listConcepts() {
-     const { data } = await api.get(ENDPOINTS.conceptos)
-     return data.map(mapConcept)          // traduce los nombres del backend a los de la pantalla
+   export async function listConcepts({ activo } = {}) {
+     const params = typeof activo === 'boolean' ? { activo: String(activo) } : undefined
+     const { data } = await api.get(ENDPOINTS.conceptos, { params })
+     return data.map(mapConcepto)         // traduce los nombres del backend a los de la pantalla
    }
    ```
 3. **Mapper** (`features/parameters/conceptMapper.js`): si el backend cambia un nombre de campo, se corrige solo ahí (ver `features/users/userMapper.js`).
-4. **Mock**: agrega datos en `src/mocks/db.js` y el endpoint en `src/mocks/handlers.js` (copia el estilo de `/users/`). Responde como DRF: errores en `{ detail }` o `{ campo: ['mensaje'] }`.
-5. **Prueba** del servicio (ver `src/test/services.test.js`).
+4. **Mock**: agrega datos en `src/mocks/db.js` y el endpoint en un archivo de `src/mocks/rutas/` (copia el estilo de `usuarios.js`; `handlers.js` solo los junta). Responde como DRF: errores en `{ detail }` o `{ campo: ['mensaje'] }`.
+5. **Prueba** del servicio (ver `src/test/services.test.js` y `src/test/parametros.test.js`).
 
-**Errores:** todo error llega como `ApiError` con `message` en español y `fieldErrors` ({ campo: 'mensaje' }). En una pantalla:
+> **Parámetros (Angel):** el servicio, el mapper, los mocks y las pruebas de conceptos y grupos **ya existen**; solo falta la pantalla (`features/parameters/ParametersPage.jsx`). Usa únicamente estas funciones de `parametersService.js` (lectura: ambos roles; escritura: solo Administrador, el Analista recibe 403):
+> - Conceptos: `listConcepts({ activo })`, `createConcept({ codigo, descripcion, activo, observacion })`, `updateConcept(codigo, cambios)`, `setConceptActive(codigo, activo)`.
+> - Grupos: `listConceptGroups()`, `getConceptGroup(id)`, `createConceptGroup({ nombre, conceptos })`, `updateConceptGroup(id, cambios)`, `setConceptGroupActive(id, activo)`, `deleteConceptGroup(id)`.
+>
+> Detalles: el concepto aún no trae fecha de creación (`fechaCreacion` llega `null`; diferencia B del contrato); el grupo trae `creado` como texto `YYYY-MM-DD`, se muestra con `formatearFechaISO`; `conceptos` de un grupo es la lista de códigos y **reemplaza** la anterior al editar.
+
+> **Extracción (Angel, RF1–RF5, RF7, RF44):** el servicio, el mapper, el catálogo de TransUnion, los mocks y las pruebas **ya existen**; solo falta la pantalla (`features/extraction/ExtractionPage.jsx`) y la tarjeta "Última extracción" del inicio. Todo en `features/extraction/extractionService.js` (ambos roles pueden usar todas las funciones):
+> - `listCuts()` (registro de extracciones, del más reciente al más antiguo), `getLatestCut()` (el último corte, o `null` si aún no hay ninguno), `getCut(id)`.
+> - `generateCut({ fechaCorte, grupoId = null })`: crea el corte en BORRADOR. `fechaCorte` es `'YYYY-MM-DD'`; `grupoId` es opcional (`null` = todos los conceptos reportables).
+> - `validateCut(id)` → `{ corte, advertencias: [{ regla, mensaje }] }`; `registerSubmission(id, { fechaEnvio })` (la fecha es opcional, sin ella se usa hoy).
+> - `listCutObligations(id, { limite = 20, desplazamiento = 0 })` → `{ items, total }` (`limite` de 1 a 100).
+>
+> Detalles: **es síncrono**, `generateCut` responde cuando el corte ya está generado; no hay que consultar el estado cada cierto tiempo (nada de polling). El ciclo es BORRADOR → (validar) → VALIDADO → (registrar envío) → ENVIADO, y solo puede haber un BORRADOR a la vez. El corte trae `esBorrador`, `esValidado` y `esEnviado` para habilitar o no los botones. `fechaCorte` es texto `YYYY-MM-DD` (se muestra con `formatearFechaISO`); `fechaEjecucion` es `Date` (`formatearFechaHora`); el dinero se muestra con `formatearCOP`.
+>
+> **Validar con errores:** si el corte tiene reglas correctivas sin resolver, `validateCut` lanza un `ApiError` con `status` 409 y el corte sigue en BORRADOR. La lista de reglas **no** está en `fieldErrors`, está en `err.datos?.errores` (`[{ regla, mensaje }]`):
+>
+> ```js
+> try { await validateCut(id) }
+> catch (err) {
+>   if (err.status === 409 && err.datos?.errores) mostrarLista(err.datos.errores) // reglas que bloquean
+>   else toast.error(err.message)                                                  // p. ej. "El corte no está en estado BORRADOR."
+> }
+> ```
+>
+> **Identificación enmascarada:** el mapper entrega `identificacion` ya enmascarada (`******0001`); el número completo es un dato personal y nunca llega a la pantalla (no lo reconstruyas ni lo registres). Los códigos vienen con su texto: `estado.descripcion` (Tabla 4b) y `edadMora.descripcion` (Tabla 9). Los catálogos (`TABLA_9`, `ESTADOS_OBLIGACION`, `TIPOS_IDENTIFICACION`) y sus funciones están en `features/extraction/catalogosTU.js`. Para marcar campos del formulario usa `mapCorteFieldErrors(err.fieldErrors)` (`fechaCorte`, `grupoId`, `fechaEnvio`).
+>
+> Los datos de los mocks siguen el manual de TransUnion (sector Servicios): el corte incluye obligaciones **Saldadas** (`estado.codigo === '02'`, con saldo y mora en 0), que el backend de hoy todavía no entrega; ver `docs/PENDIENTES_BACKEND.md`, sección 2.4.
+
+**Errores:** todo error llega como `ApiError` con `message` en español y `fieldErrors` ({ campo: 'mensaje' }), `code` (identificador estable si el backend lo manda, o `null`) y `datos` (el cuerpo de la respuesta, o `null`). En una pantalla:
 
 ```js
 try { await createConcept(datos) }
@@ -157,7 +186,7 @@ Se importan juntos: `import { Button, Input, Modal } from '../../components/ui'`
 
 Tokens de marca en `src/index.css` (bloque `@theme`): `bg-bosque`, `text-citrico`, `text-muted`, `font-hd`, `rounded-card`... Úsalos en vez de colores sueltos. Contraste: `bg-bosque-d` para superficies con texto blanco (`bosque` solo para texto grande, iconos y decoración), `bosque-dd` para su hover y `border-gris-d` para el borde de los controles de formulario. Para resaltar una fila recién creada o editada: `className="fila-resaltada"` unos segundos (ver `UsersPage.jsx`).
 
-Ayudas de formato en `lib/format.js`: `formatearFechaHora`, `formatearCOP` ($1.276.016), `formatearFechaISO` (30/09/2026), `formatearFechaISOLarga` (30 de septiembre de 2026), `plural`.
+Ayudas de formato en `lib/format.js`: `formatearFechaHora`, `formatearCOP` ($1.276.016), `formatearFechaISO` (30/09/2026), `formatearFechaISOLarga` (30 de septiembre de 2026), `plural`, `enmascararIdentificacion` (`******0001`).
 
 **La referencia visual es la maqueta** (`NexoVolt_Mockups_Iteracion1_v2.html`): mismos textos, estados, validaciones e iconos.
 
@@ -188,6 +217,8 @@ Dos trampas que ya nos pasaron:
 2. Con `renderApp(ruta, usuarioFijo)` el servidor simulado **no tiene sesión**: cualquier llamada a la API recibe 401. Para pantallas con datos usa `renderConSesion`.
 
 **Accesibilidad:** agrega tu pantalla a `src/test/accesibilidad.test.jsx` (3 líneas con `expectAccesible()`) y lee `docs/ACCESIBILIDAD.md`. Para texto verde sobre fondo claro usa `text-bosque-d`, no `text-bosque` (no alcanza el contraste mínimo). Para fondos verdes con texto blanco usa `bg-bosque-d` y para bordes de campos `border-gris-d`; `src/test/contraste.test.js` protege estos pares.
+
+**Conformidad con el contrato:** `src/test/contrato.test.js` llama a los mocks y valida cada respuesta contra los esquemas de `docs/contrato/openapi.yaml`. Cuando agregues o cambies un mock, agrega su caso ahí (método, ruta tal como aparece en el contrato, estado esperado); la prueba falla si el mock no coincide con `openapi.yaml`.
 
 Antes de abrir el PR:
 

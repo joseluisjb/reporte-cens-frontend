@@ -19,6 +19,8 @@ Cubre RF25 a RF29. La extracción (HU-A), la auditoría (RF30) y el componente d
 
 **Datos de la demo:** lo que se crea o edita se conserva mientras la pestaña esté abierta, incluso si se recarga o se escribe una dirección en la barra. **Cerrar la pestaña lo reinicia todo.** Por eso, no cerrar la pestaña 5173 durante la reunión.
 
+**Correo simulado:** al crear un usuario (2:00) el "correo" con la contraseña temporal aparece en la consola del navegador (F12 → Consola, línea `[Correo simulado]`). Si se quiere mostrar, abrir la consola antes de ese paso.
+
 ## 2. Recorrido (10 minutos)
 
 | Min | Pantalla | Qué hacer | Qué decir | RF |
@@ -26,7 +28,7 @@ Cubre RF25 a RF29. La extracción (HU-A), la auditoría (RF30) y el componente d
 | 0:00 | Inicio de sesión | Pulsar **Iniciar sesión** con los campos vacíos. Escribir un correo sin `@`. Luego `rmartinez@cens.com.co` con una contraseña incorrecta | "El sistema valida antes de enviar y dice exactamente qué falta, en español. Si las credenciales son incorrectas no revela cuál de los dos datos falla." | RF25, RF31 |
 | 1:00 | Inicio de sesión | Probar `avargas@cens.com.co` / `Cartera123` | "Un usuario desactivado no puede entrar y se le explica por qué." | RF25, RF28 |
 | 1:30 | Inicio (Administrador) | Entrar con `rmartinez@cens.com.co` / `Admin12345`. Señalar el menú | "El Administrador ve cinco opciones; las de administración llevan la etiqueta ADMIN." | RF25, RF27 |
-| 2:00 | Gestión de Usuarios | Mostrar la lista. **Crear usuario**: `Laura Díaz`, `ldiaz@cens.com.co`, rol Analista de Cartera. Aparece la contraseña temporal | "El Administrador crea usuarios. El sistema genera una contraseña temporal y la muestra **una sola vez**; el usuario deberá cambiarla." Pulsar **Listo** | RF28 |
+| 2:00 | Gestión de Usuarios | Mostrar la lista. **Crear usuario**: `Laura Díaz`, `ldiaz@cens.com.co`, rol Analista de Cartera. Aparece el aviso "La contraseña temporal se envió a su correo" | "El Administrador crea usuarios. El sistema genera una contraseña temporal y la **envía por correo** al usuario; deberá cambiarla en su primer ingreso." (En la demostración el correo es simulado: con F12 → Consola se ve la línea `[Correo simulado]` y la contraseña es `Temporal123`.) | RF28 |
 | 3:00 | Gestión de Usuarios | **Editar** a Carlos Sánchez (cambiar el nombre) y **desactivar** a otro usuario con el interruptor | "Se edita y se desactiva con confirmación. No se puede desactivar el propio usuario ni cambiarse el propio rol." | RF28 |
 | 4:00 | Cierre manual | Menú de perfil (arriba a la derecha) → **Cerrar sesión** | "El cierre de sesión manual invalida la sesión." Se ve el aviso "Sesión cerrada correctamente." | RF26 |
 | 4:20 | Primer ingreso | Entrar con `ldiaz@cens.com.co` / `Temporal123`. Intentar abrir otra pantalla escribiendo `localhost:5173/usuarios` en la barra | "Con contraseña temporal no se puede hacer nada más que cambiarla, ni escribiendo la dirección." | RF28 |
@@ -38,7 +40,7 @@ Cubre RF25 a RF29. La extracción (HU-A), la auditoría (RF30) y el componente d
 | 9:15 | Inactividad | Dejar que el tiempo se agote | "Si no hay respuesta, la sesión se cierra sola y el login dice por qué." Se ve el aviso ámbar | RF26 |
 | 9:45 | Cierre | Volver a la pestaña 5173 | Resumen (ver abajo) | — |
 
-**Frase de cierre (30 s):** "Mostramos inicio de sesión, cierre manual y por inactividad, roles diferenciados, gestión de usuarios con contraseña temporal y cambio obligatorio, y recuperación de contraseña. Todo en español, accesible con teclado y lector de pantalla."
+**Frase de cierre (30 s):** "Mostramos inicio de sesión, cierre manual y por inactividad, roles diferenciados, gestión de usuarios con contraseña temporal enviada por correo y cambio obligatorio, y recuperación de contraseña. Todo en español, accesible con teclado y lector de pantalla."
 
 ## 3. Datos de la demostración (todos ficticios)
 
@@ -47,7 +49,7 @@ Cubre RF25 a RF29. La extracción (HU-A), la auditoría (RF30) y el componente d
 | `rmartinez@cens.com.co` | `Admin12345` | Administrador |
 | `jperez@cens.com.co` | `Analista123` | Analista de Cartera (también para la inactividad) |
 | `avargas@cens.com.co` | `Cartera123` | Usuario desactivado |
-| `ldiaz@cens.com.co` | `Temporal123` → `Demo12345` | Usuario que se crea en vivo |
+| `ldiaz@cens.com.co` | `Temporal123` → `Demo12345` | Usuario que se crea en vivo. La contraseña temporal "llega por correo" (simulado: consola del navegador, F12) |
 | Enlace de recuperación | `/restablecer?token=token-de-prueba` | Restablecer contraseña |
 
 ## 4. Si algo falla (plan B)
@@ -78,6 +80,6 @@ La prueba `src/test/guionDemo.test.jsx` ejecuta este recorrido contra la API sim
 Puntos para consultar al cliente en la reunión (están pendientes, no se asumen):
 1. **Tiempo de inactividad:** se propone 10 minutos con aviso un minuto antes. ¿Es el adecuado?
 2. **Reglas de contraseña:** mínimo 8 caracteres, una mayúscula y un número. ¿Cumplen la política de CENS?
-3. **Contraseña temporal:** ¿se entrega al Administrador en pantalla o se envía por correo?
+3. **Contraseña temporal:** resuelto, se envía por correo al usuario (en la demostración el correo es simulado).
 4. **Parametrización de conceptos:** hoy solo la ve el Administrador. ¿Es correcto?
 5. **Pantalla "Restablecer contraseña":** no estaba en la maqueta; se agregó porque el enlace del correo la necesita. ¿Se aprueba?

@@ -1,5 +1,6 @@
 // Muestra UNA vez la contraseña temporal del usuario recién creado (RF28).
-// PENDIENTE José Luis: si el backend la envía por correo en vez de devolverla, este diálogo no se usa.
+// Respaldo: el backend envía la contraseña por correo y no la devuelve (UsersPage avisa con un toast);
+// este diálogo solo aparece si la respuesta trajera `temporary_password`.
 import { Button, Modal, useToast } from '../../components/ui'
 
 export default function TemporaryPasswordDialog({ nombre, password, onClose }) {

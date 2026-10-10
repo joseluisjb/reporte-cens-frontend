@@ -3,6 +3,7 @@
 import { api, ApiError, ENDPOINTS } from '../../lib/api'
 import { mapUser } from '../users/userMapper'
 import { IDENTIFICADOR, MSG_CREDENCIALES } from './authConfig'
+import { rolACodigo } from './roles'
 
 // El login no dispara el manejo global de 401: credenciales malas son un error del formulario.
 export async function login(identificador, password) {
@@ -60,6 +61,6 @@ export async function confirmPasswordReset({ token, nueva }) {
 
 // Solo modo demostración con mocks: cambia la sesión simulada a otro perfil.
 export async function demoSwitchProfile(rol) {
-  const { data } = await api.post(ENDPOINTS.demoSwitchProfile, { rol })
+  const { data } = await api.post(ENDPOINTS.demoSwitchProfile, { rol: rolACodigo(rol) })
   return mapUser(data.user)
 }

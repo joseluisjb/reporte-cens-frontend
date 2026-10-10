@@ -93,15 +93,13 @@ describe('crear usuario', () => {
     expect(within(panel).getByLabelText('Correo corporativo')).toHaveFocus()
   })
 
-  test('al crear muestra la contraseña temporal una sola vez y agrega la fila', async () => {
+  test('al crear avisa que la contraseña temporal se envió por correo y agrega la fila', async () => {
     const panel = await abrirPanel()
     await userEvent.type(within(panel).getByLabelText('Nombre completo'), 'Laura Díaz')
     await userEvent.type(within(panel).getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
     await userEvent.click(within(panel).getByRole('button', { name: 'Crear usuario' }))
 
-    const dialogo = await screen.findByRole('dialog', { name: 'Usuario creado' })
-    expect(within(dialogo).getByLabelText('Contraseña temporal')).toHaveTextContent('Temporal123')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Listo' }))
+    expect(await screen.findByText(/la contraseña temporal se envió a su correo/i)).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(fila('Laura Díaz').getByText('ldiaz@cens.com.co')).toBeInTheDocument()
   })

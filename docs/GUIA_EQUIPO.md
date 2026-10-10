@@ -196,6 +196,8 @@ Dos trampas que ya nos pasaron:
 
 **Accesibilidad:** agrega tu pantalla a `src/test/accesibilidad.test.jsx` (3 líneas con `expectAccesible()`) y lee `docs/ACCESIBILIDAD.md`. Para texto verde sobre fondo claro usa `text-bosque-d`, no `text-bosque` (no alcanza el contraste mínimo). Para fondos verdes con texto blanco usa `bg-bosque-d` y para bordes de campos `border-gris-d`; `src/test/contraste.test.js` protege estos pares.
 
+**Conformidad con el contrato:** `src/test/contrato.test.js` llama a los mocks y valida cada respuesta contra los esquemas de `docs/contrato/openapi.yaml`. Cuando agregues o cambies un mock, agrega su caso ahí (método, ruta tal como aparece en el contrato, estado esperado); la prueba falla si el mock no coincide con `openapi.yaml`.
+
 Antes de abrir el PR:
 
 ```

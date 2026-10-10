@@ -28,7 +28,8 @@ info:
 
     **Roles (RF27).** `ANALISTA_CARTERA` (Analista de Cartera) y `ADMINISTRADOR` (Administrador),
     los códigos que ya usa el backend en `request.user.rol`; el frontend los traduce a texto. Cada
-    operación indica sus roles en `x-roles`. Un rol sin permiso recibe `403`; sin sesión, `401`.
+    operación indica sus roles en `x-roles`. `x-roles` usa los nombres legibles; el valor en la API
+    es el código de `Rol`. Un rol sin permiso recibe `403`; sin sesión, `401`.
 
     **Primer ingreso.** Un usuario con `must_change_password = true` solo puede usar
     `/auth/me/`, `/auth/logout/` y `/auth/change-password/`; el resto responde `403` con
@@ -41,12 +42,14 @@ info:
 
     **Formatos.** JSON UTF-8. Fechas y horas en ISO 8601 con zona (`America/Bogota`, UTC−05:00).
     Fechas de corte como `YYYY-MM-DD`. Montos en pesos colombianos como número (sin símbolo ni
-    separadores). Las contraseñas nunca se devuelven, salvo la temporal al crear un usuario.
+    separadores). Las contraseñas nunca se devuelven (la temporal se envía por correo).
 
     **Paginación.** Los listados que pueden crecer (`/extracciones/`, `/auditoria/`, obligaciones,
     historial) usan `?page=` y `?page_size=` (por defecto 20, máximo 100) y responden
     `{ count, next, previous, results }`. Los listados pequeños (`/users/`, `/conceptos/`) devuelven
-    un arreglo plano.
+    un arreglo plano. Un `page` fuera de rango responde `404` con `{ detail }`; un `page_size`
+    mayor que 100 se recorta a 100. `next` y `previous` son URL absolutas (o `null`) y el cliente
+    pide por número de página.
 
     **Datos reservados.** Los datos de CENS son confidenciales: el log de auditoría no guarda
     contraseñas ni datos personales completos.
@@ -324,7 +327,21 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '400':
+          description: Validación por campo o regla de negocio sobre el propio usuario.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorCampos' }
+              examples:
+                desactivar_propio:
+                  summary: Intenta desactivar su propio usuario
+                  value: { is_active: ['No puedes desactivar tu propio usuario.'] }
+                cambiar_propio_rol:
+                  summary: Intenta cambiar su propio rol
+                  value: { rol: ['No puedes cambiar tu propio rol.'] }
+                correo_repetido:
+                  summary: Correo ya registrado
+                  value: { email: ['Ya existe un usuario con ese correo.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -363,7 +380,7 @@ paths:
       parameters:
         - name: activo
           in: query
-          description: Filtra por estado (`true` o `false`). Sin valor, devuelve todos.
+          description: Solo `true` o `false` en minúsculas; cualquier otro valor se ignora y devuelve todos.
           schema: { type: boolean }
       responses:
         '200':
@@ -411,8 +428,8 @@ paths:
       summary: Editar, activar o desactivar un código (RF35)
       description: |
         Cambiar `activo` no borra el código: deja de usarse en las próximas extracciones y se conserva
-        para el historial. No hay `DELETE` ni se puede cambiar el `codigo`. *Implementado en el
-        backend.* Debe quedar en el log de auditoría.
+        para el historial. No hay `DELETE` ni se puede cambiar el `codigo`. Un cuerpo vacío devuelve
+        el recurso sin cambios. *Implementado en el backend.* Debe quedar en el log de auditoría.
       operationId: conceptosUpdate
       x-roles: [Administrador]
       parameters:
@@ -431,7 +448,12 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: El concepto no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+              example: { detail: 'Concepto no encontrado.' }
 
   # ───────────────────────── Grupos de conceptos (RF43) ─────────────────────────
   /grupos-conceptos/:
@@ -507,12 +529,18 @@ paths:
               schema: { $ref: '#/components/schemas/GrupoConcepto' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: El grupo no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+              example: { detail: 'Grupo no encontrado.' }
     patch:
       tags: [Grupos de conceptos]
       summary: Editar, activar o desactivar un grupo (RF43)
       description: |
-        `conceptos` **reemplaza la lista completa** del grupo. *Implementado en el backend.*
+        `conceptos` **reemplaza la lista completa** del grupo. Un cuerpo vacío devuelve el recurso
+        sin cambios. *Implementado en el backend.*
       operationId: gruposUpdate
       x-roles: [Administrador]
       parameters:
@@ -528,10 +556,23 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/GrupoConcepto' }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '400':
+          description: Validación por campo, o un concepto que no existe o no está activo.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorCampos'
+                  - $ref: '#/components/schemas/ErrorDetail'
+              example: { detail: 'El concepto 3587 no existe o no está activo.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: El grupo no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+              example: { detail: 'Grupo no encontrado.' }
         '409':
           description: Ya existe otro grupo con ese nombre.
           content:
@@ -552,7 +593,12 @@ paths:
         '204': { description: Grupo eliminado. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: El grupo no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+              example: { detail: 'Grupo no encontrado.' }
         '409':
           description: El grupo está asociado a un corte en borrador.
           content:
@@ -623,7 +669,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorCampos' }
-              example: { fecha_corte: ['Selecciona una fecha de corte.'] }
+              examples:
+                fecha_corte_faltante:
+                  summary: Falta la fecha de corte
+                  value: { fecha_corte: ['Selecciona una fecha de corte.'] }
+                fecha_corte_invalida:
+                  summary: Fecha de corte con formato inválido
+                  value: { fecha_corte: ['La fecha de corte no es válida.'] }
+                fecha_corte_futura:
+                  summary: Fecha de corte futura
+                  value: { fecha_corte: ['La fecha de corte no puede ser futura.'] }
+                grupo_faltante:
+                  summary: Falta el grupo de conceptos
+                  value: { grupo_id: ['Selecciona un grupo de conceptos.'] }
+                grupo_inexistente:
+                  summary: El grupo no existe
+                  value: { grupo_id: ['El grupo de conceptos no existe.'] }
+                grupo_inactivo:
+                  summary: El grupo está inactivo
+                  value: { grupo_id: ['El grupo de conceptos está inactivo.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
@@ -692,7 +756,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
-              example: { detail: 'La extracción aún no ha terminado.', code: extraction_not_ready }
+              examples:
+                en_proceso:
+                  summary: La extracción sigue en proceso
+                  value: { detail: 'La extracción aún no ha terminado.', code: extraction_not_ready }
+                fallida:
+                  summary: La extracción falló
+                  value: { detail: 'La extracción falló y no tiene resultados.', code: extraction_not_ready }
 
   # ───────────────────────── Historial (RF6, RF8) ─────────────────────────
   /historial/reportes/:
@@ -730,6 +800,18 @@ paths:
                       results:
                         type: array
                         items: { $ref: '#/components/schemas/ReporteHistorico' }
+        '400':
+          description: Filtro `periodo` o `numero_obligacion` inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorCampos' }
+              examples:
+                periodo:
+                  summary: Periodo con formato inválido
+                  value: { periodo: ['Usa el formato AAAA-MM, por ejemplo 2026-09.'] }
+                numero_obligacion:
+                  summary: Número de obligación inválido
+                  value: { numero_obligacion: ['El número de obligación no es válido.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -766,6 +848,18 @@ paths:
                       results:
                         type: array
                         items: { $ref: '#/components/schemas/DeudorHistorico' }
+        '400':
+          description: Filtro `periodo` o `numero_obligacion` inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorCampos' }
+              examples:
+                periodo:
+                  summary: Periodo con formato inválido
+                  value: { periodo: ['Usa el formato AAAA-MM, por ejemplo 2026-09.'] }
+                numero_obligacion:
+                  summary: Número de obligación inválido
+                  value: { numero_obligacion: ['El número de obligación no es válido.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -794,7 +888,7 @@ paths:
           schema: { type: string, format: date }
         - name: usuario
           in: query
-          description: Id del usuario que realizó la acción.
+          description: Id del usuario que realizó la acción (`usuario_id`).
           schema: { type: integer }
         - name: tipo_accion
           in: query
@@ -816,7 +910,27 @@ paths:
                       results:
                         type: array
                         items: { $ref: '#/components/schemas/RegistroAuditoria' }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '400':
+          description: Filtro inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorCampos' }
+              examples:
+                desde:
+                  summary: Fecha inicial inválida
+                  value: { desde: ['Usa una fecha válida (AAAA-MM-DD).'] }
+                hasta:
+                  summary: Fecha final anterior a la inicial
+                  value: { hasta: ['La fecha final no puede ser anterior a la inicial.'] }
+                usuario:
+                  summary: Id de usuario no numérico
+                  value: { usuario: ['Indica el id numérico del usuario.'] }
+                tipo_accion:
+                  summary: Tipo de acción desconocido
+                  value: { tipo_accion: ['Tipo de acción no válido.'] }
+                modulo:
+                  summary: Módulo desconocido
+                  value: { modulo: ['Módulo no válido.'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1049,8 +1163,9 @@ components:
         conceptos:
           type: array
           minItems: 1
+          uniqueItems: true
           items: { type: integer, minimum: 1, maximum: 9999 }
-          description: Códigos de concepto; todos deben existir y estar activos.
+          description: "Códigos de concepto, sin repetidos (propuesta `uniqueItems`: el backend hoy no rechaza repetidos, diferencia O); todos deben existir y estar activos."
           example: [30, 94]
     GrupoConceptoUpdateRequest:
       type: object
@@ -1061,7 +1176,9 @@ components:
         conceptos:
           type: array
           minItems: 1
+          uniqueItems: true
           items: { type: integer, minimum: 1, maximum: 9999 }
+          description: "Sin códigos repetidos (propuesta `uniqueItems`: el backend hoy no rechaza repetidos, diferencia O)."
 
     # ── Extracción ──
     ExtraccionCreateRequest:
@@ -1151,9 +1268,9 @@ components:
         numero_identificacion: { type: string, description: "*(pendiente)* Dato personal: mostrar enmascarado en pantalla y no registrarlo completo en el log." }
         conceptos:
           type: array
-          items: { type: string }
-          description: Códigos de concepto de energía que componen el saldo. En el sistema comercial son numéricos (por ejemplo `30`, `94`), no `ENE-001`.
-          example: ['30']
+          items: { type: integer, minimum: 1, maximum: 9999 }
+          description: Códigos de concepto de energía que componen el saldo. En el sistema comercial son numéricos (por ejemplo `30`, `94`).
+          example: [30]
         categoria_servicio:
           type: string
           example: '04'
@@ -1209,11 +1326,12 @@ components:
       enum: [inicio_sesion, cierre_sesion, consulta, calculo, generacion, exportacion, modificacion, correccion, eliminacion, creacion, edicion, desactivacion]
     RegistroAuditoria:
       type: object
-      required: [id, fecha_hora, usuario, rol, accion, tipo_accion, modulo, detalle]
+      required: [id, fecha_hora, usuario_id, usuario, rol, accion, tipo_accion, modulo, detalle]
       properties:
         id: { type: integer }
         fecha_hora: { type: string, format: date-time }
-        usuario: { type: string, example: Rosa Martínez }
+        usuario_id: { type: integer, example: 2, description: Id del usuario que realizó la acción. }
+        usuario: { type: string, example: Rosa Martínez, description: Nombre para mostrar. }
         rol: { $ref: '#/components/schemas/Rol' }
         accion: { type: string, example: Usuario creado, description: Texto legible en español. }
         tipo_accion: { $ref: '#/components/schemas/TipoAccion' }

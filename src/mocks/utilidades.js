@@ -40,3 +40,24 @@ export function ahoraBogotaISO() {
   const hora = `${dos(d.getUTCHours())}:${dos(d.getUTCMinutes())}:${dos(d.getUTCSeconds())}`
   return `${fecha}T${hora}-05:00`
 }
+
+// Cuerpo JSON de la petición; un cuerpo vacío o ilegible se trata como `{}` (PATCH sin cambios).
+export async function leerCuerpo(request) {
+  try {
+    const cuerpo = await request.json()
+    return cuerpo && typeof cuerpo === 'object' && !Array.isArray(cuerpo) ? cuerpo : {}
+  } catch {
+    return {}
+  }
+}
+
+// Identificador de la ruta ('30', '2') → número entero; cualquier otra cosa ('abc', '1.5', '-1') → null.
+export const idDeRuta = (texto) => (/^\d+$/.test(String(texto ?? '')) ? Number(texto) : null)
+
+// Entero como lo acepta el IntegerField de DRF: un número entero JSON o un texto de dígitos
+// (' 30 ' tras recortar). Decimales, booleanos, vacío y texto no numérico → null.
+export function aEntero(valor) {
+  if (typeof valor === 'number') return Number.isInteger(valor) ? valor : null
+  if (typeof valor === 'string' && /^[+-]?\d+$/.test(valor.trim())) return Number(valor.trim())
+  return null
+}

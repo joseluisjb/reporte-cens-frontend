@@ -2,6 +2,8 @@
 // Responde como lo haría DRF: errores en { detail } o { campo: ['mensaje'] }.
 // Un archivo por módulo en `rutas/`; el orden importa (MSW usa el primer handler que coincide).
 import { authHandlers } from './rutas/auth'
+import { conceptosHandlers } from './rutas/conceptos'
+import { gruposHandlers } from './rutas/grupos'
 import { usuariosHandlers } from './rutas/usuarios'
 
-export const handlers = [...authHandlers, ...usuariosHandlers]
+export const handlers = [...authHandlers, ...usuariosHandlers, ...conceptosHandlers, ...gruposHandlers]

@@ -97,22 +97,29 @@ Con eso aparece en el menú y la ruta queda protegida (sesión + rol). `adminOnl
 
 Hazlo siempre en este orden, como en `features/users/`:
 
-1. **Ruta** en `src/lib/api/endpoints.js`:
+1. **Ruta** en `src/lib/api/endpoints.js` (las de parámetros ya están: `conceptos`, `concepto(codigo)`, `gruposConceptos`, `grupoConceptos(id)`):
    ```js
    conceptos: '/conceptos/',
-   concepto: (id) => `/conceptos/${id}/`,
+   concepto: (codigo) => `/conceptos/${codigo}/`,
    ```
 2. **Servicio** `features/parameters/parametersService.js`: funciones simples que usan `api` y devuelven datos ya listos para la pantalla.
    ```js
    import { api, ENDPOINTS } from '../../lib/api'
-   export async function listConcepts() {
-     const { data } = await api.get(ENDPOINTS.conceptos)
-     return data.map(mapConcept)          // traduce los nombres del backend a los de la pantalla
+   export async function listConcepts({ activo } = {}) {
+     const params = typeof activo === 'boolean' ? { activo: String(activo) } : undefined
+     const { data } = await api.get(ENDPOINTS.conceptos, { params })
+     return data.map(mapConcepto)         // traduce los nombres del backend a los de la pantalla
    }
    ```
 3. **Mapper** (`features/parameters/conceptMapper.js`): si el backend cambia un nombre de campo, se corrige solo ahí (ver `features/users/userMapper.js`).
-4. **Mock**: agrega datos en `src/mocks/db.js` y el endpoint en `src/mocks/handlers.js` (copia el estilo de `/users/`). Responde como DRF: errores en `{ detail }` o `{ campo: ['mensaje'] }`.
-5. **Prueba** del servicio (ver `src/test/services.test.js`).
+4. **Mock**: agrega datos en `src/mocks/db.js` y el endpoint en un archivo de `src/mocks/rutas/` (copia el estilo de `usuarios.js`; `handlers.js` solo los junta). Responde como DRF: errores en `{ detail }` o `{ campo: ['mensaje'] }`.
+5. **Prueba** del servicio (ver `src/test/services.test.js` y `src/test/parametros.test.js`).
+
+> **Parámetros (Angel):** el servicio, el mapper, los mocks y las pruebas de conceptos y grupos **ya existen**; solo falta la pantalla (`features/parameters/ParametersPage.jsx`). Usa únicamente estas funciones de `parametersService.js` (lectura: ambos roles; escritura: solo Administrador, el Analista recibe 403):
+> - Conceptos: `listConcepts({ activo })`, `createConcept({ codigo, descripcion, activo, observacion })`, `updateConcept(codigo, cambios)`, `setConceptActive(codigo, activo)`.
+> - Grupos: `listConceptGroups()`, `getConceptGroup(id)`, `createConceptGroup({ nombre, conceptos })`, `updateConceptGroup(id, cambios)`, `setConceptGroupActive(id, activo)`, `deleteConceptGroup(id)`.
+>
+> Detalles: el concepto aún no trae fecha de creación (`fechaCreacion` llega `null`; diferencia B del contrato); el grupo trae `creado` como texto `YYYY-MM-DD`, se muestra con `formatearFechaISO`; `conceptos` de un grupo es la lista de códigos y **reemplaza** la anterior al editar.
 
 **Errores:** todo error llega como `ApiError` con `message` en español y `fieldErrors` ({ campo: 'mensaje' }). En una pantalla:
 

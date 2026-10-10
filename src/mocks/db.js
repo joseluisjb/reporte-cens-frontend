@@ -1,6 +1,7 @@
 // Base de datos FICTICIA para los mocks. Todos los datos y contraseñas son inventados.
 // Vive en memoria y se copia a sessionStorage (solo en los mocks, nunca en producción) para que
 // una recarga de la página no borre lo creado durante una demostración; cerrar la pestaña la reinicia.
+// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de ejemplo.
 // Los roles se guardan como CÓDIGO del backend (`ANALISTA_CARTERA`, `ADMINISTRADOR`), igual que el contrato.
 // Cuentas de prueba (solo con VITE_USE_MOCKS=true; el rol se muestra aquí como texto):
 //   rmartinez@cens.com.co / Admin12345      → Administrador
@@ -27,24 +28,57 @@ const usuariosIniciales = () => [
 
 export const TOKEN_RECUPERACION_VALIDO = 'token-de-prueba'
 
+// Conceptos de energía (RF35). Misma forma que responde el backend; sin fecha de creación (diferencia B).
+const conceptosIniciales = () => [
+  { codigo: 30, descripcion: 'CUOTA FINANCIACION ENERGIA', activo: true, observacion: null },
+  { codigo: 94, descripcion: 'INTERES FINANCIACION ENERGIA', activo: true, observacion: null },
+  { codigo: 9001, descripcion: 'CONCEPTO DE PRUEBA ACTIVO', activo: true, observacion: 'Dato ficticio' },
+  { codigo: 9002, descripcion: 'CONCEPTO DE PRUEBA INACTIVO', activo: false, observacion: null },
+]
+
+// Grupos de conceptos (RF43). Aquí solo se guardan los CÓDIGOS; la respuesta agrega la descripción.
+const gruposIniciales = () => [
+  { id: 1, nombre: 'Energía financiada', activo: true, conceptos: [30, 94], creado: '2026-10-01' },
+  { id: 2, nombre: 'Solo cuota de energía', activo: true, conceptos: [30], creado: '2026-10-03' },
+  { id: 3, nombre: 'Grupo de prueba inactivo', activo: false, conceptos: [9001], creado: '2026-10-05' },
+]
+
+// Cortes (extracciones) mínimos: solo sirven para que eliminar un grupo asociado a un BORRADOR dé 409.
+const cortesIniciales = () => [{ id: 1, grupo_id: 2, estado: 'BORRADOR' }]
+
+// Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes']
+
+const inicial = () => ({
+  usuarios: usuariosIniciales(),
+  siguienteId: 8,
+  conceptos: conceptosIniciales(),
+  grupos: gruposIniciales(),
+  siguienteGrupoId: 4,
+  cortes: cortesIniciales(),
+})
+
+// Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que
+// existieran conceptos y grupos (solo usuarios y siguienteId) no deja colecciones sin definir.
 function leerBase() {
+  const base = inicial()
   try {
     const guardada = JSON.parse(sessionStorage.getItem(DB_KEY))
-    if (guardada?.usuarios?.length) return guardada
+    if (guardada?.usuarios?.length) return Object.fromEntries(COLECCIONES.map((k) => [k, guardada[k] ?? base[k]]))
   } catch {
     /* sin datos guardados o ilegibles: se parte de los iniciales */
   }
-  return { usuarios: usuariosIniciales(), siguienteId: 8 }
+  return base
 }
 
 // `correos` (bandeja del correo simulado) vive solo en memoria: no se guarda en sessionStorage.
 export const db = { ...leerBase(), sesionId: leerSesion(), correos: [] }
 export const ultimoCorreo = () => db.correos.at(-1) ?? null
 
-// Llamar después de cada cambio en db.usuarios.
+// Llamar después de cada cambio en las colecciones de db (usuarios, conceptos, grupos...).
 export function persistir() {
   try {
-    sessionStorage.setItem(DB_KEY, JSON.stringify({ usuarios: db.usuarios, siguienteId: db.siguienteId }))
+    sessionStorage.setItem(DB_KEY, JSON.stringify(Object.fromEntries(COLECCIONES.map((k) => [k, db[k]]))))
   } catch {
     /* sin sessionStorage: los datos viven solo en memoria */
   }
@@ -73,8 +107,7 @@ export const usuarioActual = () => db.usuarios.find((u) => u.id === db.sesionId)
 export const publico = ({ password: _password, ...u }) => u // nunca se devuelve la contraseña
 
 export function resetMockDb() {
-  db.usuarios = usuariosIniciales()
-  db.siguienteId = 8
+  Object.assign(db, inicial())
   db.correos = []
   try {
     sessionStorage.removeItem(DB_KEY)

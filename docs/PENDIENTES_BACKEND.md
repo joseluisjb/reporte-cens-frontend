@@ -95,9 +95,28 @@ Reglas que el servidor debe imponer (el frontend ya las aplica en pantalla, pero
 
 **Resuelto: se envía por correo** y la API no la devuelve (`temporary_password` en `null` o ausente); el frontend muestra "La contraseña temporal se envió a su correo". El diálogo que la muestra una sola vez queda como respaldo: solo aparece si algún día la respuesta la trajera. En los mocks el correo se simula (consola del navegador, `[Correo simulado]`).
 
-### 2.3 Parámetros de conceptos de energía (RF35) — para Angel
+### 2.3 Parámetros de conceptos de energía (RF35) y grupos de conceptos (RF43) — para Angel
 
-Angel construirá la pantalla. Hay que acordar el contrato antes: lista, crear, editar y activar/desactivar un código, con los campos `código`, `descripción`, `estado` y `fecha de creación`. Propuesta de rutas: `GET/POST /api/conceptos/` y `PATCH /api/conceptos/:id/`, solo Administrador.
+**Estado: ya implementado en el backend** (`reporte-cens-backend`, rama `dev`, revisado el 10/10/2026). Angel construye la pantalla sobre `features/parameters/parametersService.js`, que ya funciona contra los mocks.
+
+| Método y ruta | Rol | Respuesta |
+|---|---|---|
+| `GET /api/conceptos/` (`?activo=true|false`) | Analista y Administrador | 200 `[{ codigo, descripcion, activo, observacion }]`, ordenado por código |
+| `POST /api/conceptos/` | Administrador | 201 concepto · 400 por campo · 409 `El código de concepto ya existe.` |
+| `PATCH /api/conceptos/{codigo}/` | Administrador | 200 concepto · 404 `Concepto no encontrado.` (no hay `DELETE` ni detalle) |
+| `GET /api/grupos-conceptos/` y `GET /api/grupos-conceptos/{id}/` | Analista y Administrador | 200 `{ id, nombre, activo, conceptos: [{ codigo, descripcion }], creado }` |
+| `POST /api/grupos-conceptos/` | Administrador | 201 grupo · 400 (concepto inexistente o inactivo) · 409 `El nombre de grupo ya existe.` |
+| `PATCH /api/grupos-conceptos/{id}/` | Administrador | 200 grupo (`conceptos` reemplaza la lista) · 404 · 409 · 400 |
+| `DELETE /api/grupos-conceptos/{id}/` | Administrador | 204 · 404 · 409 si un corte en BORRADOR usa el grupo |
+
+Diferencias abiertas que afectan a estas rutas (detalle y propuesta en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
+- **A.** Hoy el backend deja escribir también al Analista; el contrato y los mocks dan `403` a quien no sea Administrador.
+- **B.** El concepto no tiene fecha de creación (RF35 la pide): falta la columna `FECHA_CREACION` o quitar el requisito.
+- **J.** Sin modelo de usuario con `rol`, el permiso `EsAnalistaOAdministrador` respondería 403 siempre; depende de Dilan.
+- **K.** Un anónimo recibe 403 en vez de 401 (el frontend cierra la sesión con 401).
+- **L.** `LANGUAGE_CODE = "en-us"`: las validaciones de DRF salen en inglés. **Los mocks validan en español** (RF31) y el backend hoy responde en inglés; hay que poner `es-co` para que coincidan.
+
+También quedan O (códigos repetidos en un grupo, que los mocks rechazan con 400) y P (código no numérico en la ruta, que los mocks responden con 404).
 
 ---
 

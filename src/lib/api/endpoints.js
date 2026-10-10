@@ -10,6 +10,11 @@ export const ENDPOINTS = {
   passwordResetConfirm: '/auth/password-reset/confirm/',
   users: '/users/',
   user: (id) => `/users/${id}/`,
+  // Conceptos de energía (RF35) y grupos de conceptos (RF43): ya implementados en el backend.
+  conceptos: '/conceptos/',
+  concepto: (codigo) => `/conceptos/${codigo}/`,
+  gruposConceptos: '/grupos-conceptos/',
+  grupoConceptos: (id) => `/grupos-conceptos/${id}/`,
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

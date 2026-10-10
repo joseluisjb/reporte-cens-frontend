@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: NexoVolt — API REST (Iteración 1)
-  version: 0.3.0-borrador
+  version: 0.4.0-borrador
   description: |
     Contrato entre el frontend (React) y el backend (Django REST Framework) de NexoVolt.
     Cubre la **Iteración 1**: HU-A (extracción, consolidación y trazabilidad) y HU-D (seguridad,
@@ -14,8 +14,12 @@ info:
     **versión 0.3 se alinea también con la extracción, el ciclo de corte (validar y registrar el
     envío) y el historial** de `origin/dev` (commit `cf07754`, 10/10/2026). Autenticación, usuarios y
     auditoría siguen siendo lo que construyó el frontend contra mocks o una propuesta para Dilan.
-    Donde el backend difiere de lo que pide la documentación, el README del contrato lo lista como
-    diferencia por resolver. Cada operación dice si está *implementada en el backend*, *implementada
+    La **versión 0.4 sigue al Manual Sector Real v34 de TransUnion** en los puntos donde el backend
+    se aparta de él (tipo de identificación, estado de la obligación, qué entra al corte y la
+    comprobación de la fecha de corte; ver `DISCREPANCIAS.md`, filas A2, A3, A4 y A9). Johan decidió
+    el 10/10/2026 que CENS reporta como **Sector Real Servicios** (paquete SSR, Tabla 4b, categoría
+    de servicios `04` "Servicio energía"). Donde el backend difiere de lo que pide la
+    documentación, el README del contrato lo lista como diferencia por resolver. Cada operación dice si está *implementada en el backend*, *implementada
     en el frontend* (contra mocks) o es *propuesta*.
 
     ## Reglas generales
@@ -658,6 +662,10 @@ paths:
         fecha en `BORRADOR`**, se reemplaza (se borran sus filas y se vuelve a calcular) y conserva
         el mismo `id`. Si existe uno con esa fecha en cualquier otro estado, responde `409`. Solo
         puede haber **un** `BORRADOR` a la vez: si hay uno con otra fecha, responde `409`.
+
+        **Propuesta (contrato 0.4, manual de TransUnion, inconsistencia 074):** la fecha de corte
+        debe ser **posterior** a la del último corte enviado (`ENVIADO`); si es igual o anterior,
+        responde `409`. El backend todavía no lo comprueba (`DISCREPANCIAS.md`, A9).
       operationId: extraccionesCreate
       x-roles: [Analista de Cartera, Administrador]
       requestBody:
@@ -709,7 +717,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
               example: { detail: 'Grupo no encontrado.' }
         '409':
-          description: Grupo inactivo, corte existente que no se puede reemplazar o ya hay un borrador de otra fecha.
+          description: Grupo inactivo, corte existente que no se puede reemplazar, ya hay un borrador de otra fecha o la fecha de corte no es posterior a la del último corte enviado (propuesta).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
@@ -723,6 +731,9 @@ paths:
                 borrador_otra_fecha:
                   summary: Hay un BORRADOR de otra fecha
                   value: { detail: 'Ya existe un corte en BORRADOR con fecha 2026-08-31. Debe completarlo o eliminarlo primero.' }
+                fecha_no_posterior:
+                  summary: La fecha de corte no es posterior a la del último corte enviado (propuesta; el backend aún no lo comprueba, A9)
+                  value: { detail: 'La fecha de corte debe ser posterior a la del último corte enviado.' }
 
   /extracciones/ultima/:
     get:
@@ -783,6 +794,14 @@ paths:
         mora, el valor en mora y el saldo. Ordenado por `OBLIGACION_ID`. Se pagina con `limite` y
         `desplazamiento`. Disponible en cualquier estado del corte. *Implementado en el backend.*
 
+        **Contenido del corte (contrato 0.4, manual de TransUnion).** Un corte puede incluir las
+        obligaciones que se **cerraron desde el corte anterior**, reportadas con `estado_tu` `02`
+        (Saldada), `valor_saldo`, `valor_mora`, `valor_cuota` y `cuotas_mora` en `0` y `edad_mora`
+        `'00'`. Según el manual, una obligación se cierra reportándola como Saldada; la que deja de
+        reportarse queda como "no reportada" ante TransUnion. Hoy el backend excluye las obligaciones
+        con saldo 0 (`DISCREPANCIAS.md`, A2). **Pendiente de confirmar por Santiago**, porque RF1
+        dice "solo vigentes".
+
         **Dato personal:** `numero_identificacion` llega completo hoy; el frontend lo enmascara en
         pantalla (diferencia Q del README).
       operationId: extraccionesObligaciones
@@ -816,6 +835,16 @@ paths:
                     cuotas_mora: 0
                     valor_mora: 0
                     valor_saldo: 500000
+                    n_creditos: 1
+                  - numero_obligacion: OBL0002
+                    nombre_titular: TITULAR FICTICIO DOS
+                    numero_identificacion: '1000000002'
+                    estado_tu: '02'
+                    edad_mora: '00'
+                    dias_mora: 0
+                    cuotas_mora: 0
+                    valor_mora: 0
+                    valor_saldo: 0
                     n_creditos: 1
         '400':
           description: '`limite` o `desplazamiento` no son enteros.'
@@ -1153,7 +1182,7 @@ paths:
                   valor_saldo: 520000
                   estado_corte: ENVIADO
                 - fecha_corte: '2026-09-30'
-                  estado_tu: '06'
+                  estado_tu: '01'
                   edad_mora: '01'
                   dias_mora: 32
                   cuotas_mora: 1
@@ -1608,7 +1637,57 @@ components:
         | `06` | Mora 180 | `14` | Mora 730 |
         | `07` | Mora 210 | | |
 
-        El backend aún no valida que el valor esté entre `00` y `14` (diferencia R del README).
+        El backend aún no valida que el valor esté entre `00` y `14` (diferencia R del README). Todo
+        campo `edad_mora` de la API usa este mismo esquema. Una obligación Saldada (`02`) lleva
+        siempre `00`.
+    TipoIdentificacion:
+      type: string
+      enum: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '12', '13']
+      example: '01'
+      description: |
+        Tipo de identificación del titular según la **Tabla 2** del Manual Sector Real v34 de
+        TransUnion: código numérico de dos dígitos, no letras. No existe el código `11`.
+
+        | Código | Descripción | Código | Descripción |
+        |---|---|---|---|
+        | `01` | Cédula de ciudadanía | `07` | Sociedad extranjera sin NIT en Colombia |
+        | `02` | NIT | `08` | Fideicomiso |
+        | `03` | Cédula de extranjería | `09` | Registro civil |
+        | `04` | Tarjeta de identidad | `10` | Carnet diplomático |
+        | `05` | Pasaporte | `12` | PEP |
+        | `06` | Tarjeta del seguro social extranjero | `13` | PPT |
+
+        **Diferencia con el backend:** hoy la documentación y las pruebas del backend devuelven
+        `"CC"` (`DISCREPANCIAS.md`, A3). El contrato 0.4 sigue al manual; el backend debe
+        traducir a estos códigos.
+    EstadoObligacion:
+      type: string
+      enum: ['01', '02', '03', '04', '06', '07', '08', '10', '11', '12']
+      example: '01'
+      description: |
+        Estado de la obligación ante TransUnion según la **Tabla 4b** del Manual Sector Real v34
+        (**Sector Real Servicios**, paquete SSR), sector con el que reporta CENS (decisión de Johan,
+        10/10/2026). No existen los códigos `05` ni `09`.
+
+        | Código | Descripción |
+        |---|---|
+        | `01` | Vigente |
+        | `02` | Saldada |
+        | `03` | Dudoso recaudo |
+        | `04` | Suspendida por la entidad |
+        | `06` | Castigada |
+        | `07` | Castigada recuperada (cartera recuperada) |
+        | `08` | Inactivo |
+        | `10` | Ley 550 |
+        | `11` | Ley 1116 |
+        | `12` | Ley 1564 de 2012 (insolvencia de persona natural no comerciante) |
+
+        **El sector importa:** la Tabla 4a (Comercio) usa los mismos códigos con otros significados;
+        por ejemplo, `03` y `04` no son Dudoso recaudo ni Suspendida por la entidad en Comercio.
+
+        **Saldada (`02`)** exige `valor_saldo` 0, `valor_mora` 0, `edad_mora` `'00'`, `valor_cuota` 0
+        y `cuotas_mora` 0. El backend todavía no declara la tabla ni valida los códigos
+        (`DISCREPANCIAS.md`, A4).
     NumeroObligacion:
       type: string
       maxLength: 20
@@ -1631,12 +1710,15 @@ components:
       required: [numero_obligacion, nombre_titular, numero_identificacion, estado_tu, edad_mora, dias_mora, cuotas_mora, valor_mora, valor_saldo, n_creditos]
       description: |
         Una **obligación = una financiación (proceso)**. Un mismo deudor puede tener varias, y una
-        misma obligación puede tener varios titulares; el corte muestra un titular por fila.
+        misma obligación puede tener varios titulares; el corte muestra un titular por fila. Puede
+        ser una obligación **saldada** desde el corte anterior: `estado_tu` `02`, `valor_saldo`,
+        `valor_mora`, `cuotas_mora` en `0` y `edad_mora` `'00'` (contrato 0.4; el backend hoy las
+        excluye, `DISCREPANCIAS.md` A2).
       properties:
         numero_obligacion: { $ref: '#/components/schemas/NumeroObligacion' }
         nombre_titular: { type: string, example: TITULAR FICTICIO UNO }
         numero_identificacion: { $ref: '#/components/schemas/NumeroIdentificacion' }
-        estado_tu: { type: string, example: '01', description: Código del estado de la obligación ante TransUnion (dos dígitos). Catálogo por confirmar. }
+        estado_tu: { $ref: '#/components/schemas/EstadoObligacion' }
         edad_mora: { $ref: '#/components/schemas/CodigoEdadMora' }
         dias_mora: { type: integer, minimum: 0, example: 0, description: Fecha de corte menos fecha límite de pago (RF7). }
         cuotas_mora: { type: integer, minimum: 0, example: 0 }
@@ -1667,9 +1749,9 @@ components:
         numero_obligacion: { $ref: '#/components/schemas/NumeroObligacion' }
         nombre_titular: { type: string, example: TITULAR FICTICIO UNO }
         numero_identificacion: { $ref: '#/components/schemas/NumeroIdentificacion' }
-        tipo_id_tu: { type: string, example: '01', description: "Tipo de identificación (Tabla 2 de TransUnion: `01` Cédula, `02` NIT, `03` Cédula de extranjería, `04` Tarjeta de identidad, `05` Pasaporte, entre otros). Los datos de prueba del backend usan `CC`: por confirmar (diferencia R del README)." }
+        tipo_id_tu: { $ref: '#/components/schemas/TipoIdentificacion' }
         tipo_cartera: { type: integer, example: 2, description: Tipo de cartera (código numérico; catálogo por confirmar). }
-        estado_tu: { type: string, example: '01', description: Código del estado de la obligación ante TransUnion (dos dígitos). Catálogo por confirmar. }
+        estado_tu: { $ref: '#/components/schemas/EstadoObligacion' }
         edad_mora: { $ref: '#/components/schemas/CodigoEdadMora' }
         fecha_inicio: { type: string, format: date, nullable: true, example: '2025-01-01', description: Fecha de inicio de la financiación. }
         cuotas_mora: { type: integer, minimum: 0, example: 0 }
@@ -1691,7 +1773,12 @@ components:
         cliente_id: { type: integer, example: 900001, description: Id del cliente en el sistema comercial de CENS. }
         numero_proceso: { type: integer, example: 1001, description: Número del proceso de financiación. }
         fecha_inicio: { type: string, format: date, nullable: true, example: '2025-01-01' }
-        ultimo_estado_tu: { type: string, nullable: true, example: '01', description: "Estado en el último corte donde aparece. `null` si nunca ha aparecido en un corte. Hoy el \"último corte\" puede ser un `BORRADOR` o `ANULADO` (diferencia Z del README)." }
+        ultimo_estado_tu:
+          type: string
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/EstadoObligacion'
+          description: "Estado en el último corte donde aparece. `null` si nunca ha aparecido en un corte. Hoy el \"último corte\" puede ser un `BORRADOR` o `ANULADO` (diferencia Z del README)."
         ultimo_valor_saldo: { type: integer, nullable: true, example: 500000, description: Saldo en COP en ese último corte. `null` si nunca ha aparecido en un corte. }
     DeudorLineaTiempo:
       type: object
@@ -1699,7 +1786,7 @@ components:
       description: El estado de una obligación en un corte.
       properties:
         fecha_corte: { type: string, format: date, example: '2026-09-30', description: "Hoy puede llegar como fecha-hora (diferencia V del README)." }
-        estado_tu: { type: string, example: '01', description: Código del estado de la obligación ante TransUnion (dos dígitos). Catálogo por confirmar. }
+        estado_tu: { $ref: '#/components/schemas/EstadoObligacion' }
         edad_mora: { $ref: '#/components/schemas/CodigoEdadMora' }
         dias_mora: { type: integer, minimum: 0, example: 0 }
         cuotas_mora: { type: integer, minimum: 0, example: 0 }

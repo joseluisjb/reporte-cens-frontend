@@ -2,6 +2,7 @@
 
 Frontend de la aplicación Reporte CENS construido con Vite + React.
 
+https://reporte-cens.onrender.com/login
 ## Requisitos
 
 - Node.js 18 o superior

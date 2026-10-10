@@ -45,7 +45,7 @@ Los **grupos de conceptos** dejaron de estar fuera: el backend ya implementó RF
 
 ## Diferencias con lo implementado en el backend
 
-El contrato 0.3 ya adopta lo que José Luis construyó (conceptos, grupos, extracción, ciclo de corte e historial). Estas son las diferencias que **quedan por resolver** (revisado en `origin/dev`, commit `cf07754`, el 10/10/2026, leyendo el código; donde `docs/API.md` y el código difieren, el contrato sigue al código):
+El contrato 0.3 ya adopta lo que José Luis construyó (conceptos, grupos, extracción, ciclo de corte e historial). Estas son las diferencias que **quedan por resolver** (revisado en `origin/dev`, commit `cf07754`, el 10/10/2026, leyendo el código; donde `docs/API.md` y el código difieren, el contrato sigue al código). Las diferencias de fondo frente al **manual de TransUnion** (tipo de identificación, estados, reglas para saldar, qué entra al corte) están en [`DISCREPANCIAS.md`](DISCREPANCIAS.md):
 
 | # | Backend hoy | Lo que piden la documentación o el frontend | Propuesta |
 |---|---|---|---|

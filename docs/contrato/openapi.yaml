@@ -22,9 +22,8 @@ info:
     documentación, el README del contrato lo lista como diferencia por resolver. Cada operación dice si está *implementada en el backend*, *implementada
     en el frontend* (contra mocks) o es *propuesta*.
 
-    La **versión 0.5** recoge los cambios del backend del 10/10/2026: la rama `dev` (commit
-    `9411d65`) y la rama `fix/api-reglas` (commit `81b9f57`), que **todavía no está fusionada en
-    `dev`**. Lo que solo existe en esa rama se marca como *implementado en `fix/api-reglas`*. Suma
+    La **versión 0.5** recoge los cambios del backend del 10/10/2026, revisados el 11/10/2026 en la
+    rama `main` (commit `e835f31`), que ya incluye `fix/api-reglas`. Suma
     `DELETE /extracciones/{id}/`, pagina la búsqueda de deudores y marca como resueltas las
     diferencias que el backend ya corrigió (README y `DISCREPANCIAS.md`).
 
@@ -71,8 +70,8 @@ info:
 
     **Datos reservados.** Los datos de CENS son confidenciales: el log de auditoría no guarda
     contraseñas ni datos personales completos. `numero_identificacion` llega **enmascarado** en las
-    obligaciones de un corte y en el detalle histórico (solo los últimos 4 dígitos; implementado en
-    `fix/api-reglas`). El frontend lo vuelve a enmascarar en pantalla por si acaso.
+    obligaciones de un corte y en el detalle histórico (solo los últimos 4 dígitos).
+    El frontend lo vuelve a enmascarar en pantalla por si acaso.
 
     ## Fuera de alcance de este contrato (no construir sin confirmar)
     "Cambiar datos", "Cambiar de perfil" y exportar log/resumen aparecen en la maqueta pero no
@@ -420,8 +419,7 @@ paths:
       summary: Agregar un código de concepto (RF35)
       description: |
         Se crea activo salvo que se indique lo contrario. El código es único: si ya existe responde
-        `409`. *Implementado en el backend.* Solo el Administrador (implementado en `fix/api-reglas`;
-        en `dev` todavía entra también el Analista). Debe quedar en el log de auditoría.
+        `409`. *Implementado en el backend.* Solo el Administrador. Debe quedar en el log de auditoría.
       operationId: conceptosCreate
       x-roles: [Administrador]
       requestBody:
@@ -503,8 +501,7 @@ paths:
       summary: Crear un grupo de conceptos (RF43)
       description: |
         El nombre es único. Todos los conceptos deben existir y estar activos, sin repetidos.
-        *Implementado en el backend.* Escribir grupos es solo del Administrador (implementado en
-        `fix/api-reglas`; en `dev` todavía entra también el Analista).
+        *Implementado en el backend.* Escribir grupos es solo del Administrador.
       operationId: gruposCreate
       x-roles: [Administrador]
       requestBody:
@@ -672,7 +669,7 @@ paths:
 
         **Contrato 0.4 (manual de TransUnion, inconsistencia 074):** la fecha de corte
         debe ser **posterior** a la del último corte enviado (`ENVIADO`); si es igual o anterior,
-        responde `409`. Implementado en `fix/api-reglas` (`DISCREPANCIAS.md`, A9).
+        responde `409`. Implementado en el backend (`DISCREPANCIAS.md`, A9).
 
         **Si hay un `BORRADOR` equivocado** de otra fecha, se elimina con
         `DELETE /extracciones/{id}/` y se vuelve a generar.
@@ -733,7 +730,7 @@ paths:
           description: |
             Grupo inactivo, corte existente que no se puede reemplazar, ya hay un borrador de otra
             fecha o la fecha de corte no es posterior a la del último corte enviado. El texto del
-            borrador de otra fecha es el que propone el contrato: hoy el backend (`fix/api-reglas`)
+            borrador de otra fecha es el que propone el contrato: hoy el backend
             incluye la ruta `DELETE /api/extracciones/{id}/` en el mensaje, y ese texto lo ve el
             usuario (diferencia AC del README).
           content:
@@ -805,7 +802,7 @@ paths:
         Borra un corte que está en `BORRADOR`, junto con sus obligaciones e inconsistencias, y deja
         la eliminación en la bitácora (`NV_BITACORA`, acción `ELIMINACION_BORRADOR`). Sirve para
         salir de un borrador equivocado, porque solo puede haber uno a la vez. Un corte en otro
-        estado no se puede eliminar (`409`). Implementado en `fix/api-reglas`. Debe quedar en el
+        estado no se puede eliminar (`409`). Implementado en el backend. Debe quedar en el
         log de auditoría (RF30, eliminación).
       operationId: extraccionesDelete
       x-roles: [Analista de Cartera, Administrador]
@@ -979,8 +976,8 @@ paths:
 
         `fecha_envio` no puede ser futura ni anterior a la fecha de corte. El backend comprueba
         primero que el corte exista (`404`) y después las fechas; un formato de fecha inválido sí
-        se rechaza antes (`400` por campo). Lo de la fecha de corte y el orden están en
-        `fix/api-reglas`.
+        se rechaza antes (`400` por campo). Lo de la fecha de corte y el orden ya están implementados en
+        el backend.
       operationId: extraccionesRegistrarEnvio
       x-roles: [Analista de Cartera, Administrador]
       parameters:
@@ -1573,9 +1570,10 @@ components:
           format: date
           example: '2026-10-10'
           description: |
-            Fecha de creación del grupo (`AAAA-MM-DD`). **Diferencia AB del README:** desde el commit
-            `9411d65` el backend la devuelve como fecha-hora (`2026-10-10T00:00:00-05:00`). El
-            contrato la mantiene como fecha; el frontend toma los 10 primeros caracteres.
+            Fecha de creación del grupo (`AAAA-MM-DD`). **Diferencia AB del README (resuelta en `3610b63`):**
+            entre `9411d65` y `3610b63` el backend la devolvió como fecha-hora
+            (`2026-10-10T00:00:00-05:00`); desde `3610b63` (`main` `e835f31`) vuelve a ser fecha. El
+            frontend sigue tomando los 10 primeros caracteres, por si acaso.
     GrupoConceptoCreateRequest:
       type: object
       required: [nombre, conceptos]
@@ -1743,7 +1741,7 @@ components:
         | `05` | Pasaporte | `12` | PEP |
         | `06` | Tarjeta del seguro social extranjero | `13` | PPT |
 
-        **Diferencia con el backend:** desde `fix/api-reglas` su `docs/API.md` ya muestra `"01"`,
+        **Diferencia con el backend:** su `docs/API.md` ya muestra `"01"`,
         pero el código copia el valor de la base sin validarlo (`DISCREPANCIAS.md`, A3). El contrato
         sigue al manual; el backend debe devolver estos códigos.
     EstadoObligacion:
@@ -1790,7 +1788,7 @@ components:
       description: |
         **Dato personal reservado.** Llega **enmascarado**: seis asteriscos y los últimos 4 dígitos
         (`******0001`); con menos de 4 caracteres, todo en asteriscos, y sin valor, `****`.
-        Implementado en `fix/api-reglas`; en `dev` todavía llega completo. El frontend lo vuelve a
+        Implementado en el backend. El frontend lo vuelve a
         enmascarar en pantalla y no lo registra completo en el log. Falta decidir si algún rol puede
         verlo completo (pendiente anotado en el backend).
     ObligacionCorte:

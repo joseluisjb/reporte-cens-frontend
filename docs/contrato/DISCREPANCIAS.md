@@ -2,7 +2,7 @@
 
 Registro para revisar lo que implementa el backend (`reporte-cens-backend`, rama `dev`) contra el **Manual Sector Real v34 de TransUnion** y contra los requerimientos del proyecto. Es la versión pública: no contiene datos de CENS. Se citan solo números de tabla y página del manual y los RF.
 
-- **Revisado:** rama `dev`, commit `9411d65`, y rama `fix/api-reglas`, commit `81b9f57` (sin fusionar en `dev`), el 10/10/2026. La revisión anterior fue `cf07754`.
+- **Revisado:** rama `main`, commit `e835f31`, el 11/10/2026 (antes `9411d65` y `fix/api-reglas` `81b9f57`; la revisión inicial fue `cf07754`).
 - **Contrato:** [`openapi.yaml`](openapi.yaml) versión 0.5. Las diferencias de forma de la API (posibles 500, orden, fechas) están en el [README](README.md), filas Q a AD.
 - **Filas resueltas:** quedan tachadas, con la rama donde se resolvieron.
 - **Regla:** cuando el backend se aparta del manual, el contrato y los mocks del frontend siguen al manual y la diferencia queda aquí.
@@ -15,19 +15,19 @@ Johan decidió que CENS reporta como **Sector Real Servicios** (paquete SSR, Tab
 
 ## Backend frente al manual y los requerimientos
 
-| ID | Tema | Manual o requerimiento | Backend (`9411d65` y `fix/api-reglas`) | Comprobación | Impacto | Propuesta |
+| ID | Tema | Manual o requerimiento | Backend (`e835f31`) | Comprobación | Impacto | Propuesta |
 |---|---|---|---|---|---|---|
 | A1 | La lógica de negocio no está en el repositorio | RF3 a RF7: consolidación, mora, Tabla 9 y número de obligación | Se toma de las vistas `V_CALCULO_CORTE` y `V_VALIDACION_CORTE`, cuyo SQL no está en `extraccion/sql/` | Verificado | I1, I2 | Versionar el SQL de las vistas para poder revisarlas |
 | A2 | Las obligaciones pagadas dejan de reportarse | El reporte mensual incluye toda la base. Una obligación se cierra reportándola como Saldada; la que deja de reportarse queda como "no reportada" | `V_DEUDOR_VIGENTE` filtra saldo mayor que 0 (filtro de estado provisional) | Verificado / inferido | I2 | Incluir las obligaciones cerradas desde el corte anterior con estado 02. **Contrato 0.4: sí** (pendiente de confirmar por Santiago: RF1 dice «solo vigentes») |
-| A3 | Tipo de identificación | Tabla 2: código numérico de 2 dígitos (`01` Cédula, `02` NIT…) | `docs/API.md` ya muestra `"01"` (en `fix/api-reglas`), pero el código copia el valor de la base sin validarlo | Verificado / inferido | I1, I2 | Usar el código de la Tabla 2. **Contrato 0.4: sí** (`TipoIdentificacion`) |
+| A3 | Tipo de identificación | Tabla 2: código numérico de 2 dígitos (`01` Cédula, `02` NIT…) | `docs/API.md` ya muestra `"01"` (desde `fix/api-reglas`, ya en `main`), pero el código copia el valor de la base sin validarlo | Verificado / inferido | I1, I2 | Usar el código de la Tabla 2. **Contrato 0.4: sí** (`TipoIdentificacion`) |
 | A4 | Estado de la obligación | Tabla 4a o 4b, según el sector | Sin tabla declarada ni validación | Verificado / no verificable | I1, I2 | Declarar la tabla 4b y validar los códigos. **Contrato 0.4: sí** (Tabla 4b de Servicios en `EstadoObligacion`) |
 | A5 | Edad de mora | Tabla 9: `00` a `14`; los tramos amplios son `12` (360–539), `13` (540–729) y `14` (730 o más) | Código en texto, calculado en la vista | No verificable | I1, I2 | Publicar el SQL y probar los límites de cada tramo |
 | A6 | Reglas para saldar | Saldo 0, mora 0, edad `00`, cuota 0 y cuotas en mora 0; además fecha de pago, modo de extinción y tipo de pago | No se ven las reglas; faltan las columnas de modo de extinción y de tipo de pago | No verificable / verificado | I2 | Agregar los campos y la validación |
 | A7 | "Fecha de pago" (campo 20) | Es la fecha de extinción de la mora o de pago total; no se reporta si hay mora | Guarda la fecha del último pago recibido | Verificado | I2 | Calcularla aparte |
 | A8 | Tipo de cartera, línea de crédito y categoría de servicios | El tipo de cartera lo define el registro de control. En Servicios se usa la categoría 04 y no la línea de crédito. | Guarda el tipo de cartera y la línea de crédito por fila, pero no la categoría | Verificado | I2 | Guardar la categoría de servicios |
-| ~~A9~~ | ~~Fecha de corte~~ | Debe ser mayor que la última reportada (inconsistencia 074) y no futura | **Resuelta en `fix/api-reglas`:** rechaza la fecha futura (en hora de Bogotá) y responde `409` "La fecha de corte debe ser posterior a la del último corte enviado." si es igual o anterior | Verificado | I1, I2 | Fusionar en `dev`. Mismo texto que el contrato y el mock |
+| ~~A9~~ | ~~Fecha de corte~~ | Debe ser mayor que la última reportada (inconsistencia 074) y no futura | **Resuelta en `fix/api-reglas`, ya en `main` (`e835f31`):** rechaza la fecha futura (en hora de Bogotá) y responde `409` "La fecha de corte debe ser posterior a la del último corte enviado." si es igual o anterior | Verificado | I1, I2 | Fusionada en `main` (`e835f31`). Mismo texto que el contrato y el mock |
 | A10 | Corrección, eliminación y renumeración | El manual prevé rectificación, eliminación con justificación (Tabla 12) y renumeración (registro tipo 3) | El ciclo termina en ENVIADO | Verificado | Iteración 2 | Registrar para la HU-C |
-| ~~A11~~ | ~~Identificación completa en la API~~ | Datos personales con acceso restringido (RF30, Habeas Data) | **Resuelta en `fix/api-reglas`:** se devuelve enmascarada (últimos 4 dígitos) en las obligaciones del corte y en el detalle de reportes | Verificado | I1 | Fusionar en `dev`; decidir si algún rol la ve completa. El generador del archivo (Iteración 2) sí necesita el número completo, leído de la base y no de la API |
+| ~~A11~~ | ~~Identificación completa en la API~~ | Datos personales con acceso restringido (RF30, Habeas Data) | **Resuelta en `fix/api-reglas`, ya en `main` (`e835f31`):** se devuelve enmascarada (últimos 4 dígitos) en las obligaciones del corte y en el detalle de reportes | Verificado | I1 | Fusionada en `main` (`e835f31`); decidir si algún rol la ve completa. El generador del archivo (Iteración 2) sí necesita el número completo, leído de la base y no de la API |
 | A12 | Caracteres del número de obligación | Máximo 20; solo `( ) * , - . / \ _` (inconsistencia 972); único y permanente | La permanencia se cumple, pero no se validan los caracteres | Verificado | I2 | Validar el patrón al crear la obligación |
 
 **Lo que coincide:**

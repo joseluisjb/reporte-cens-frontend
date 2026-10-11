@@ -110,17 +110,17 @@ Reglas que el servidor debe imponer (el frontend ya las aplica en pantalla, pero
 | `DELETE /api/grupos-conceptos/{id}/` | Administrador | 204 · 404 · 409 si un corte en BORRADOR usa el grupo |
 
 Diferencias que afectan a estas rutas (detalle y propuesta en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
-- **A. Resuelta en `fix/api-reglas`** (falta fusionar en `dev`): solo el Administrador escribe, como en el contrato y los mocks.
+- **A. Resuelta en `fix/api-reglas` y fusionada en `main` (`e835f31`):** solo el Administrador escribe, como en el contrato y los mocks.
 - **B.** El concepto no expone fecha de creación (RF35 la pide). La rama `feature/RF35-sql` de Angel agrega la columna `FECHA_CREACION`; falta que la API la devuelva.
-- **J.** Sin modelo de usuario con `rol`, el permiso `EsAnalistaOAdministrador` respondería 403 siempre; depende de Dilan.
-- **K.** Un anónimo recibe 403 en vez de 401 (el frontend cierra la sesión con 401).
-- **AB.** `creado` de los grupos llega como fecha-hora desde `9411d65`; el contrato lo pide como fecha (`AAAA-MM-DD`).
+- **J.** Sin modelo de usuario con `rol`, el permiso `EsAnalistaOAdministrador` respondería 403 siempre; depende de Dilan. Confirmado en vivo en Render el 11/10/2026: los endpoints de negocio responden 403 y no existe `/api/auth/`.
+- **K.** Un anónimo recibe 403 en vez de 401 (el frontend cierra la sesión con 401). Confirmado en vivo en Render el 11/10/2026: `403` con `Las credenciales de autenticación no se proveyeron.`
+- **AB.** Resuelta en `3610b63` (`main` `e835f31`): `creado` de los grupos vuelve a llegar como fecha (`AAAA-MM-DD`).
 
 Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400` con `No se permiten códigos repetidos.`) y P (código no numérico en la ruta: `404`).
 
 ### 2.4 Extracción de cartera y ciclo de corte (RF1–RF5, RF7, RF44) — para José Luis y Angel
 
-**Estado: ya implementado en el backend** (`reporte-cens-backend`, revisado el 10/10/2026 en `dev`, commit `9411d65`, y en `fix/api-reglas`, commit `81b9f57`, sin fusionar). Angel construye la pantalla sobre `features/extraction/extractionService.js`, que ya funciona contra los mocks. Rutas (ambos roles): `GET/POST /api/extracciones/`, `GET /api/extracciones/ultima/` (204 sin cuerpo si no hay cortes), `GET`, `DELETE /api/extracciones/{id}/` (el `DELETE` solo para un BORRADOR, en `fix/api-reglas`), `GET /api/extracciones/{id}/obligaciones/` (`limite`, `desplazamiento`), `POST /api/extracciones/{id}/validar/` y `POST /api/extracciones/{id}/registrar-envio/`. Es síncrono (201 al generar, sin consulta de estado).
+**Estado: ya implementado en el backend** (`reporte-cens-backend`, revisado el 11/10/2026 en `main`, commit `e835f31`, que incluye `fix/api-reglas`). Angel construye la pantalla sobre `features/extraction/extractionService.js`, que ya funciona contra los mocks. Rutas (ambos roles): `GET/POST /api/extracciones/`, `GET /api/extracciones/ultima/` (204 sin cuerpo si no hay cortes), `GET`, `DELETE /api/extracciones/{id}/` (el `DELETE` solo para un BORRADOR), `GET /api/extracciones/{id}/obligaciones/` (`limite`, `desplazamiento`), `POST /api/extracciones/{id}/validar/` y `POST /api/extracciones/{id}/registrar-envio/`. Es síncrono (201 al generar, sin consulta de estado).
 
 **Lo que los mocks hacen distinto del backend de hoy.** Siguen el manual de TransUnion (Sector Real v34, sector **Servicios**, decisión de Johan del 10/10/2026) y el contrato; el detalle de cada punto está en [`contrato/DISCREPANCIAS.md`](contrato/DISCREPANCIAS.md):
 - **A2.** El corte incluye las obligaciones **saldadas** desde el corte anterior (`estado_tu` `02`, saldo, mora y cuotas en `0`, `edad_mora` `00`); el backend hoy las excluye. Pendiente de confirmar por Santiago (RF1 dice "solo vigentes").
@@ -129,7 +129,7 @@ Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400
 
 **Ya resuelto en el backend (10/10/2026)**, con los mismos textos que el contrato y los mocks:
 - **En `dev`:** mensajes propios del serializador (M1), rango y máximo de `limite` y `desplazamiento` (M2, M3, N, S), ids no numéricos (S), `validar` filtrado por corte (U), fechas normalizadas (V) y búsqueda de deudores paginada y ordenada (T, adoptada en el contrato 0.5).
-- **En `fix/api-reglas`, falta fusionar:** fecha de corte posterior al último ENVIADO (A9), identificación enmascarada (Q), `DELETE /extracciones/{id}/` para un BORRADOR (W), `fecha_envio` no anterior a la `fecha_corte` y primero el `404` en `registrar-envio` (AA, en parte).
+- **Fusionado en `main` (`e835f31`):** fecha de corte posterior al último ENVIADO (A9), identificación enmascarada (Q), `DELETE /extracciones/{id}/` para un BORRADOR (W), `fecha_envio` no anterior a la `fecha_corte` y primero el `404` en `registrar-envio` (AA, en parte).
 - **`409` de validar.** Con errores correctivos responde `{ detail, errores: [{ regla, mensaje }] }`; si el corte no está en BORRADOR, solo `{ detail }` (ambos validan contra `ErrorCorrectivo`).
 
 **Siguen abiertas** (filas de [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):

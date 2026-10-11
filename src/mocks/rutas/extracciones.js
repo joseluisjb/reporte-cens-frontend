@@ -1,5 +1,5 @@
 // Rutas de extracción de cartera y ciclo de corte (RF1–RF5, RF7, RF44) del backend simulado.
-// Ambos roles (Analista y Administrador). Siguen el contrato 0.4: donde el backend de hoy se aparta del
+// Ambos roles (Analista y Administrador). Siguen el contrato 0.5: donde el backend de hoy se aparta del
 // manual de TransUnion (sector Servicios) o tiene un defecto, el mock hace lo previsto:
 //  - A2: el corte incluye obligaciones Saldadas (estado 02). A4: estado de la obligación (Tabla 4b).
 //    Ver mocks/datos/obligaciones.js y docs/contrato/DISCREPANCIAS.md. (A3, el tipo de identificación de la
@@ -13,6 +13,7 @@
 // Síncrono: generar un corte responde 201 con el corte ya en BORRADOR.
 import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
+import { enmascararIdentificacion } from '../../lib/format'
 import { generarObligaciones, totalesCorte } from '../datos/obligaciones'
 import { validarCorte } from '../datos/validaciones'
 import { db, persistir } from '../db'
@@ -133,7 +134,7 @@ export const extraccionesHandlers = [
     }
     const otroBorrador = db.cortes.find((c) => c.estado === 'BORRADOR' && c.fecha_corte !== fechaCorte)
     if (otroBorrador) {
-      return error(409, { detail: `Ya existe un corte en BORRADOR con fecha ${otroBorrador.fecha_corte}. Debe completarlo o eliminarlo primero.` })
+      return error(409, { detail: `Ya existe un corte en BORRADOR con fecha ${otroBorrador.fecha_corte}. Elimínelo o complételo antes de generar otro.` })
     }
     const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
     if (ultimaEnviada && fechaCorte <= ultimaEnviada) {
@@ -154,6 +155,19 @@ export const extraccionesHandlers = [
     }
     persistir()
     return HttpResponse.json(aResumen(corte), { status: 201 })
+  }),
+
+  // Solo un BORRADOR se elimina. Las obligaciones no se guardan (se generan al pedirlas): basta quitar el corte.
+  http.delete(url(ENDPOINTS.extraccion(':id')), async ({ params }) => {
+    await espera()
+    const { respuesta } = exigirSesion()
+    if (respuesta) return respuesta
+    const corte = buscarCorte(params.id)
+    if (!corte) return sinCorte()
+    if (corte.estado !== 'BORRADOR') return error(409, { detail: 'Solo se puede eliminar un corte en estado BORRADOR.' })
+    db.cortes = db.cortes.filter((c) => c.id !== corte.id)
+    persistir()
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.post(url(ENDPOINTS.validarExtraccion(':id')), async ({ params }) => {
@@ -197,6 +211,10 @@ export const extraccionesHandlers = [
     const pagina = leerPaginacion(new URL(request.url).searchParams)
     if (pagina.error) return error(400, { detail: pagina.error })
     const filas = generarObligaciones(corte).toSorted((a, b) => (a.numero_obligacion < b.numero_obligacion ? -1 : 1))
-    return HttpResponse.json({ total: filas.length, resultados: filas.slice(pagina.desplazamiento, pagina.desplazamiento + pagina.limite) })
+    // Como el backend, la identificación sale enmascarada (la completa solo la usan las reglas de validar).
+    const resultados = filas
+      .slice(pagina.desplazamiento, pagina.desplazamiento + pagina.limite)
+      .map((f) => ({ ...f, numero_identificacion: enmascararIdentificacion(f.numero_identificacion) }))
+    return HttpResponse.json({ total: filas.length, resultados })
   }),
 ]

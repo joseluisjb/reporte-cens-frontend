@@ -1,6 +1,6 @@
 // Extracción de cartera y ciclo de corte (RF1–RF5, RF7, RF44). Lo usa la pantalla de Angel
 // (`ExtractionPage.jsx`) y la tarjeta "Última extracción" del inicio. Todas las funciones: Analista y
-// Administrador. Contrato: docs/contrato/openapi.yaml (0.4). Ya existe en el backend.
+// Administrador. Contrato: docs/contrato/openapi.yaml (0.5). Ya existe en el backend.
 //
 // Es SÍNCRONO: `generateCut` responde 201 cuando el corte ya está generado; no hay 202 ni consulta
 // periódica del estado (no hagas polling).
@@ -36,6 +36,11 @@ export async function getCut(id) {
 export async function generateCut({ fechaCorte, grupoId = null }) {
   const { data } = await api.post(ENDPOINTS.extracciones, { fecha_corte: fechaCorte, grupo_id: grupoId })
   return mapCorte(data)
+}
+
+// Elimina un corte. Solo se puede en BORRADOR: en otro estado responde 409. No devuelve nada (204).
+export async function deleteCut(id) {
+  await api.delete(ENDPOINTS.extraccion(id))
 }
 
 // BORRADOR → VALIDADO. Devuelve { corte, advertencias } (las advertencias no bloquean).

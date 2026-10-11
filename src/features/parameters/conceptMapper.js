@@ -3,7 +3,7 @@
 //
 //   Backend (contrato 0.2)                        Interfaz
 //   Concepto                                 →    { codigo, descripcion, activo, estado ('Activo'|'Inactivo'),
-//   { codigo, descripcion, activo,                  observacion ('' si no hay), fechaCreacion (Date|null) }
+//   { codigo, descripcion, activo,                  observacion ('' si no hay), fechaCreacion ('YYYY-MM-DD' | null) }
 //     observacion, fecha_creacion? }
 //   GrupoConcepto                            →    { id, nombre, activo, estado,
 //   { id, nombre, activo,                           conceptos: [{ codigo, descripcion }],
@@ -12,8 +12,9 @@
 //
 // - `fecha_creacion` aún no existe en el backend (diferencia B del contrato): se tolera que falte y
 //   la interfaz recibe `fechaCreacion: null`.
-// - `creado` se deja como texto 'YYYY-MM-DD': con `new Date()` se correría un día en hora de Colombia.
-//   Las pantallas lo muestran con `formatearFechaISO`.
+// - `fecha_creacion` y `creado` se dejan como texto 'YYYY-MM-DD' (de `fecha_creacion` se toman los 10
+//   primeros caracteres por si llega como fecha-hora): con `new Date()` se correría un día en hora de
+//   Colombia. Las pantallas los muestran con `formatearFechaISO`.
 // - El backend nombra el booleano `activo` (no `is_active` como usuarios): diferencia F.
 const estadoDe = (activo) => (activo ? 'Activo' : 'Inactivo')
 
@@ -24,7 +25,7 @@ export function mapConcepto(raw) {
     activo: Boolean(raw.activo),
     estado: estadoDe(raw.activo),
     observacion: raw.observacion ?? '',
-    fechaCreacion: raw.fecha_creacion ? new Date(raw.fecha_creacion) : null,
+    fechaCreacion: raw.fecha_creacion ? String(raw.fecha_creacion).slice(0, 10) : null,
   }
 }
 

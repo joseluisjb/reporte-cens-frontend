@@ -68,6 +68,7 @@ describe('estructura de las pantallas internas', () => {
     await userEvent.click(within(screen.getByRole('navigation', { name: 'Navegación principal' })).getByRole('link', { name: /extracción/i }))
     await screen.findByRole('heading', { name: /extracción y consolidación/i })
     await waitFor(() => expect(anuncio).toHaveTextContent('NexoVolt — Extracción y Consolidación de Cartera'))
+    await screen.findByText('TITULAR FICTICIO 01') // deja terminar la carga de obligaciones
   })
 
   test('la navegación y el menú de perfil se pueden recorrer con el teclado', async () => {

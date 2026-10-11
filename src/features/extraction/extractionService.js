@@ -21,8 +21,8 @@ export async function listCuts() {
 }
 
 // El corte más reciente, o null si todavía no hay ninguno (el backend responde 204 sin cuerpo).
-export async function getLatestCut() {
-  const { data, status } = await api.get(ENDPOINTS.extraccionUltima)
+export async function getLatestCut({ skipAuthRedirect = false } = {}) {
+  const { data, status } = await api.get(ENDPOINTS.extraccionUltima, { skipAuthRedirect })
   return status === 204 || !data ? null : mapCorte(data)
 }
 

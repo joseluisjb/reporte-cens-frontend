@@ -112,6 +112,12 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('extracción de cartera con datos', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('TITULAR FICTICIO 01')
+    await expectAccesible()
+  })
+
   test('acceso restringido (Analista)', async () => {
     renderApp('/usuarios', ANALISTA)
     await screen.findByRole('heading', { name: 'Acceso restringido' })

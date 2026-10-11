@@ -29,8 +29,9 @@ describe('un Analista no abre las pantallas de administración, ni escribiendo l
   })
 
   test('las pantallas permitidas siguen abriendo', async () => {
-    renderApp('/extraccion', ANALISTA)
+    await renderConSesion('/extraccion', 'jperez@cens.com.co', 'Analista123')
     expect(await screen.findByRole('heading', { name: 'Extracción y Consolidación de Cartera' })).toBeInTheDocument()
+    await screen.findByText('TITULAR FICTICIO 01')
   })
 
   test('no ofrece "Cambiar de perfil" fuera del modo demostración', async () => {

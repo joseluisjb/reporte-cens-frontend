@@ -56,3 +56,29 @@ describe('tarjeta "Usuarios activos"', () => {
     expect(screen.queryByRole('button', { name: 'Iniciar sesión' })).not.toBeInTheDocument()
   })
 })
+
+describe('tarjeta "Última extracción de cartera"', () => {
+  test('muestra la información del último corte y enlace a la extracción', async () => {
+    await renderConSesion('/panel')
+    const region = await screen.findByRole('region', { name: 'Última extracción de cartera' })
+    expect(region).toBeInTheDocument()
+    expect(await within(region).findByText('BORRADOR')).toBeInTheDocument()
+    expect(within(region).getByText(/24 obligaciones/i)).toBeInTheDocument()
+    expect(within(region).getByRole('link', { name: 'Ver extracción' })).toHaveAttribute('href', '/extraccion')
+  })
+
+  test('el Analista también ve la tarjeta de última extracción', async () => {
+    await renderConSesion('/panel', 'jperez@cens.com.co', 'Analista123')
+    const region = await screen.findByRole('region', { name: 'Última extracción de cartera' })
+    expect(region).toBeInTheDocument()
+    expect(await within(region).findByText('BORRADOR')).toBeInTheDocument()
+  })
+
+  test('si no hay cortes registrados muestra mensaje explicativo', async () => {
+    server.use(http.get(`${API_URL}${ENDPOINTS.extraccionUltima}`, () => new HttpResponse(null, { status: 204 })))
+    await renderConSesion('/panel')
+    const region = await screen.findByRole('region', { name: 'Última extracción de cartera' })
+    expect(await within(region).findByText('Aún no se ha realizado ninguna extracción.')).toBeInTheDocument()
+  })
+})
+

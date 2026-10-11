@@ -1,9 +1,12 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { listUsers } from '../features/users/usersService'
 import { login as loginRequest } from '../features/auth/authService'
 import { MSG_CREDENCIALES } from '../features/auth/authConfig'
+import { AuthContext } from '../features/auth/authContext'
+import RequireAuth, { AVISO_LENTO_MS } from '../features/auth/RequireAuth'
 import { MSG_PASSWORD_VACIA, validarLogin } from '../features/auth/loginValidation'
 import { guardarSesion } from '../mocks/db'
 import { server } from '../mocks/server'
@@ -188,5 +191,27 @@ describe('sesión', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument())
     expect(screen.getByText('Tu sesión expiró. Inicia sesión de nuevo.')).toBeInTheDocument()
+  })
+})
+
+describe('arranque en frío del servidor', () => {
+  afterEach(() => vi.useRealTimers())
+
+  test('mientras carga la sesión, pasados 5 s avisa que la primera conexión puede tardar', () => {
+    vi.useFakeTimers()
+    render(
+      <AuthContext.Provider value={{ user: null, status: 'cargando' }}>
+        <MemoryRouter>
+          <RequireAuth />
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    const aviso = /conectando con el servidor/i
+    expect(screen.getByRole('status', { name: 'Cargando' })).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(AVISO_LENTO_MS - 1))
+    expect(screen.queryByText(aviso)).not.toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(1))
+    expect(screen.getByText(aviso)).toHaveTextContent('puede tardar hasta un minuto')
+    expect(screen.getByRole('status')).toContainElement(screen.getByText(aviso))
   })
 })

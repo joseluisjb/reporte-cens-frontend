@@ -51,6 +51,8 @@ La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hec
 
 ## 1. Primeros pasos
 
+Despliegue en Render, conexión con el backend real y prueba de humo: `docs/DESPLIEGUE.md`.
+
 ```
 git clone https://github.com/joseluisjb/reporte-cens-frontend.git
 cd reporte-cens-frontend

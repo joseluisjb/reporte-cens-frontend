@@ -26,6 +26,11 @@ async function entrar([email, password]) {
 }
 
 describe('conformidad de los mocks con el contrato OpenAPI', () => {
+  test('utilidades: GET /salud/ 200 cumple el contrato sin sesión', async () => {
+    const ok = await verifica('get', '/salud/', 200)
+    expect(ok.estado).toBe('ok')
+  })
+
   test('el validador detecta una respuesta que no cumple', () => {
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 'x' }])).toThrow(/no cumple el contrato/)
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, { codigo: 30 })).toThrow()

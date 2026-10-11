@@ -145,7 +145,7 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
                     return (
                       <label
                         key={c.codigo}
-                        className="flex cursor-pointer items-center gap-3 rounded-sm p-1.5 hover:bg-slate-50"
+                        className="flex cursor-pointer items-center gap-3 rounded-sm p-1.5 hover:bg-fondo"
                       >
                         <input
                           type="checkbox"
@@ -162,7 +162,7 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
                 {inactivosEnGrupo.map((c) => (
                   <label
                     key={c.codigo}
-                    className="flex cursor-not-allowed items-center gap-3 rounded-sm p-1.5 opacity-60 bg-slate-50"
+                    className="flex cursor-not-allowed items-center gap-3 rounded-sm p-1.5 opacity-60 bg-fondo"
                   >
                     <input
                       type="checkbox"
@@ -171,7 +171,7 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
                       className="size-4 rounded border-gris-d text-muted"
                     />
                     <span className="text-sm text-muted">
-                      <strong className="font-semibold text-slate-500">{c.codigo}</strong> — {c.descripcion || `Concepto ${c.codigo}`}{' '}
+                      <strong className="font-semibold text-muted">{c.codigo}</strong> — {c.descripcion || `Concepto ${c.codigo}`}{' '}
                       <span className="text-xs text-danger font-medium">(Inactivo — no seleccionable)</span>
                     </span>
                   </label>

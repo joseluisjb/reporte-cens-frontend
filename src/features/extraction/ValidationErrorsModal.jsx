@@ -38,7 +38,7 @@ export default function ValidationErrorsModal({ errores = [], onClose }) {
               {errores.map((item, index) => (
                 <tr key={`${item.regla}-${index}`}>
                   <td className="font-semibold text-danger">{item.regla}</td>
-                  <td className="text-slate-800">{item.mensaje}</td>
+                  <td className="text-ink">{item.mensaje}</td>
                 </tr>
               ))}
             </tbody>

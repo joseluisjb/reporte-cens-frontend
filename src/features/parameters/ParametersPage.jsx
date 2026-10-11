@@ -320,7 +320,7 @@ export default function ParametersPage() {
                         key={c.codigo}
                         className={resaltadoConcepto === c.codigo ? 'fila-resaltada' : undefined}
                       >
-                        <td className="font-semibold text-slate-800">{c.codigo}</td>
+                        <td className="font-semibold text-ink">{c.codigo}</td>
                         <td className="font-medium text-ink">{c.descripcion}</td>
                         <td className="text-muted">{c.observacion || '—'}</td>
                         <td className="whitespace-nowrap text-muted">
@@ -397,7 +397,7 @@ export default function ParametersPage() {
                   <tbody>
                     {grupos.map((g) => (
                       <tr key={g.id}>
-                        <td className="font-semibold text-slate-800">{g.id}</td>
+                        <td className="font-semibold text-ink">{g.id}</td>
                         <td className="font-medium text-ink">{g.nombre}</td>
                         <td>
                           <div className="flex flex-wrap gap-1.5">

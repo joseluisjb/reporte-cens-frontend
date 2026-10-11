@@ -14,8 +14,8 @@ import { db } from '../mocks/db'
 import { leerPaginacion } from '../mocks/rutas/extracciones'
 import { hoyLocalISO } from '../mocks/utilidades'
 
-const entrarAdmin = () => login('rmartinez@cens.com.co', 'Admin12345')
-const entrarAnalista = () => login('jperez@cens.com.co', 'Analista123')
+const entrarAdmin = () => login('rmartinez@example.com', 'Admin12345')
+const entrarAnalista = () => login('jperez@example.com', 'Analista123')
 const ids = (cortes) => cortes.map((c) => c.id)
 const corteDb = (id) => db.cortes.find((c) => c.id === id)
 const CLAVES_RESUMEN = ['id', 'fecha_corte', 'fecha_ejecucion', 'grupo', 'obligaciones', 'saldo_consolidado', 'estado', 'ejecutada_por']

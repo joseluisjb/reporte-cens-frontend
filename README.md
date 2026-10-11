@@ -67,10 +67,10 @@ Los tokens de marca (colores, fuentes, radios, sombras) viven en `src/index.css`
 
 | Correo | Contraseña | Caso |
 |---|---|---|
-| `rmartinez@cens.com.co` | `Admin12345` | Administrador |
-| `jperez@cens.com.co` | `Analista123` | Analista de Cartera |
-| `mgomez@cens.com.co` | `Temporal123` | Primer ingreso (debe cambiar la contraseña) |
-| `avargas@cens.com.co` | `Cartera123` | Usuario desactivado |
+| `rmartinez@example.com` | `Admin12345` | Administrador |
+| `jperez@example.com` | `Analista123` | Analista de Cartera |
+| `mgomez@example.com` | `Temporal123` | Primer ingreso (debe cambiar la contraseña) |
+| `avargas@example.com` | `Cartera123` | Usuario desactivado |
 
 ### Contrato con el backend
 

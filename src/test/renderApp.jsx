@@ -6,12 +6,12 @@ import AuthProvider from '../features/auth/AuthProvider'
 import { login as loginRequest } from '../features/auth/authService'
 import { ROLES } from '../features/auth/roles'
 
-export const ADMIN = { nombre: 'Rosa Martínez', correo: 'rmartinez@cens.com.co', rol: ROLES.ADMIN }
-export const ANALISTA = { nombre: 'Juan Pérez', correo: 'jperez@cens.com.co', rol: ROLES.ANALISTA }
+export const ADMIN = { nombre: 'Rosa Martínez', correo: 'rmartinez@example.com', rol: ROLES.ADMIN }
+export const ANALISTA = { nombre: 'Juan Pérez', correo: 'jperez@example.com', rol: ROLES.ANALISTA }
 
 // Inicia sesión de verdad contra el backend simulado y renderiza. Úsalo cuando la pantalla hace
 // llamadas a la API: con `initialUser` el servidor simulado no tiene sesión y respondería 401.
-export async function renderConSesion(ruta, email = 'rmartinez@cens.com.co', password = 'Admin12345') {
+export async function renderConSesion(ruta, email = 'rmartinez@example.com', password = 'Admin12345') {
   await loginRequest(email, password)
   return renderApp(ruta, null)
 }

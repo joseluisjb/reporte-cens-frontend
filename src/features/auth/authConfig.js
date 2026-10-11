@@ -5,12 +5,12 @@ export const IDENTIFICADOR = {
   campo: 'email', // PROPUESTO: nombre del campo que se envía al backend (confirmar con Dilan)
   etiqueta: 'Correo electrónico',
   etiquetaCorporativo: 'Correo electrónico corporativo',
-  placeholder: 'nombre@cens.com.co',
+  placeholder: 'nombre@example.com',
   tipoInput: 'email',
   autoComplete: 'username',
   regla: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   msgVacio: 'Ingresa tu correo electrónico.',
-  msgInvalido: 'Ingresa un correo válido, por ejemplo nombre@cens.com.co.',
+  msgInvalido: 'Ingresa un correo válido, por ejemplo nombre@example.com.',
 }
 
 export const MSG_CREDENCIALES = 'Usuario o contraseña incorrectos.'

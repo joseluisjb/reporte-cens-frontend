@@ -20,7 +20,7 @@ describe('tarjeta "Usuarios activos"', () => {
   })
 
   test('baja cuando se desactiva un usuario', async () => {
-    await login('rmartinez@cens.com.co', 'Admin12345')
+    await login('rmartinez@example.com', 'Admin12345')
     await setUserActive(6, false)
     renderApp('/panel', null)
     const region = await screen.findByRole('region', { name: 'Usuarios activos' })
@@ -31,7 +31,7 @@ describe('tarjeta "Usuarios activos"', () => {
     const rutas = []
     server.events.on('request:start', ({ request }) => rutas.push(new URL(request.url).pathname))
     try {
-      await renderConSesion('/panel', 'jperez@cens.com.co', 'Analista123')
+      await renderConSesion('/panel', 'jperez@example.com', 'Analista123')
       await bienvenida('Juan')
       await new Promise((r) => setTimeout(r, 50)) // margen para una petición que no debería salir
       expect(tarjeta()).not.toBeInTheDocument()
@@ -68,7 +68,7 @@ describe('tarjeta "Última extracción de cartera"', () => {
   })
 
   test('el Analista también ve la tarjeta de última extracción', async () => {
-    await renderConSesion('/panel', 'jperez@cens.com.co', 'Analista123')
+    await renderConSesion('/panel', 'jperez@example.com', 'Analista123')
     const region = await screen.findByRole('region', { name: 'Última extracción de cartera' })
     expect(region).toBeInTheDocument()
     expect(await within(region).findByText('BORRADOR')).toBeInTheDocument()

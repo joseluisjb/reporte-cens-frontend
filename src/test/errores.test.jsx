@@ -67,7 +67,7 @@ describe('backend caído o con errores', () => {
   test('el login con el servidor caído muestra el mensaje general, no "credenciales incorrectas"', async () => {
     server.use(http.post('/api/auth/login/', caido))
     renderApp('/login', null)
-    await userEvent.type(await screen.findByLabelText('Correo electrónico'), 'rmartinez@cens.com.co')
+    await userEvent.type(await screen.findByLabelText('Correo electrónico'), 'rmartinez@example.com')
     await userEvent.type(screen.getByLabelText('Contraseña'), 'Admin12345')
     await userEvent.click(boton('Iniciar sesión'))
     expect(await screen.findByRole('alert')).toHaveTextContent(MSG_500)
@@ -76,7 +76,7 @@ describe('backend caído o con errores', () => {
   test('sin conexión el login lo dice', async () => {
     server.use(http.post('/api/auth/login/', () => HttpResponse.error()))
     renderApp('/login', null)
-    await userEvent.type(await screen.findByLabelText('Correo electrónico'), 'rmartinez@cens.com.co')
+    await userEvent.type(await screen.findByLabelText('Correo electrónico'), 'rmartinez@example.com')
     await userEvent.type(screen.getByLabelText('Contraseña'), 'Admin12345')
     await userEvent.click(boton('Iniciar sesión'))
     expect(await screen.findByRole('alert')).toHaveTextContent(/no se pudo conectar/i)
@@ -85,7 +85,7 @@ describe('backend caído o con errores', () => {
   test('recuperar contraseña: un fallo del servidor se avisa y permite reintentar', async () => {
     server.use(http.post('/api/auth/password-reset/', caido))
     renderApp('/recuperar', null)
-    await userEvent.type(await screen.findByLabelText('Correo electrónico corporativo'), 'a@cens.com.co')
+    await userEvent.type(await screen.findByLabelText('Correo electrónico corporativo'), 'a@example.com')
     await userEvent.click(boton('Enviar enlace de recuperación'))
     expect(await screen.findByRole('alert')).toHaveTextContent(MSG_500)
     expect(boton('Enviar enlace de recuperación')).toBeEnabled()
@@ -93,7 +93,7 @@ describe('backend caído o con errores', () => {
 
   test('cambio de contraseña: un fallo del servidor se avisa', async () => {
     server.use(http.post('/api/auth/change-password/', caido))
-    await renderConSesion('/panel', 'mgomez@cens.com.co', 'Temporal123')
+    await renderConSesion('/panel', 'mgomez@example.com', 'Temporal123')
     await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })
     await escribir('Contraseña temporal', 'Temporal123')
     await escribir('Nueva contraseña', 'Nueva12345')
@@ -123,7 +123,7 @@ describe('backend caído o con errores', () => {
     await userEvent.click(boton('Crear usuario'))
     const panel = screen.getByRole('dialog', { name: 'Crear nuevo usuario' })
     await userEvent.type(screen.getByLabelText('Nombre completo'), 'Laura Díaz')
-    await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
+    await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@example.com')
     await userEvent.click(panel.querySelector('button[type=submit]'))
     expect(await screen.findByRole('alert')).toHaveTextContent(MSG_500)
   })
@@ -144,7 +144,7 @@ describe('contraseña temporal devuelta por el backend (respaldo)', () => {
     server.use(
       http.post('/api/users/', () =>
         HttpResponse.json(
-          { user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true }, temporary_password: 'Clave-Temp-01' },
+          { user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@example.com', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true }, temporary_password: 'Clave-Temp-01' },
           { status: 201 },
         ),
       ),
@@ -156,7 +156,7 @@ describe('contraseña temporal devuelta por el backend (respaldo)', () => {
     await screen.findByText('Juan Pérez')
     await usuario.click(boton('Crear usuario'))
     await usuario.type(screen.getByLabelText('Nombre completo'), 'Laura Díaz')
-    await usuario.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
+    await usuario.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@example.com')
     await usuario.click(screen.getByRole('dialog').querySelector('button[type=submit]'))
     return screen.findByRole('dialog', { name: 'Usuario creado' })
   }
@@ -180,14 +180,14 @@ describe('contraseña temporal devuelta por el backend (respaldo)', () => {
   test('si el backend NO devuelve la contraseña (la envía por correo) lo avisa en vez de mostrarla', async () => {
     server.use(
       http.post('/api/users/', () =>
-        HttpResponse.json({ user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } }, { status: 201 }),
+        HttpResponse.json({ user: { id: 99, nombre: 'Laura Díaz', email: 'ldiaz@example.com', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } }, { status: 201 }),
       ),
     )
     await renderConSesion('/usuarios')
     await screen.findByText('Juan Pérez')
     await userEvent.click(boton('Crear usuario'))
     await userEvent.type(screen.getByLabelText('Nombre completo'), 'Laura Díaz')
-    await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
+    await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@example.com')
     await userEvent.click(screen.getByRole('dialog').querySelector('button[type=submit]'))
     expect(await screen.findByText(/la contraseña temporal se envió a su correo/i)).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Usuario creado' })).not.toBeInTheDocument()

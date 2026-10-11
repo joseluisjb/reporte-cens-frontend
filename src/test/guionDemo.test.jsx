@@ -32,19 +32,19 @@ test('recorrido completo del guion: administrador crea un usuario, que cambia su
   // 0:00 validaciones y credenciales incorrectas
   await userEvent.click(await screen.findByRole('button', { name: 'Iniciar sesión' }))
   expect(screen.getByText('Ingresa tu correo electrónico.')).toBeInTheDocument()
-  await iniciarSesion('rmartinez@cens.com.co', 'ClaveMala1')
+  await iniciarSesion('rmartinez@example.com', 'ClaveMala1')
   expect(await screen.findByRole('alert')).toHaveTextContent('Usuario o contraseña incorrectos.')
 
   // 1:00 usuario desactivado
   await userEvent.clear(screen.getByLabelText('Correo electrónico'))
-  await userEvent.type(screen.getByLabelText('Correo electrónico'), 'avargas@cens.com.co')
+  await userEvent.type(screen.getByLabelText('Correo electrónico'), 'avargas@example.com')
   await userEvent.type(screen.getByLabelText('Contraseña'), 'Cartera123')
   await userEvent.click(boton('Iniciar sesión'))
   expect(await screen.findByRole('alert')).toHaveTextContent(/desactivado/i)
 
   // 1:30 administrador con el menú completo
   await userEvent.clear(screen.getByLabelText('Correo electrónico'))
-  await userEvent.type(screen.getByLabelText('Correo electrónico'), 'rmartinez@cens.com.co')
+  await userEvent.type(screen.getByLabelText('Correo electrónico'), 'rmartinez@example.com')
   await userEvent.type(screen.getByLabelText('Contraseña'), 'Admin12345')
   await userEvent.click(boton('Iniciar sesión'))
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
@@ -55,11 +55,11 @@ test('recorrido completo del guion: administrador crea un usuario, que cambia su
   await screen.findByText('Juan Pérez')
   await userEvent.click(boton('Crear usuario'))
   await userEvent.type(screen.getByLabelText('Nombre completo'), 'Laura Díaz')
-  await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
+  await userEvent.type(screen.getByLabelText('Correo corporativo'), 'ldiaz@example.com')
   await userEvent.click(screen.getByRole('dialog').querySelector('button[type=submit]'))
   expect(await screen.findByText(/la contraseña temporal se envió a su correo/i)).toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: 'Usuario creado' })).not.toBeInTheDocument()
-  expect(ultimoCorreo().para).toBe('ldiaz@cens.com.co')
+  expect(ultimoCorreo().para).toBe('ldiaz@example.com')
 
   // 3:00 editar y desactivar con confirmación
   await userEvent.click(screen.getByRole('button', { name: 'Editar a Carlos Sánchez' }))
@@ -77,7 +77,7 @@ test('recorrido completo del guion: administrador crea un usuario, que cambia su
   expect(screen.getByText('Sesión cerrada correctamente.')).toBeInTheDocument()
 
   // 4:20 primer ingreso: la contraseña temporal obliga a cambiarla, también al "escribir la dirección"
-  await iniciarSesion('ldiaz@cens.com.co', 'Temporal123')
+  await iniciarSesion('ldiaz@example.com', 'Temporal123')
   expect(await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })).toBeInTheDocument()
   recargar('/usuarios') // escribir localhost:5173/usuarios en la barra
   expect(await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })).toBeInTheDocument()
@@ -96,18 +96,18 @@ test('recorrido completo del guion: administrador crea un usuario, que cambia su
 
   // los datos creados en la demo siguen ahí tras las recargas: Laura entra con su nueva contraseña
   await cerrarSesion(/^laura díaz/i)
-  await iniciarSesion('ldiaz@cens.com.co', 'Demo12345')
+  await iniciarSesion('ldiaz@example.com', 'Demo12345')
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Laura' })).toBeInTheDocument()
 }, 60000) // recorrido largo: necesita más margen que una prueba normal
 
 test('los datos ficticios de la demostración sobreviven a una recarga de la página', async () => {
   const { createUser } = await import('../features/users/usersService')
   const { login } = await import('../features/auth/authService')
-  await login('rmartinez@cens.com.co', 'Admin12345')
-  await createUser({ nombre: 'Laura Díaz', correo: 'ldiaz@cens.com.co', rol: 'Analista de Cartera' })
+  await login('rmartinez@example.com', 'Admin12345')
+  await createUser({ nombre: 'Laura Díaz', correo: 'ldiaz@example.com', rol: 'Analista de Cartera' })
 
   vi.resetModules() // equivale a recargar la página: la base en memoria se vuelve a leer
   const { db } = await import('../mocks/db')
-  expect(db.usuarios.map((u) => u.email)).toContain('ldiaz@cens.com.co')
+  expect(db.usuarios.map((u) => u.email)).toContain('ldiaz@example.com')
   expect(db.siguienteId).toBe(9)
 })

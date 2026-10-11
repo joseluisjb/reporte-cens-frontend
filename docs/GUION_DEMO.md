@@ -25,18 +25,18 @@ Cubre RF25 a RF29. La extracción (HU-A), la auditoría (RF30) y el componente d
 
 | Min | Pantalla | Qué hacer | Qué decir | RF |
 |---|---|---|---|---|
-| 0:00 | Inicio de sesión | Pulsar **Iniciar sesión** con los campos vacíos. Escribir un correo sin `@`. Luego `rmartinez@cens.com.co` con una contraseña incorrecta | "El sistema valida antes de enviar y dice exactamente qué falta, en español. Si las credenciales son incorrectas no revela cuál de los dos datos falla." | RF25, RF31 |
-| 1:00 | Inicio de sesión | Probar `avargas@cens.com.co` / `Cartera123` | "Un usuario desactivado no puede entrar y se le explica por qué." | RF25, RF28 |
-| 1:30 | Inicio (Administrador) | Entrar con `rmartinez@cens.com.co` / `Admin12345`. Señalar el menú | "El Administrador ve cinco opciones; las de administración llevan la etiqueta ADMIN." | RF25, RF27 |
-| 2:00 | Gestión de Usuarios | Mostrar la lista. **Crear usuario**: `Laura Díaz`, `ldiaz@cens.com.co`, rol Analista de Cartera. Aparece el aviso "La contraseña temporal se envió a su correo" | "El Administrador crea usuarios. El sistema genera una contraseña temporal y la **envía por correo** al usuario; deberá cambiarla en su primer ingreso." (En la demostración el correo es simulado: con F12 → Consola se ve la línea `[Correo simulado]` y la contraseña es `Temporal123`.) | RF28 |
+| 0:00 | Inicio de sesión | Pulsar **Iniciar sesión** con los campos vacíos. Escribir un correo sin `@`. Luego `rmartinez@example.com` con una contraseña incorrecta | "El sistema valida antes de enviar y dice exactamente qué falta, en español. Si las credenciales son incorrectas no revela cuál de los dos datos falla." | RF25, RF31 |
+| 1:00 | Inicio de sesión | Probar `avargas@example.com` / `Cartera123` | "Un usuario desactivado no puede entrar y se le explica por qué." | RF25, RF28 |
+| 1:30 | Inicio (Administrador) | Entrar con `rmartinez@example.com` / `Admin12345`. Señalar el menú | "El Administrador ve cinco opciones; las de administración llevan la etiqueta ADMIN." | RF25, RF27 |
+| 2:00 | Gestión de Usuarios | Mostrar la lista. **Crear usuario**: `Laura Díaz`, `ldiaz@example.com`, rol Analista de Cartera. Aparece el aviso "La contraseña temporal se envió a su correo" | "El Administrador crea usuarios. El sistema genera una contraseña temporal y la **envía por correo** al usuario; deberá cambiarla en su primer ingreso." (En la demostración el correo es simulado: con F12 → Consola se ve la línea `[Correo simulado]` y la contraseña es `Temporal123`.) | RF28 |
 | 3:00 | Gestión de Usuarios | **Editar** a Carlos Sánchez (cambiar el nombre) y **desactivar** a otro usuario con el interruptor | "Se edita y se desactiva con confirmación. No se puede desactivar el propio usuario ni cambiarse el propio rol." | RF28 |
 | 4:00 | Cierre manual | Menú de perfil (arriba a la derecha) → **Cerrar sesión** | "El cierre de sesión manual invalida la sesión." Se ve el aviso "Sesión cerrada correctamente." | RF26 |
-| 4:20 | Primer ingreso | Entrar con `ldiaz@cens.com.co` / `Temporal123`. Intentar abrir otra pantalla escribiendo `localhost:5173/usuarios` en la barra | "Con contraseña temporal no se puede hacer nada más que cambiarla, ni escribiendo la dirección." | RF28 |
+| 4:20 | Primer ingreso | Entrar con `ldiaz@example.com` / `Temporal123`. Intentar abrir otra pantalla escribiendo `localhost:5173/usuarios` en la barra | "Con contraseña temporal no se puede hacer nada más que cambiarla, ni escribiendo la dirección." | RF28 |
 | 5:00 | Cambio obligatorio | Escribir `Temporal123` y la nueva `Demo12345` (dos veces). Mostrar cómo los requisitos se marcan a medida que se escribe | "La nueva contraseña debe cumplir las reglas. Al guardar, entra al sistema." | RF28 |
 | 6:00 | Roles | Ya como Analista: mostrar el menú de **dos opciones**. Escribir `localhost:5173/usuarios` en la barra | "El Analista no ve las opciones de administración y, aunque escriba la dirección, ve *Acceso restringido*." | RF27 |
 | 7:00 | Recuperar contraseña | Cerrar sesión → **¿Olvidaste tu contraseña?** → escribir un correo cualquiera, existente o no | "La respuesta es siempre la misma: no revela si el correo existe. El enlace llega al correo corporativo, es de un solo uso y vence pronto." | RF29 |
 | 7:45 | Restablecer | Abrir `localhost:5173/restablecer?token=token-de-prueba` y definir una contraseña | "Este es el enlace que llegaría por correo. Con un enlace vencido o ya usado, se ofrece pedir uno nuevo." | RF29 |
-| 8:30 | Inactividad | Cambiar a la **pestaña 5174** (inactividad corta de 30 s), entrar como `jperez@cens.com.co` / `Analista123` y **no tocar nada** | "En producción son 10 minutos; para la demo está en 30 segundos. Un minuto antes de cerrar, el sistema avisa." Aparece "¿Sigues ahí?" a los 15 s | RF26 |
+| 8:30 | Inactividad | Cambiar a la **pestaña 5174** (inactividad corta de 30 s), entrar como `jperez@example.com` / `Analista123` y **no tocar nada** | "En producción son 10 minutos; para la demo está en 30 segundos. Un minuto antes de cerrar, el sistema avisa." Aparece "¿Sigues ahí?" a los 15 s | RF26 |
 | 9:15 | Inactividad | Dejar que el tiempo se agote | "Si no hay respuesta, la sesión se cierra sola y el login dice por qué." Se ve el aviso ámbar | RF26 |
 | 9:45 | Cierre | Volver a la pestaña 5173 | Resumen (ver abajo) | — |
 
@@ -46,10 +46,10 @@ Cubre RF25 a RF29. La extracción (HU-A), la auditoría (RF30) y el componente d
 
 | Correo | Contraseña | Para qué |
 |---|---|---|
-| `rmartinez@cens.com.co` | `Admin12345` | Administrador |
-| `jperez@cens.com.co` | `Analista123` | Analista de Cartera (también para la inactividad) |
-| `avargas@cens.com.co` | `Cartera123` | Usuario desactivado |
-| `ldiaz@cens.com.co` | `Temporal123` → `Demo12345` | Usuario que se crea en vivo. La contraseña temporal "llega por correo" (simulado: consola del navegador, F12) |
+| `rmartinez@example.com` | `Admin12345` | Administrador |
+| `jperez@example.com` | `Analista123` | Analista de Cartera (también para la inactividad) |
+| `avargas@example.com` | `Cartera123` | Usuario desactivado |
+| `ldiaz@example.com` | `Temporal123` → `Demo12345` | Usuario que se crea en vivo. La contraseña temporal "llega por correo" (simulado: consola del navegador, F12) |
 | Enlace de recuperación | `/restablecer?token=token-de-prueba` | Restablecer contraseña |
 
 ## 4. Si algo falla (plan B)

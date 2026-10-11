@@ -26,7 +26,7 @@ describe('validación del formulario', () => {
       password: MSG_PASSWORD_VACIA,
     })
     expect(validarLogin({ identificador: 'sin-arroba', password: 'x' }).identificador).toMatch(/correo válido/i)
-    expect(validarLogin({ identificador: ' jperez@cens.com.co ', password: 'x' })).toEqual({})
+    expect(validarLogin({ identificador: ' jperez@example.com ', password: 'x' })).toEqual({})
   })
 })
 
@@ -65,17 +65,17 @@ describe('pantalla de login', () => {
   test('credenciales incorrectas: mensaje de la maqueta, contraseña limpia y foco en ella', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('rmartinez@cens.com.co', 'ClaveMala1')
+    await iniciar('rmartinez@example.com', 'ClaveMala1')
     expect(await screen.findByRole('alert')).toHaveTextContent(MSG_CREDENCIALES)
     expect(clave()).toHaveValue('')
     expect(clave()).toHaveFocus()
-    expect(correo()).toHaveValue('rmartinez@cens.com.co')
+    expect(correo()).toHaveValue('rmartinez@example.com')
   })
 
   test('un usuario desactivado ve el motivo', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('avargas@cens.com.co', 'Cartera123')
+    await iniciar('avargas@example.com', 'Cartera123')
     expect(await screen.findByRole('alert')).toHaveTextContent(/desactivado/i)
   })
 
@@ -88,7 +88,7 @@ describe('pantalla de login', () => {
     )
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('rmartinez@cens.com.co', 'Admin12345')
+    await iniciar('rmartinez@example.com', 'Admin12345')
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo conectar con el servidor de NexoVolt')
     expect(screen.queryByText(/cannot read properties/i)).not.toBeInTheDocument()
   })
@@ -118,7 +118,7 @@ describe('inicio de sesión correcto', () => {
   test('el Administrador entra al inicio con su menú completo', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('rmartinez@cens.com.co', 'Admin12345')
+    await iniciar('rmartinez@example.com', 'Admin12345')
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /gestión de usuarios/i })).toHaveLength(1)
   })
@@ -126,7 +126,7 @@ describe('inicio de sesión correcto', () => {
   test('el Analista entra y ve solo su menú', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('jperez@cens.com.co', 'Analista123')
+    await iniciar('jperez@example.com', 'Analista123')
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Juan' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /gestión de usuarios/i })).not.toBeInTheDocument()
   })
@@ -134,19 +134,19 @@ describe('inicio de sesión correcto', () => {
   test('tras iniciar sesión vuelve a la pantalla que quería abrir', async () => {
     renderApp('/usuarios', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('rmartinez@cens.com.co', 'Admin12345')
+    await iniciar('rmartinez@example.com', 'Admin12345')
     expect(await screen.findByRole('heading', { name: 'Usuarios del Sistema' })).toBeInTheDocument()
   })
 
   test('el primer ingreso obliga a cambiar la contraseña temporal', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('mgomez@cens.com.co', 'Temporal123')
+    await iniciar('mgomez@example.com', 'Temporal123')
     expect(await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })).toBeInTheDocument()
   })
 
   test('con contraseña temporal no se puede abrir ninguna otra pantalla, ni escribiendo la dirección', async () => {
-    await loginRequest('mgomez@cens.com.co', 'Temporal123')
+    await loginRequest('mgomez@example.com', 'Temporal123')
     renderApp('/extraccion', null)
     expect(await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Navegación principal' })).not.toBeInTheDocument()
@@ -160,7 +160,7 @@ describe('inicio de sesión correcto', () => {
 
 describe('sesión', () => {
   test('al recargar, la cookie de sesión vigente restaura al usuario sin pedir login', async () => {
-    await loginRequest('jperez@cens.com.co', 'Analista123')
+    await loginRequest('jperez@example.com', 'Analista123')
     renderApp('/extraccion', null)
     expect(await screen.findByRole('heading', { name: 'Extracción y Consolidación de Cartera' })).toBeInTheDocument()
   })
@@ -168,7 +168,7 @@ describe('sesión', () => {
   test('cerrar sesión vuelve al login, avisa y no deja volver con la dirección', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('rmartinez@cens.com.co', 'Admin12345')
+    await iniciar('rmartinez@example.com', 'Admin12345')
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
     await userEvent.click(screen.getByRole('button', { name: /rosa martínez/i }))
     await userEvent.click(screen.getByRole('menuitem', { name: /cerrar sesión/i }))
@@ -180,7 +180,7 @@ describe('sesión', () => {
   test('si la sesión vence en el servidor, la siguiente llamada devuelve al login con aviso', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
-    await iniciar('rmartinez@cens.com.co', 'Admin12345')
+    await iniciar('rmartinez@example.com', 'Admin12345')
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
 
     guardarSesion(null) // el backend invalida la sesión

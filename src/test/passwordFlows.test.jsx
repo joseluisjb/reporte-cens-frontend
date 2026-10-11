@@ -33,7 +33,7 @@ describe('validaciones de contraseña', () => {
 describe('cambio obligatorio de la contraseña temporal (primer ingreso)', () => {
   async function entrarConTemporal() {
     renderApp('/login', null)
-    await userEvent.type(await screen.findByLabelText('Correo electrónico'), 'mgomez@cens.com.co')
+    await userEvent.type(await screen.findByLabelText('Correo electrónico'), 'mgomez@example.com')
     await userEvent.type(screen.getByLabelText('Contraseña'), 'Temporal123')
     await userEvent.click(boton('Iniciar sesión'))
     await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })
@@ -102,7 +102,7 @@ describe('recuperar contraseña', () => {
     expect(screen.getByText(/ingresa un correo válido/i)).toBeInTheDocument()
   })
 
-  test.each(['jperez@cens.com.co', 'no-existe@cens.com.co'])('responde igual con %s (no revela si existe)', async (correo) => {
+  test.each(['jperez@example.com', 'no-existe@example.com'])('responde igual con %s (no revela si existe)', async (correo) => {
     renderApp('/recuperar', null)
     await userEvent.type(await screen.findByLabelText('Correo electrónico corporativo'), correo)
     await userEvent.click(boton('Enviar enlace de recuperación'))

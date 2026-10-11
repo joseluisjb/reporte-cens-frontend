@@ -16,8 +16,8 @@ import {
   updateConceptGroup,
 } from '../features/parameters/parametersService'
 
-const entrarAdmin = () => login('rmartinez@cens.com.co', 'Admin12345')
-const entrarAnalista = () => login('jperez@cens.com.co', 'Analista123')
+const entrarAdmin = () => login('rmartinez@example.com', 'Admin12345')
+const entrarAnalista = () => login('jperez@example.com', 'Analista123')
 const codigos = (lista) => lista.map((c) => c.codigo)
 const SIN_PERMISO = { status: 403, message: 'No tienes permiso para realizar esta acción.' }
 
@@ -345,7 +345,7 @@ describe('persistencia de la base simulada', () => {
   })
 
   test('una base guardada sin conceptos se completa con los iniciales', async () => {
-    const guardada = { usuarios: [{ id: 1, nombre: 'Juan Pérez', email: 'jperez@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: false, password: 'Analista123' }], siguienteId: 8 }
+    const guardada = { usuarios: [{ id: 1, nombre: 'Juan Pérez', email: 'jperez@example.com', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: false, password: 'Analista123' }], siguienteId: 8 }
     sessionStorage.setItem('nexovolt-mock-db-v3', JSON.stringify(guardada))
 
     vi.resetModules()

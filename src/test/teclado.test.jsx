@@ -23,7 +23,7 @@ describe('inicio de sesión con teclado', () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
     await userEvent.tab()
-    await userEvent.keyboard('rmartinez@cens.com.co')
+    await userEvent.keyboard('rmartinez@example.com')
     await userEvent.tab()
     await userEvent.keyboard('Admin12345{Enter}')
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
@@ -120,7 +120,7 @@ describe('usuarios: tabla y diálogos', () => {
 
 describe('contraseñas', () => {
   test('los requisitos describen el campo de la nueva contraseña', async () => {
-    await renderConSesion('/panel', 'mgomez@cens.com.co', 'Temporal123')
+    await renderConSesion('/panel', 'mgomez@example.com', 'Temporal123')
     await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })
     expect(screen.getByLabelText('Nueva contraseña')).toHaveAccessibleDescription(/mínimo 8 caracteres/i)
   })

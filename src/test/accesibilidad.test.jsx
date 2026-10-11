@@ -25,7 +25,7 @@ describe('pantallas públicas', () => {
     renderApp('/recuperar', null)
     await screen.findByRole('button', { name: 'Enviar enlace de recuperación' })
     await expectAccesible()
-    await userEvent.type(screen.getByLabelText('Correo electrónico corporativo'), 'a@cens.com.co')
+    await userEvent.type(screen.getByLabelText('Correo electrónico corporativo'), 'a@example.com')
     await userEvent.click(boton('Enviar enlace de recuperación'))
     await screen.findByRole('heading', { name: 'Enlace enviado' })
     await expectAccesible()
@@ -46,7 +46,7 @@ describe('pantallas públicas', () => {
 
 describe('pantallas con sesión', () => {
   test('cambio obligatorio de contraseña, también con errores', async () => {
-    await renderConSesion('/panel', 'mgomez@cens.com.co', 'Temporal123')
+    await renderConSesion('/panel', 'mgomez@example.com', 'Temporal123')
     await screen.findByRole('heading', { name: 'Debes cambiar tu contraseña' })
     await expectAccesible()
     await userEvent.click(boton('Guardar y continuar'))

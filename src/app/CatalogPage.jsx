@@ -86,8 +86,8 @@ export default function CatalogPage() {
 
       <Seccion titulo="Campos de formulario">
         <Card className="grid gap-5 p-6 sm:grid-cols-2">
-          <Input label="Correo electrónico" type="email" placeholder="nombre@cens.com.co" />
-          <Input label="Con error" defaultValue="correo-invalido" error="Ingresa un correo válido, por ejemplo nombre@cens.com.co." />
+          <Input label="Correo electrónico" type="email" placeholder="nombre@example.com" />
+          <Input label="Con error" defaultValue="correo-invalido" error="Ingresa un correo válido, por ejemplo nombre@example.com." />
           <Input label="Deshabilitado" defaultValue="No editable" disabled />
           <PasswordField label="Contraseña" />
           <Select label="Rol" defaultValue="Analista de Cartera">
@@ -131,19 +131,19 @@ export default function CatalogPage() {
             <tbody>
               <tr>
                 <td>Juan Pérez</td>
-                <td>jperez@cens.com.co</td>
+                <td>jperez@example.com</td>
                 <td><Badge tone="ok">Analista de Cartera</Badge></td>
                 <td><Badge tone="ok">Activo</Badge></td>
               </tr>
               <tr>
                 <td>Rosa Martínez</td>
-                <td>rmartinez@cens.com.co</td>
+                <td>rmartinez@example.com</td>
                 <td><Badge tone="admin">Administrador</Badge></td>
                 <td><Badge tone="ok">Activo</Badge></td>
               </tr>
               <tr>
                 <td>Ana Lucía Vargas</td>
-                <td>avargas@cens.com.co</td>
+                <td>avargas@example.com</td>
                 <td><Badge tone="ok">Analista de Cartera</Badge></td>
                 <td><Badge tone="off">Inactivo</Badge></td>
               </tr>

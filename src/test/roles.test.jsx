@@ -29,7 +29,7 @@ describe('un Analista no abre las pantallas de administración, ni escribiendo l
   })
 
   test('las pantallas permitidas siguen abriendo', async () => {
-    await renderConSesion('/extraccion', 'jperez@cens.com.co', 'Analista123')
+    await renderConSesion('/extraccion', 'jperez@example.com', 'Analista123')
     expect(await screen.findByRole('heading', { name: 'Extracción y Consolidación de Cartera' })).toBeInTheDocument()
     await screen.findByText('TITULAR FICTICIO 01')
   })

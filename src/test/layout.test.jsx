@@ -46,7 +46,7 @@ describe('menú de perfil', () => {
     expect(boton).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(boton)
     const menu = screen.getByRole('menu', { name: 'Menú de perfil' })
-    expect(within(menu).getByText('rmartinez@cens.com.co')).toBeInTheDocument()
+    expect(within(menu).getByText('rmartinez@example.com')).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: /cerrar sesión/i })).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()

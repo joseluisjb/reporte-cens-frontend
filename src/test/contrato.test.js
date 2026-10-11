@@ -7,8 +7,8 @@ import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
 import { expectCumpleContrato } from './contrato'
 
-const ADMIN = ['rmartinez@cens.com.co', 'Admin12345'] // id 2
-const ANALISTA = ['jperez@cens.com.co', 'Analista123']
+const ADMIN = ['rmartinez@example.com', 'Admin12345'] // id 2
+const ANALISTA = ['jperez@example.com', 'Analista123']
 
 const llamar = (metodo, ruta, datos) => api.request({ method: metodo, url: ruta, data: datos, validateStatus: () => true })
 
@@ -26,6 +26,11 @@ async function entrar([email, password]) {
 }
 
 describe('conformidad de los mocks con el contrato OpenAPI', () => {
+  test('utilidades: GET /salud/ 200 cumple el contrato sin sesión', async () => {
+    const ok = await verifica('get', '/salud/', 200)
+    expect(ok.estado).toBe('ok')
+  })
+
   test('el validador detecta una respuesta que no cumple', () => {
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 'x' }])).toThrow(/no cumple el contrato/)
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, { codigo: 30 })).toThrow()
@@ -39,7 +44,7 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     expect(() => expectCumpleContrato('post', '/extracciones/{id}/validar/', 409, { detail: 'x', errores: [{ regla: 'R', mensaje: 'M' }] })).not.toThrow()
     // y acepta las formas válidas, incluido `nullable` (observacion y last_login en null)
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 30, descripcion: 'A', activo: true, observacion: null }])).not.toThrow()
-    expect(() => expectCumpleContrato('get', '/auth/me/', 200, { user: { id: 7, nombre: 'A', email: 'a@cens.com.co', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } })).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/auth/me/', 200, { user: { id: 7, nombre: 'A', email: 'a@example.com', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } })).not.toThrow()
   })
 
   test('autenticación: POST /auth/login/ 200 cumple UserEnvelope y 401 cumple ErrorDetail', async () => {
@@ -70,13 +75,13 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
 
   test('usuarios: POST /users/ 201 cumple UserCreatedResponse (sin contraseña temporal), 400 y 403', async () => {
     await entrar(ADMIN)
-    const nuevo = { nombre: 'Laura Prueba', email: 'lprueba@cens.com.co', rol: 'ANALISTA_CARTERA' }
+    const nuevo = { nombre: 'Laura Prueba', email: 'lprueba@example.com', rol: 'ANALISTA_CARTERA' }
     const creado = await verifica('post', '/users/', 201, { datos: nuevo })
     expect(creado.temporary_password).toBeNull()
     await verifica('post', '/users/', 400, { datos: nuevo }) // correo repetido
     await verifica('post', '/users/', 400, { datos: { nombre: '', email: '', rol: 'JEFE' } }) // campos vacíos
     await entrar(ANALISTA)
-    await verifica('post', '/users/', 403, { datos: { ...nuevo, email: 'otra@cens.com.co' } })
+    await verifica('post', '/users/', 403, { datos: { ...nuevo, email: 'otra@example.com' } })
   })
 
   test('usuarios: PATCH /users/{id}/ 200 cumple User, 400 (desactivarse a sí mismo), 403 y 404', async () => {

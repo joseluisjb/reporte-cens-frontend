@@ -5,6 +5,7 @@ import { authHandlers } from './rutas/auth'
 import { conceptosHandlers } from './rutas/conceptos'
 import { extraccionesHandlers } from './rutas/extracciones'
 import { gruposHandlers } from './rutas/grupos'
+import { saludHandlers } from './rutas/salud'
 import { usuariosHandlers } from './rutas/usuarios'
 
-export const handlers = [...authHandlers, ...usuariosHandlers, ...conceptosHandlers, ...gruposHandlers, ...extraccionesHandlers]
+export const handlers = [...saludHandlers, ...authHandlers, ...usuariosHandlers, ...conceptosHandlers, ...gruposHandlers, ...extraccionesHandlers]

@@ -1,6 +1,7 @@
 // Llamadas de autenticación al backend. Las pantallas usan SOLO estas funciones, nunca axios.
 // Respuesta propuesta de login y me: { user: {...} } (ver userMapper). Contrato por confirmar con Dilan.
 import { api, ApiError, ENDPOINTS } from '../../lib/api'
+import { TIEMPO_ESPERA_ARRANQUE_MS } from '../../lib/config'
 import { mapUser } from '../users/userMapper'
 import { IDENTIFICADOR, MSG_CREDENCIALES } from './authConfig'
 import { rolACodigo } from './roles'
@@ -11,7 +12,7 @@ export async function login(identificador, password) {
     const { data } = await api.post(
       ENDPOINTS.login,
       { [IDENTIFICADOR.campo]: identificador, password },
-      { skipAuthRedirect: true },
+      { skipAuthRedirect: true, timeout: TIEMPO_ESPERA_ARRANQUE_MS }, // puede caer en el arranque en frío
     )
     return mapUser(data.user)
   } catch (e) {
@@ -29,7 +30,8 @@ export async function logout() {
 // Usuario de la sesión actual, o null si no hay sesión. Se llama al abrir la app.
 export async function getCurrentUser() {
   try {
-    const { data } = await api.get(ENDPOINTS.me, { skipAuthRedirect: true })
+    // Primera petición al abrir la app: puede caer en el arranque en frío de Render.
+    const { data } = await api.get(ENDPOINTS.me, { skipAuthRedirect: true, timeout: TIEMPO_ESPERA_ARRANQUE_MS })
     return mapUser(data.user)
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) return null

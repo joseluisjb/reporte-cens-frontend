@@ -1455,7 +1455,7 @@ components:
       properties:
         id: { type: integer, example: 2 }
         nombre: { type: string, example: Rosa Martínez }
-        email: { type: string, format: email, example: rmartinez@cens.com.co }
+        email: { type: string, format: email, example: rmartinez@example.com }
         rol: { $ref: '#/components/schemas/Rol' }
         is_active: { type: boolean }
         last_login: { type: string, format: date-time, nullable: true, description: Último acceso; `null` si nunca ingresó. }

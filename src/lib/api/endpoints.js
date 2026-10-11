@@ -1,6 +1,8 @@
 // Rutas del contrato `docs/contrato/openapi.yaml` (versión 0.4). La autenticación (Dilan) y los
 // usuarios (José Luis) aún no existen en el backend; si cambian, se corrigen solo aquí.
 export const ENDPOINTS = {
+  // Verifica que el servidor responde; sin sesión. Ya implementado en el backend.
+  salud: '/salud/',
   csrf: '/auth/csrf/',
   login: '/auth/login/',
   logout: '/auth/logout/',

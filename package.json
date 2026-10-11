@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "humo": "node scripts/humo-api.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage"

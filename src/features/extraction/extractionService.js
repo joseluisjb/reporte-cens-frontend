@@ -12,6 +12,7 @@
 // ([{ regla, mensaje }]); las pantallas la leen con `err.datos?.errores`. El corte sigue en BORRADOR.
 import { api, ENDPOINTS } from '../../lib/api'
 import { mapPagina } from '../../lib/api/pagina'
+import { TIEMPO_ESPERA_CORTE_MS } from '../../lib/config'
 import { mapCorte, mapCorteValidado, mapObligacionCorte } from './extractionMapper'
 
 // Cortes no anulados, del más reciente al más antiguo (por fecha de ejecución). Puede ser [].
@@ -34,7 +35,12 @@ export async function getCut(id) {
 // Genera un corte en BORRADOR. `fechaCorte`: 'YYYY-MM-DD', no futura. `grupoId`: grupo de conceptos
 // activo; null = todos los conceptos reportables. Un BORRADOR de la misma fecha se reemplaza (mismo id).
 export async function generateCut({ fechaCorte, grupoId = null }) {
-  const { data } = await api.post(ENDPOINTS.extracciones, { fecha_corte: fechaCorte, grupo_id: grupoId })
+  // Espera ampliada: con datos reales la generación puede pasar de 15 s.
+  const { data } = await api.post(
+    ENDPOINTS.extracciones,
+    { fecha_corte: fechaCorte, grupo_id: grupoId },
+    { timeout: TIEMPO_ESPERA_CORTE_MS },
+  )
   return mapCorte(data)
 }
 
@@ -46,7 +52,8 @@ export async function deleteCut(id) {
 // BORRADOR → VALIDADO. Devuelve { corte, advertencias } (las advertencias no bloquean).
 // 409 con reglas correctivas: ApiError con `datos.errores` y el corte sigue en BORRADOR.
 export async function validateCut(id) {
-  const { data } = await api.post(ENDPOINTS.validarExtraccion(id))
+  // Espera ampliada: validar consulta la vista de validación en Oracle.
+  const { data } = await api.post(ENDPOINTS.validarExtraccion(id), null, { timeout: TIEMPO_ESPERA_CORTE_MS })
   return mapCorteValidado(data)
 }
 

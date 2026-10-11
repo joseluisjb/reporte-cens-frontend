@@ -51,6 +51,8 @@ La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hec
 
 ## 1. Primeros pasos
 
+Despliegue en Render, conexión con el backend real y prueba de humo: `docs/DESPLIEGUE.md`.
+
 ```
 git clone https://github.com/joseluisjb/reporte-cens-frontend.git
 cd reporte-cens-frontend
@@ -66,10 +68,10 @@ Cuentas de prueba (todas ficticias):
 
 | Correo | Contraseña | Rol |
 |---|---|---|
-| `rmartinez@cens.com.co` | `Admin12345` | Administrador |
-| `jperez@cens.com.co` | `Analista123` | Analista de Cartera |
-| `mgomez@cens.com.co` | `Temporal123` | Primer ingreso (debe cambiar la contraseña) |
-| `avargas@cens.com.co` | `Cartera123` | Desactivado (no entra) |
+| `rmartinez@example.com` | `Admin12345` | Administrador |
+| `jperez@example.com` | `Analista123` | Analista de Cartera |
+| `mgomez@example.com` | `Temporal123` | Primer ingreso (debe cambiar la contraseña) |
+| `avargas@example.com` | `Cartera123` | Desactivado (no entra) |
 
 Para alternar rápido entre Analista y Administrador, pon `VITE_DEMO_MODE=true` en tu `.env` (aparece "Cambiar de perfil" en el menú de perfil).
 
@@ -253,7 +255,7 @@ Cada pieza lleva su prueba. Ayudas en `src/test/renderApp.jsx`:
 
 ```js
 await renderConSesion('/parametrizacion')              // Administrador con sesión real en el mock
-await renderConSesion('/extraccion', 'jperez@cens.com.co', 'Analista123')  // otro usuario
+await renderConSesion('/extraccion', 'jperez@example.com', 'Analista123')  // otro usuario
 renderApp('/panel', ANALISTA)                          // usuario fijo; SOLO si la pantalla no llama a la API
 ```
 

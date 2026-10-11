@@ -95,7 +95,7 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
   const MIN = 60 * S
   // Con sesión real en el mock: así el "ping" de renovación al servidor es válido.
   async function entrar() {
-    await login('rmartinez@cens.com.co', 'Admin12345')
+    await login('rmartinez@example.com', 'Admin12345')
     renderApp('/panel', null)
   }
 
@@ -144,7 +144,7 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
   })
 
   test('el cierre por inactividad invalida la sesión también en el servidor', async () => {
-    await login('rmartinez@cens.com.co', 'Admin12345')
+    await login('rmartinez@example.com', 'Admin12345')
     renderApp('/panel', null)
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
     await pasar(10 * MIN)
@@ -156,7 +156,7 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
 describe('keepAlive', () => {
   test('con sesión vigente renueva; con sesión vencida falla con 401', async () => {
     await expect(keepAlive()).rejects.toMatchObject({ status: 401 })
-    await login('jperez@cens.com.co', 'Analista123')
+    await login('jperez@example.com', 'Analista123')
     await expect(keepAlive()).resolves.toBeUndefined()
   })
 })

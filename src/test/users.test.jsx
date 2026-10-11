@@ -22,7 +22,7 @@ describe('validación y utilidades', () => {
       rol: 'Selecciona un rol.',
     })
     expect(validarUsuario({ nombre: 'Ana', correo: 'ana', rol: ROLES.ANALISTA }).correo).toMatch(/correo válido/i)
-    expect(validarUsuario({ nombre: 'Ana', correo: 'ana@cens.com.co', rol: ROLES.ADMIN })).toEqual({})
+    expect(validarUsuario({ nombre: 'Ana', correo: 'ana@example.com', rol: ROLES.ADMIN })).toEqual({})
   })
 
   test('los errores del servidor sobre `email` se muestran en el campo `correo`', () => {
@@ -69,7 +69,7 @@ describe('listado de usuarios', () => {
     await abrirUsuarios()
     expect(screen.getAllByRole('row')).toHaveLength(8) // encabezado + 7
     const juan = fila('Juan Pérez')
-    expect(juan.getByText('jperez@cens.com.co')).toBeInTheDocument()
+    expect(juan.getByText('jperez@example.com')).toBeInTheDocument()
     expect(juan.getByText('Analista de Cartera')).toBeInTheDocument()
     expect(juan.getByText('Activo')).toBeInTheDocument()
     expect(juan.getByText('30/09/2026 08:14')).toBeInTheDocument()
@@ -106,7 +106,7 @@ describe('crear usuario', () => {
   test('un correo repetido se reporta en el campo del correo', async () => {
     const panel = await abrirPanel()
     await userEvent.type(within(panel).getByLabelText('Nombre completo'), 'Otra Persona')
-    await userEvent.type(within(panel).getByLabelText('Correo corporativo'), 'jperez@cens.com.co')
+    await userEvent.type(within(panel).getByLabelText('Correo corporativo'), 'jperez@example.com')
     await userEvent.click(within(panel).getByRole('button', { name: 'Crear usuario' }))
     expect(await within(panel).findByText('Ya existe un usuario con ese correo.')).toBeInTheDocument()
     expect(within(panel).getByLabelText('Correo corporativo')).toHaveFocus()
@@ -115,12 +115,12 @@ describe('crear usuario', () => {
   test('al crear avisa que la contraseña temporal se envió por correo y agrega la fila', async () => {
     const panel = await abrirPanel()
     await userEvent.type(within(panel).getByLabelText('Nombre completo'), 'Laura Díaz')
-    await userEvent.type(within(panel).getByLabelText('Correo corporativo'), 'ldiaz@cens.com.co')
+    await userEvent.type(within(panel).getByLabelText('Correo corporativo'), 'ldiaz@example.com')
     await userEvent.click(within(panel).getByRole('button', { name: 'Crear usuario' }))
 
     expect(await screen.findByText(/la contraseña temporal se envió a su correo/i)).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(fila('Laura Díaz').getByText('ldiaz@cens.com.co')).toBeInTheDocument()
+    expect(fila('Laura Díaz').getByText('ldiaz@example.com')).toBeInTheDocument()
   })
 
   test('el panel no se muestra con datos de la vez anterior', async () => {
@@ -143,7 +143,7 @@ describe('editar usuario', () => {
     await userEvent.type(nombre, 'Carlos A. Sánchez')
     await userEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }))
     expect(await screen.findByText('Usuario actualizado correctamente.')).toBeInTheDocument()
-    expect(fila('Carlos A. Sánchez').getByText('csanchez@cens.com.co')).toBeInTheDocument()
+    expect(fila('Carlos A. Sánchez').getByText('csanchez@example.com')).toBeInTheDocument()
   })
 
   test('un administrador no puede cambiarse el rol a sí mismo', async () => {

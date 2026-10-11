@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { ROLES } from '../features/auth/roles'
 import { mapUserFieldErrors } from '../features/users/userMapper'
 import { validarUsuario } from '../features/users/userValidation'
-import { formatearCOP, formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../lib/format'
+import { formatearCOP, formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, hoyISO, plural } from '../lib/format'
 import { server } from '../mocks/server'
 import { renderConSesion } from './renderApp'
 
@@ -42,6 +42,25 @@ describe('validación y utilidades', () => {
     expect(formatearFechaISOLarga('2026-09-30')).toBe('30 de septiembre de 2026')
     expect(plural(1, 'obligación', 'obligaciones')).toBe('1 obligación')
     expect(plural(6, 'obligación', 'obligaciones')).toBe('6 obligaciones')
+  })
+
+  test('formatearFechaISO tolera vacíos, fechas con hora y objetos Date', () => {
+    expect(formatearFechaISO(null)).toBe('—')
+    expect(formatearFechaISO(undefined)).toBe('—')
+    expect(formatearFechaISO('')).toBe('—')
+    expect(formatearFechaISO('2026-10-10T00:00:00-05:00')).toBe('10/10/2026')
+    expect(formatearFechaISO(new Date(2026, 8, 30))).toBe('30/09/2026')
+    expect(formatearFechaISO(new Date('x'))).toBe('—')
+  })
+
+  test('hoyISO usa la fecha local y no la UTC', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date(2026, 9, 10, 20, 30)) // 8:30 p. m. local
+      expect(hoyISO()).toBe('2026-10-10')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   EmptyState,
+  FilterSelect,
   Icon,
   Input,
   PageHeader,
@@ -20,6 +21,7 @@ import {
   formatearFechaHora,
   formatearFechaISO,
   hoyISO,
+  plural,
 } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { listConceptGroups } from '../parameters/parametersService'
@@ -57,8 +59,14 @@ export default function ExtractionPage() {
   const [obligaciones, setObligaciones] = useState([])
   const [totalObligaciones, setTotalObligaciones] = useState(0)
   const [paginaActual, setPaginaActual] = useState(1)
-  const [cargandoObligaciones, setCargandoObligaciones] = useState(false)
   const [versionCarga, setVersionCarga] = useState(0)
+  const claveObligaciones = corteActual?.id
+    ? `${corteActual.id}|${paginaActual}|${versionCarga}`
+    : null
+  const [claveCargada, setClaveCargada] = useState(null)
+  // Se calcula en vez de guardarse: hay carga mientras la última clave resuelta
+  // (corte, página y versión) no coincida con la solicitada.
+  const cargandoObligaciones = claveObligaciones !== null && claveCargada !== claveObligaciones
 
   // Modales y acciones del ciclo de vida
   const [validando, setValidando] = useState(false)
@@ -93,10 +101,10 @@ export default function ExtractionPage() {
     const id = corteActual?.id
     if (!id) return
 
+    const clave = claveObligaciones
     let cancelado = false
     const desplazamiento = (paginaActual - 1) * FILAS_POR_PAGINA
 
-    setCargandoObligaciones(true)
     listCutObligations(id, {
       limite: FILAS_POR_PAGINA,
       desplazamiento,
@@ -110,13 +118,13 @@ export default function ExtractionPage() {
         if (!cancelado) toast.error(`Error al cargar obligaciones: ${err.message}`)
       })
       .finally(() => {
-        if (!cancelado) setCargandoObligaciones(false)
+        if (!cancelado) setClaveCargada(clave)
       })
 
     return () => {
       cancelado = true
     }
-  }, [corteActual?.id, paginaActual, versionCarga, toast])
+  }, [corteActual?.id, paginaActual, versionCarga, claveObligaciones, toast])
 
   // Iniciar / Generar nuevo corte (síncrono)
   const iniciarExtraccion = async (e) => {
@@ -151,7 +159,7 @@ export default function ExtractionPage() {
       setVersionCarga((v) => v + 1)
       setAdvertencias([])
       toast.success(
-        `Corte de cartera generado correctamente (${nuevoCorte.totalObligaciones} obligaciones).`,
+        `Corte de cartera generado correctamente (${plural(nuevoCorte.totalObligaciones, 'obligación', 'obligaciones')}).`,
       )
     } catch (err) {
       if (err.fieldErrors && Object.keys(err.fieldErrors).length) {
@@ -215,7 +223,7 @@ export default function ExtractionPage() {
 
       {/* Formulario de nueva extracción (RF1, RF2, RF44) */}
       <Card className="mb-6 p-6">
-        <h2 className="font-hd text-lg font-bold text-slate-800">
+        <h2 className="font-hd text-lg font-bold text-ink">
           Iniciar extracción mensual de cartera
         </h2>
         <p className="mt-1 text-sm text-muted">
@@ -301,7 +309,7 @@ export default function ExtractionPage() {
           <Card className="mb-6 p-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gris-d pb-4">
               <div className="flex flex-wrap items-center gap-3">
-                <h3 className="font-hd text-xl font-bold text-slate-800">
+                <h3 className="font-hd text-xl font-bold text-ink">
                   Corte #{corteActual.id} al {formatearFechaISO(corteActual.fechaCorte)}
                 </h3>
                 <Badge
@@ -320,38 +328,39 @@ export default function ExtractionPage() {
               {/* Selector para cambiar de corte si hay más de uno */}
               {cortes.length > 1 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">Historial de cortes:</span>
-                  <select
-                    aria-label="Seleccionar corte del historial"
+                  <span aria-hidden="true" className="text-xs text-muted">
+                    Historial de cortes:
+                  </span>
+                  <FilterSelect
+                    label="Historial de cortes"
                     value={corteActual.id}
                     onChange={(e) => seleccionarCorte(Number(e.target.value))}
-                    className="rounded-ctl border border-gris-d bg-white py-1 px-2.5 text-xs text-slate-700"
                   >
                     {cortes.map((c) => (
                       <option key={c.id} value={c.id}>
                         Corte {c.id} ({formatearFechaISO(c.fechaCorte)}) - {c.estado}
                       </option>
                     ))}
-                  </select>
+                  </FilterSelect>
                 </div>
               )}
             </div>
 
             {/* Métricas clave del corte */}
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-ctl bg-slate-50 p-3">
+              <div className="rounded-ctl bg-fondo p-3">
                 <span className="text-xs text-muted">Total obligaciones</span>
                 <p className="font-hd text-xl font-bold text-bosque-d">
                   {corteActual.totalObligaciones}
                 </p>
               </div>
-              <div className="rounded-ctl bg-slate-50 p-3">
+              <div className="rounded-ctl bg-fondo p-3">
                 <span className="text-xs text-muted">Saldo consolidado</span>
                 <p className="font-hd text-xl font-bold text-bosque-d">
                   {formatearCOP(corteActual.saldoConsolidado)}
                 </p>
               </div>
-              <div className="rounded-ctl bg-slate-50 p-3">
+              <div className="rounded-ctl bg-fondo p-3">
                 <span className="text-xs text-muted">Fecha de ejecución</span>
                 <p className="text-sm font-semibold text-slate-700">
                   {corteActual.fechaEjecucion
@@ -359,7 +368,7 @@ export default function ExtractionPage() {
                     : '—'}
                 </p>
               </div>
-              <div className="rounded-ctl bg-slate-50 p-3">
+              <div className="rounded-ctl bg-fondo p-3">
                 <span className="text-xs text-muted">Grupo de conceptos</span>
                 <p className="text-sm font-semibold text-slate-700">
                   {corteActual.grupo ? corteActual.grupo.nombre : 'Todos los reportables'}
@@ -419,7 +428,7 @@ export default function ExtractionPage() {
           {/* Tabla de Resultados Consolidados de Deudores (RF3, RF4, RF5, RF7) */}
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between border-b border-gris-d p-4">
-              <h3 className="font-hd font-bold text-slate-800">
+              <h3 className="font-hd font-bold text-ink">
                 Obligaciones consolidadas ({totalObligaciones})
               </h3>
               <span className="text-xs text-muted">
@@ -453,7 +462,7 @@ export default function ExtractionPage() {
                     <tbody>
                       {obligaciones.map((o) => (
                         <tr key={o.numeroObligacion}>
-                          <td className="font-mono text-xs font-semibold text-slate-800">
+                          <td className="font-mono text-xs font-semibold text-ink">
                             {o.numeroObligacion}
                           </td>
                           <td className="font-medium text-ink">{o.nombreTitular}</td>

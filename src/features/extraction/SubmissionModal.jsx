@@ -2,10 +2,9 @@
 // Pasa el corte de VALIDADO a ENVIADO.
 import { useState } from 'react'
 import { Alert, Button, Input, Modal } from '../../components/ui'
+import { formatearFechaISO, hoyISO } from '../../lib/format'
 import { registerSubmission } from './extractionService'
 import { mapCorteFieldErrors } from './extractionMapper'
-
-const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 export default function SubmissionModal({ corte, onClose, onEnviado }) {
   const [fechaEnvio, setFechaEnvio] = useState(hoyISO)
@@ -58,7 +57,7 @@ export default function SubmissionModal({ corte, onClose, onEnviado }) {
     >
       <form id="form-envio-tu" onSubmit={enviar} noValidate>
         <p className="text-sm text-slate-700">
-          Registra el envío del corte de cartera correspondiente al <strong>{corte.fechaCorte}</strong> una vez
+          Registra el envío del corte de cartera correspondiente al <strong>{formatearFechaISO(corte.fechaCorte)}</strong> una vez
           cargado exitosamente en la plataforma de TransUnion.
         </p>
 

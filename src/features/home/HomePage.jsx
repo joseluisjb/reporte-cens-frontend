@@ -114,7 +114,7 @@ function TarjetaUltimaExtraccion() {
               {formatearCOP(resultado.corte.saldoConsolidado)}
             </p>
             <p className="text-sm text-muted">
-              Corte al {formatearFechaISO(resultado.corte.fechaCorte)} · {resultado.corte.totalObligaciones}{' '}
+              Corte al {formatearFechaISO(resultado.corte.fechaCorte)} ·{' '}
               {plural(resultado.corte.totalObligaciones, 'obligación', 'obligaciones')}
             </p>
           </div>

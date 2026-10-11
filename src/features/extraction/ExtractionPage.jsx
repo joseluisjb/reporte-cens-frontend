@@ -19,6 +19,7 @@ import {
   formatearCOP,
   formatearFechaHora,
   formatearFechaISO,
+  hoyISO,
 } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { listConceptGroups } from '../parameters/parametersService'
@@ -34,7 +35,6 @@ import SubmissionModal from './SubmissionModal'
 import ValidationErrorsModal from './ValidationErrorsModal'
 
 const FILAS_POR_PAGINA = 20
-const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 export default function ExtractionPage() {
   usePageTitle('Extracción y Consolidación de Cartera')
@@ -58,6 +58,7 @@ export default function ExtractionPage() {
   const [totalObligaciones, setTotalObligaciones] = useState(0)
   const [paginaActual, setPaginaActual] = useState(1)
   const [cargandoObligaciones, setCargandoObligaciones] = useState(false)
+  const [versionCarga, setVersionCarga] = useState(0)
 
   // Modales y acciones del ciclo de vida
   const [validando, setValidando] = useState(false)
@@ -87,7 +88,7 @@ export default function ExtractionPage() {
     }
   }, [])
 
-  // Carga obligaciones cuando cambia el corte actual o la página
+  // Carga obligaciones cuando cambia el corte actual, la página o se fuerza recarga
   useEffect(() => {
     const id = corteActual?.id
     if (!id) return
@@ -95,6 +96,7 @@ export default function ExtractionPage() {
     let cancelado = false
     const desplazamiento = (paginaActual - 1) * FILAS_POR_PAGINA
 
+    setCargandoObligaciones(true)
     listCutObligations(id, {
       limite: FILAS_POR_PAGINA,
       desplazamiento,
@@ -114,7 +116,7 @@ export default function ExtractionPage() {
     return () => {
       cancelado = true
     }
-  }, [corteActual?.id, paginaActual, toast])
+  }, [corteActual?.id, paginaActual, versionCarga, toast])
 
   // Iniciar / Generar nuevo corte (síncrono)
   const iniciarExtraccion = async (e) => {
@@ -146,6 +148,7 @@ export default function ExtractionPage() {
       })
       setCorteActual(nuevoCorte)
       setPaginaActual(1)
+      setVersionCarga((v) => v + 1)
       setAdvertencias([])
       toast.success(
         `Corte de cartera generado correctamente (${nuevoCorte.totalObligaciones} obligaciones).`,

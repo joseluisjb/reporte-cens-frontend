@@ -1,5 +1,5 @@
 // Pruebas de la pantalla de Extracción y Consolidación de Cartera (RF1-RF5, RF7, RF44).
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { renderConSesion } from './renderApp'
@@ -106,5 +106,31 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     await userEvent.click(boton('Iniciar extracción'))
 
     expect(await screen.findByText('La fecha de corte no puede ser futura.')).toBeInTheDocument()
+  })
+
+  test('regenerar un borrador de la misma fecha recarga la tabla y ventana de envío formatea la fecha', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('Corte #2 al 30/09/2026')
+    await screen.findByText('TITULAR FICTICIO 01')
+
+    // Regenerar el corte del 30/09/2026
+    const inputFecha = screen.getByLabelText('Fecha de corte')
+    fireEvent.change(inputFecha, { target: { value: '2026-09-30' } })
+    await userEvent.click(boton('Iniciar extracción'))
+
+    // Muestra notificación y recarga
+    expect(await screen.findByText(/Corte de cartera generado correctamente/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('TITULAR FICTICIO 01')).toBeInTheDocument()
+    })
+
+    // Validar y abrir ventana de envío para comprobar fecha formateada con formatearFechaISO
+    await userEvent.click(boton('Validar corte'))
+    expect(await screen.findByText('VALIDADO')).toBeInTheDocument()
+
+    await userEvent.click(boton('Registrar envío a TransUnion'))
+    const dialog = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
+    // Comprueba que dice "30/09/2026" formateado y no "2026-09-30"
+    expect(dialog.getByText('30/09/2026')).toBeInTheDocument()
   })
 })

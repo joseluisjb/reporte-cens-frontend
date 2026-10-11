@@ -145,12 +145,51 @@ describe('pantalla de parametrización (RF35)', () => {
     await renderConSesion('/parametrizacion')
     await screen.findByText('CUOTA FINANCIACION ENERGIA')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Grupos de conceptos' }))
+    const tabConceptos = screen.getByRole('button', { name: /conceptos de energía/i })
+    const tabGrupos = screen.getByRole('button', { name: /grupos de conceptos/i })
+
+    expect(tabConceptos).toHaveAttribute('aria-current', 'page')
+    expect(tabGrupos).not.toHaveAttribute('aria-current')
+
+    await userEvent.click(tabGrupos)
+
+    expect(tabGrupos).toHaveAttribute('aria-current', 'page')
+    expect(tabConceptos).not.toHaveAttribute('aria-current')
 
     expect(await screen.findByText('Energía financiada')).toBeInTheDocument()
     expect(screen.getByText('Solo cuota de energía')).toBeInTheDocument()
 
     await userEvent.click(boton('Crear grupo'))
     expect(screen.getByRole('dialog', { name: 'Crear nuevo grupo de conceptos' })).toBeInTheDocument()
+  })
+
+  test('la tabla de conceptos incluye columna Fecha de creación con «—» si no tiene', async () => {
+    await renderConSesion('/parametrizacion')
+    await screen.findByText('CUOTA FINANCIACION ENERGIA')
+
+    expect(screen.getByRole('columnheader', { name: 'Fecha de creación' })).toBeInTheDocument()
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+
+  test('editar un grupo con conceptos inactivos los excluye o advierte para evitar error 400', async () => {
+    await renderConSesion('/parametrizacion')
+    await screen.findByText('CUOTA FINANCIACION ENERGIA')
+
+    // Desactivamos el concepto 30 primero
+    await userEvent.click(screen.getByRole('switch', { name: 'Concepto 30 activo' }))
+    const confirmDialog = within(screen.getByRole('alertdialog'))
+    await userEvent.click(confirmDialog.getByRole('button', { name: 'Desactivar' }))
+    await screen.findByRole('switch', { name: 'Concepto 30 activo' })
+
+    // Pasamos a la pestaña de grupos y editamos "Energía financiada" (que contenía concepto 30)
+    await userEvent.click(screen.getByRole('button', { name: /grupos de conceptos/i }))
+    expect(await screen.findByText('Energía financiada')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar grupo Energía financiada' }))
+    const dialog = within(screen.getByRole('dialog'))
+
+    // Guarda cambios sin error 400 porque se filtran/advierten los inactivos
+    await userEvent.click(dialog.getByRole('button', { name: 'Guardar cambios' }))
+    expect(await screen.findByText('Grupo «Energía financiada» actualizado correctamente.')).toBeInTheDocument()
   })
 })

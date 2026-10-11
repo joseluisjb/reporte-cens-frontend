@@ -82,6 +82,14 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('confirmación de desactivar usuario', async () => {
+    await renderConSesion('/usuarios')
+    await screen.findByText('Juan Pérez')
+    await userEvent.click(screen.getByRole('switch', { name: 'Usuario Carlos Sánchez activo' }))
+    await screen.findByRole('alertdialog', { name: 'Desactivar usuario' })
+    await expectAccesible()
+  })
+
   test('parametrización de conceptos con datos', async () => {
     await renderConSesion('/parametrizacion')
     await screen.findByText('CUOTA FINANCIACION ENERGIA')

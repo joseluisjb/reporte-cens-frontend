@@ -229,6 +229,7 @@ export default function ParametersPage() {
         <button
           type="button"
           onClick={() => setPestana('conceptos')}
+          aria-current={pestana === 'conceptos' ? 'page' : undefined}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
             pestana === 'conceptos'
               ? 'border-bosque-d text-bosque-d'
@@ -240,6 +241,7 @@ export default function ParametersPage() {
         <button
           type="button"
           onClick={() => setPestana('grupos')}
+          aria-current={pestana === 'grupos' ? 'page' : undefined}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
             pestana === 'grupos'
               ? 'border-bosque-d text-bosque-d'
@@ -307,6 +309,7 @@ export default function ParametersPage() {
                       <th scope="col" className="w-24">Código</th>
                       <th scope="col">Descripción</th>
                       <th scope="col">Observación</th>
+                      <th scope="col" className="w-36">Fecha de creación</th>
                       <th scope="col" className="w-32">Estado</th>
                       {esAdmin && <th scope="col" className="w-32">Acciones</th>}
                     </tr>
@@ -320,6 +323,9 @@ export default function ParametersPage() {
                         <td className="font-semibold text-slate-800">{c.codigo}</td>
                         <td className="font-medium text-ink">{c.descripcion}</td>
                         <td className="text-muted">{c.observacion || '—'}</td>
+                        <td className="whitespace-nowrap text-muted">
+                          {formatearFechaISO(c.fechaCreacion)}
+                        </td>
                         <td>
                           <Badge tone={c.activo ? 'ok' : 'off'}>{c.estado}</Badge>
                         </td>
@@ -431,7 +437,7 @@ export default function ParametersPage() {
                                 }
                               />
                               <IconButton
-                                icon="cross"
+                                icon="close"
                                 label={`Eliminar grupo ${g.nombre}`}
                                 onClick={() => setAEliminarGrupo(g)}
                               />
@@ -461,6 +467,7 @@ export default function ParametersPage() {
       {modalGrupo && (
         <GroupFormModal
           grupo={modalGrupo.grupo}
+          conceptos={conceptos ?? []}
           conceptosDisponibles={(conceptos ?? []).filter((c) => c.activo)}
           onClose={() => setModalGrupo(null)}
           onGuardado={guardadoGrupo}

@@ -90,6 +90,28 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('parametrización de conceptos con datos', async () => {
+    await renderConSesion('/parametrizacion')
+    await screen.findByText('CUOTA FINANCIACION ENERGIA')
+    await expectAccesible()
+  })
+
+  test('panel lateral "Agregar concepto"', async () => {
+    await renderConSesion('/parametrizacion')
+    await screen.findByText('CUOTA FINANCIACION ENERGIA')
+    await userEvent.click(boton('Agregar concepto'))
+    await screen.findByRole('heading', { name: 'Agregar concepto de energía' })
+    await expectAccesible()
+  })
+
+  test('confirmación de desactivar concepto', async () => {
+    await renderConSesion('/parametrizacion')
+    await screen.findByText('CUOTA FINANCIACION ENERGIA')
+    await userEvent.click(screen.getByRole('switch', { name: 'Concepto 30 activo' }))
+    await screen.findByRole('alertdialog', { name: 'Desactivar concepto de energía' })
+    await expectAccesible()
+  })
+
   test('acceso restringido (Analista)', async () => {
     renderApp('/usuarios', ANALISTA)
     await screen.findByRole('heading', { name: 'Acceso restringido' })

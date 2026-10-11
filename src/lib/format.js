@@ -12,10 +12,24 @@ const partesISO = (iso) => iso.split('-').map(Number) // '2026-09-30' → [2026,
 // 1276016 → $1.276.016 (pesos colombianos, sin decimales, como la maqueta)
 export const formatearCOP = (n) => '$' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 
-// '2026-09-30' → 30/09/2026
+// '2026-09-30' o Date → 30/09/2026. Sin fecha o nulo devuelve "—".
 export function formatearFechaISO(iso) {
-  const [a, m, d] = partesISO(iso)
+  if (!iso) return '—'
+  if (iso instanceof Date) {
+    if (isNaN(iso.getTime())) return '—'
+    return `${pad(iso.getDate())}/${pad(iso.getMonth() + 1)}/${iso.getFullYear()}`
+  }
+  const str = String(iso).slice(0, 10)
+  if (!str.includes('-')) return '—'
+  const [a, m, d] = partesISO(str)
+  if (!a || !m || !d) return '—'
   return `${pad(d)}/${pad(m)}/${a}`
+}
+
+// Fecha de hoy en hora local como 'YYYY-MM-DD' (evita que toISOString corra de día después de las 7 p. m. por UTC).
+export function hoyISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 // '2026-09-30' → 30 de septiembre de 2026

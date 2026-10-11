@@ -252,6 +252,18 @@ describe('conformidad de los mocks de extracción con el contrato', () => {
     expectCumpleContrato('post', '/extracciones/{id}/registrar-envio/', 200, res.data)
   })
 
+  test('DELETE /extracciones/{id}/ 204 (sin cuerpo) para un BORRADOR; 401, 404 y 409 (no BORRADOR)', async () => {
+    await verifica('delete', '/extracciones/{id}/', 401, { url: '/extracciones/2/' })
+    await entrar(ANALISTA)
+    await verifica('delete', '/extracciones/{id}/', 409, { url: '/extracciones/1/' }) // ENVIADO
+    await verifica('delete', '/extracciones/{id}/', 204, { url: '/extracciones/2/' }) // BORRADOR
+    await verifica('delete', '/extracciones/{id}/', 404, { url: '/extracciones/2/' }) // ya borrado
+    await verifica('delete', '/extracciones/{id}/', 404, { url: '/extracciones/abc/' })
+    await entrar(ADMIN)
+    await verifica('post', '/extracciones/', 201, { datos: { fecha_corte: '2026-10-05' } })
+    await verifica('delete', '/extracciones/{id}/', 204, { url: '/extracciones/3/' })
+  })
+
   test('GET /extracciones/{id}/obligaciones/ 200 cumple ListaPaginada de ObligacionCorte; 400, 404 y 401', async () => {
     await verifica('get', '/extracciones/{id}/obligaciones/', 401, { url: '/extracciones/1/obligaciones/' })
     await entrar(ANALISTA)

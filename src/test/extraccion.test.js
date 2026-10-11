@@ -4,7 +4,7 @@
 import { login } from '../features/auth/authService'
 import { edadMoraDesdeDias } from '../features/extraction/catalogosTU'
 import { mapCorte, mapCorteFieldErrors, mapCorteValidado, mapObligacionCorte } from '../features/extraction/extractionMapper'
-import { generateCut, getCut, getLatestCut, listCutObligations, listCuts, registerSubmission, validateCut } from '../features/extraction/extractionService'
+import { deleteCut, generateCut, getCut, getLatestCut, listCutObligations, listCuts, registerSubmission, validateCut } from '../features/extraction/extractionService'
 import { updateConceptGroup } from '../features/parameters/parametersService'
 import { api, ENDPOINTS } from '../lib/api'
 import { mapPagina } from '../lib/api/pagina'
@@ -108,6 +108,7 @@ describe('listar y consultar cortes', () => {
       () => generateCut({ fechaCorte: '2026-10-05' }),
       () => validateCut(2),
       () => registerSubmission(2),
+      () => deleteCut(2),
       () => listCutObligations(1),
     ]) {
       await expect(llamada()).rejects.toMatchObject({ status: 401 })
@@ -147,7 +148,7 @@ describe('generar un corte', () => {
     await entrarAnalista()
     await expect(generateCut({ fechaCorte: '2026-10-05' })).rejects.toMatchObject({
       status: 409,
-      message: 'Ya existe un corte en BORRADOR con fecha 2026-09-30. Debe completarlo o eliminarlo primero.',
+      message: 'Ya existe un corte en BORRADOR con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.',
     })
   })
 
@@ -185,6 +186,35 @@ describe('generar un corte', () => {
     expect(data).toMatchObject({ id: 2, grupo: null, ejecutada_por: 'Juan Pérez' })
     expect(Object.keys(data)).toEqual(CLAVES_RESUMEN)
     expect(await generateCut({ fechaCorte: '2026-09-30', grupoId: null })).toMatchObject({ id: 2, grupo: null })
+  })
+})
+
+describe('eliminar un corte', () => {
+  test('borra un BORRADOR: después getCut da 404 y la lista ya no lo trae', async () => {
+    await entrarAnalista()
+    await expect(deleteCut(2)).resolves.toBeUndefined()
+    await expect(getCut(2)).rejects.toMatchObject({ status: 404, message: 'Corte no encontrado.' })
+    expect(ids(await listCuts())).toEqual([1])
+    await expect(deleteCut(2)).rejects.toMatchObject({ status: 404, message: 'Corte no encontrado.' })
+    // Sin BORRADOR se puede generar otro de nuevo.
+    expect(await generateCut({ fechaCorte: '2026-10-05' })).toMatchObject({ estado: 'BORRADOR' })
+  })
+
+  test('lo puede hacer el Administrador y un id inexistente o no numérico da 404', async () => {
+    await entrarAdmin()
+    for (const malo of [999, 'abc']) {
+      await expect(deleteCut(malo)).rejects.toMatchObject({ status: 404, message: 'Corte no encontrado.' })
+    }
+    await expect(deleteCut(2)).resolves.toBeUndefined()
+  })
+
+  test('un corte ENVIADO o VALIDADO no se elimina: 409 y sigue ahí', async () => {
+    await entrarAnalista()
+    const mensaje = 'Solo se puede eliminar un corte en estado BORRADOR.'
+    await expect(deleteCut(1)).rejects.toMatchObject({ status: 409, message: mensaje }) // ENVIADO
+    await validateCut(2)
+    await expect(deleteCut(2)).rejects.toMatchObject({ status: 409, message: mensaje }) // VALIDADO
+    expect(ids(await listCuts())).toEqual([2, 1])
   })
 })
 
@@ -317,7 +347,7 @@ describe('obligaciones del corte', () => {
   test('el mapper nunca entrega la identificación completa', async () => {
     await entrarAnalista()
     const { data } = await api.get(ENDPOINTS.obligacionesCorte(2), { params: { limite: 100 } })
-    expect(data.resultados[0].numero_identificacion).toMatch(/^10000000\d\d$/) // la API sí la trae completa (diferencia Q)
+    expect(data.resultados[0].numero_identificacion).toBe('******0001') // el backend ya la entrega enmascarada
 
     const { items } = await listCutObligations(2, { limite: 100 })
     expect(JSON.stringify(items)).not.toContain('10000000')

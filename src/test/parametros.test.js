@@ -168,11 +168,13 @@ describe('mapper de conceptos y grupos', () => {
     expect(c).toEqual({ codigo: 30, descripcion: 'X', activo: true, estado: 'Activo', observacion: '', fechaCreacion: null })
   })
 
-  test('un concepto con fecha_creacion la convierte en Date', () => {
+  test('un concepto con fecha_creacion la deja como texto YYYY-MM-DD, sin correrse un día', () => {
     const c = mapConcepto({ codigo: 30, descripcion: 'X', activo: false, observacion: 'n', fecha_creacion: '2026-10-10T08:00:00-05:00' })
-    expect(c.fechaCreacion).toBeInstanceOf(Date)
-    expect(c.fechaCreacion.toISOString()).toBe('2026-10-10T13:00:00.000Z')
+    expect(c.fechaCreacion).toBe('2026-10-10')
     expect(c).toMatchObject({ estado: 'Inactivo', observacion: 'n' })
+    expect(mapConcepto({ codigo: 30, descripcion: 'X', activo: true, fecha_creacion: '2026-10-10' }).fechaCreacion).toBe('2026-10-10')
+    expect(mapConcepto({ codigo: 30, descripcion: 'X', activo: true, fecha_creacion: '2026-10-10T00:00:00-05:00' }).fechaCreacion).toBe('2026-10-10')
+    expect(mapConcepto({ codigo: 30, descripcion: 'X', activo: true, fecha_creacion: null }).fechaCreacion).toBeNull()
   })
 
   test('un grupo conserva "creado" como texto YYYY-MM-DD', () => {
@@ -226,7 +228,7 @@ describe('grupos de conceptos', () => {
     await expect(createConceptGroup({ nombre: 'G', conceptos: [] })).rejects.toMatchObject({ fieldErrors: { conceptos: 'Selecciona al menos un concepto.' } })
     await expect(createConceptGroup({ nombre: 'G' })).rejects.toMatchObject({ fieldErrors: { conceptos: 'Selecciona al menos un concepto.' } })
     await expect(createConceptGroup({ nombre: 'G', conceptos: [0] })).rejects.toMatchObject({ fieldErrors: { conceptos: 'Cada concepto debe ser un número entero entre 1 y 9999.' } })
-    await expect(createConceptGroup({ nombre: 'G', conceptos: [30, 30] })).rejects.toMatchObject({ status: 400, fieldErrors: { conceptos: 'No repitas conceptos.' } })
+    await expect(createConceptGroup({ nombre: 'G', conceptos: [30, 30] })).rejects.toMatchObject({ status: 400, fieldErrors: { conceptos: 'No se permiten códigos repetidos.' } })
   })
 
   test('los conceptos de un grupo aceptan enteros como texto y se guardan como números', async () => {
@@ -235,7 +237,7 @@ describe('grupos de conceptos', () => {
     expect(grupo.conceptos.map((c) => c.codigo)).toEqual([30, 94])
     const editado = await updateConceptGroup(grupo.id, { conceptos: [' 94 '] })
     expect(editado.conceptos.map((c) => c.codigo)).toEqual([94])
-    await expect(createConceptGroup({ nombre: 'Repetidos', conceptos: ['30', 30] })).rejects.toMatchObject({ status: 400, fieldErrors: { conceptos: 'No repitas conceptos.' } })
+    await expect(createConceptGroup({ nombre: 'Repetidos', conceptos: ['30', 30] })).rejects.toMatchObject({ status: 400, fieldErrors: { conceptos: 'No se permiten códigos repetidos.' } })
     for (const malo of ['30.5', 30.5, true, 'abc', '']) {
       await expect(createConceptGroup({ nombre: 'Malo', conceptos: [30, malo] })).rejects.toMatchObject({ fieldErrors: { conceptos: 'Cada concepto debe ser un número entero entre 1 y 9999.' } })
     }
@@ -275,7 +277,7 @@ describe('grupos de conceptos', () => {
     await expect(updateConceptGroup(2, { nombre: 'Solo cuota de energía' })).resolves.toMatchObject({ id: 2 })
     await expect(updateConceptGroup(2, { conceptos: [30, 9002] })).rejects.toMatchObject({ status: 400, message: 'El concepto 9002 no existe o no está activo.' })
     await expect(updateConceptGroup(2, { conceptos: [] })).rejects.toMatchObject({ fieldErrors: { conceptos: 'Selecciona al menos un concepto.' } })
-    await expect(updateConceptGroup(2, { conceptos: [30, 30] })).rejects.toMatchObject({ fieldErrors: { conceptos: 'No repitas conceptos.' } })
+    await expect(updateConceptGroup(2, { conceptos: [30, 30] })).rejects.toMatchObject({ fieldErrors: { conceptos: 'No se permiten códigos repetidos.' } })
     expect((await getConceptGroup(2)).conceptos.map((c) => c.codigo)).toEqual([30]) // los rechazos no cambian nada
   })
 

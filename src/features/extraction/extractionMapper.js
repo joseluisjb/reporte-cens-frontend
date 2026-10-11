@@ -19,8 +19,9 @@
 //   caracteres. Las pantallas la muestran con `formatearFechaISO`.
 // - `fecha_ejecucion` sí es fecha-hora: llega como `Date` (se muestra con `formatearFechaHora`).
 // - `ejecutada_por` hoy llega siempre `null` en el backend real (diferencia Y).
-// - DATO PERSONAL (Habeas Data): `numero_identificacion` llega completo, pero el mapper NUNCA lo
-//   entrega completo a las pantallas; solo expone `identificacion` enmascarada (últimos 4 dígitos).
+// - DATO PERSONAL (Habeas Data): `numero_identificacion` ya llega enmascarado desde el backend; el
+//   mapper lo vuelve a enmascarar por si acaso y NUNCA lo entrega completo a las pantallas: solo expone
+//   `identificacion` enmascarada (últimos 4 dígitos).
 import { enmascararIdentificacion } from '../../lib/format'
 import { descripcionEdadMora, descripcionEstado } from './catalogosTU'
 

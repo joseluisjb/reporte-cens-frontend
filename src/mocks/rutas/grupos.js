@@ -42,7 +42,7 @@ function validar(cuerpo, { crear }) {
     const { conceptos } = cuerpo
     if (!Array.isArray(conceptos) || conceptos.length === 0) errores.conceptos = ['Selecciona al menos un concepto.']
     else if (!conceptos.every(esCodigo)) errores.conceptos = ['Cada concepto debe ser un número entero entre 1 y 9999.']
-    else if (new Set(conceptos).size !== conceptos.length) errores.conceptos = ['No repitas conceptos.']
+    else if (new Set(conceptos).size !== conceptos.length) errores.conceptos = ['No se permiten códigos repetidos.']
   }
   if (cuerpo.activo !== undefined && typeof cuerpo.activo !== 'boolean') errores.activo = ['El estado debe ser verdadero o falso.']
   return errores

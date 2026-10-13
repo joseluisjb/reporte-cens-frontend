@@ -182,6 +182,12 @@ describe('mapper de conceptos y grupos', () => {
     expect(g).toEqual({ id: 1, nombre: 'G', activo: false, estado: 'Inactivo', conceptos: [{ codigo: 30, descripcion: 'X' }], creado: '2026-10-01' })
     expect(mapGrupo({ id: 2, nombre: 'H', activo: true, conceptos: [] }).creado).toBeNull()
   })
+
+  test('una descripción null (filas de Oracle sin DESCRIPCION) queda como texto vacío', () => {
+    expect(mapConcepto({ codigo: 30, descripcion: null, activo: true }).descripcion).toBe('')
+    const g = mapGrupo({ id: 1, nombre: 'G', activo: true, conceptos: [{ codigo: 30, descripcion: null }] })
+    expect(g.conceptos).toEqual([{ codigo: 30, descripcion: '' }])
+  })
 })
 
 describe('grupos de conceptos', () => {

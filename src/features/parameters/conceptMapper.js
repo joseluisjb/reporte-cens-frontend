@@ -12,6 +12,8 @@
 //
 // - `fecha_creacion` aún no existe en el backend (diferencia B del contrato): se tolera que falte y
 //   la interfaz recibe `fechaCreacion: null`.
+// - `descripcion` puede llegar null: la columna DESCRIPCION de NV_CONCEPTO_REPORTABLE admite nulos y
+//   hay filas sin ella en Oracle. Se deja '' para que la búsqueda y el formulario no fallen.
 // - `fecha_creacion` y `creado` se dejan como texto 'YYYY-MM-DD' (de `fecha_creacion` se toman los 10
 //   primeros caracteres por si llega como fecha-hora): con `new Date()` se correría un día en hora de
 //   Colombia. Las pantallas los muestran con `formatearFechaISO`.
@@ -21,7 +23,7 @@ const estadoDe = (activo) => (activo ? 'Activo' : 'Inactivo')
 export function mapConcepto(raw) {
   return {
     codigo: raw.codigo,
-    descripcion: raw.descripcion,
+    descripcion: raw.descripcion ?? '',
     activo: Boolean(raw.activo),
     estado: estadoDe(raw.activo),
     observacion: raw.observacion ?? '',
@@ -35,7 +37,7 @@ export function mapGrupo(raw) {
     nombre: raw.nombre,
     activo: Boolean(raw.activo),
     estado: estadoDe(raw.activo),
-    conceptos: raw.conceptos.map(({ codigo, descripcion }) => ({ codigo, descripcion })),
+    conceptos: raw.conceptos.map(({ codigo, descripcion }) => ({ codigo, descripcion: descripcion ?? '' })),
     creado: raw.creado ?? null,
   }
 }

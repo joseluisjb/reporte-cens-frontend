@@ -1,7 +1,9 @@
 // Pruebas de la pantalla de Extracción y Consolidación de Cartera (RF1-RF5, RF7, RF44).
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
+import { server } from '../mocks/server'
 import { renderConSesion } from './renderApp'
 
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
@@ -23,11 +25,50 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     // Tabla de obligaciones consolidadas
     expect(await screen.findByText('TITULAR FICTICIO 01')).toBeInTheDocument()
     expect(screen.getByText('******0001')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Saldo neto (COP)' })).toBeInTheDocument()
     expect(screen.getAllByText('01 - Vigente').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('00 Normal').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/No incluye el estado individual de consolidación/)).toBeInTheDocument()
+    expect(screen.queryByText('Requiere revisión')).not.toBeInTheDocument()
 
     // Ninguna identificación completa debe verse (Habeas Data)
     expect(screen.queryByText('1000000001')).not.toBeInTheDocument()
+  })
+
+  test('muestra carga y estado vacío cuando la página no tiene obligaciones', async () => {
+    let resolverRespuesta
+    server.use(
+      http.get('/api/extracciones/:id/obligaciones/', () =>
+        new Promise((resolve) => {
+          resolverRespuesta = () => resolve(HttpResponse.json({ total: 0, resultados: [] }))
+        }),
+      ),
+    )
+
+    await renderConSesion('/extraccion')
+    await screen.findByText('Corte #2 al 30/09/2026')
+    expect(screen.getByRole('status', { name: 'Cargando obligaciones' })).toBeInTheDocument()
+
+    resolverRespuesta()
+    expect(await screen.findByText('No hay obligaciones en este corte.')).toBeInTheDocument()
+  })
+
+  test('muestra el error al cargar obligaciones y permite reintentar', async () => {
+    let falla = true
+    server.use(
+      http.get('/api/extracciones/:id/obligaciones/', () =>
+        falla
+          ? HttpResponse.json({ detail: 'Error temporal' }, { status: 500 })
+          : HttpResponse.json({ total: 0, resultados: [] }),
+      ),
+    )
+
+    await renderConSesion('/extraccion')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ocurrió un error en el servidor')
+
+    falla = false
+    await userEvent.click(boton('Reintentar carga de obligaciones'))
+    expect(await screen.findByText('No hay obligaciones en este corte.')).toBeInTheDocument()
   })
 
   test('paginación de obligaciones consolidadas', async () => {

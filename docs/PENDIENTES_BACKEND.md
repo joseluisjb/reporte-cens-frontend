@@ -157,6 +157,21 @@ Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400
 - **AC.** El `409` por un BORRADOR de otra fecha muestra al usuario la ruta `DELETE /api/extracciones/{id}/`. El contrato 0.5 propone `Ya existe un corte en BORRADOR con fecha AAAA-MM-DD. Elimínelo o complételo antes de generar otro.`
 - **AD.** Un id no numérico en la ruta da `404` con la página HTML de Django, no con `{ detail }`.
 
+**Contrato pendiente para mostrar el detalle RF3–RF5/RF7 por obligación.** El contrato actual de
+`GET /api/extracciones/{id}/obligaciones/` documenta `limite` y `desplazamiento`, con respuesta
+`{ total, resultados }`; cada resultado incluye `numero_obligacion`, `valor_saldo`, `dias_mora` y
+`edad_mora`. No define un estado individual de consolidación, el total facturado, el pago aplicado ni
+abonos no aplicados/excedentes. Además, la consulta SQL de referencia RF3–RF5 indicada en el contexto
+del backend aún no está integrada a este endpoint.
+
+Hasta que José Luis confirme el contrato, la pantalla muestra únicamente esos campos documentados,
+no calcula mora, no redistribuye pagos y no etiqueta un saldo como confirmado ni como inconsistente.
+Quedan por acordar el endpoint (o la ampliación de este), sus filtros, los nombres y tipos exactos de
+los campos por obligación, y la semántica para comunicar y presentar una consolidación inconsistente
+sin usarla como saldo confirmado. Los detalles de facturación, pagos parciales y excedentes solo se
+podrán mostrar si el backend los entrega explícitamente. No se implementan vistas de historial RF6/RF8
+con el esquema PostgreSQL propuesto mientras no se confirmen sus endpoints y contrato.
+
 ---
 
 ## 3. Decisiones por cerrar (resumen para responder rápido)

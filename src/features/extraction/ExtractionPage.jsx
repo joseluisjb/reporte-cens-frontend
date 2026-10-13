@@ -58,6 +58,7 @@ export default function ExtractionPage() {
   // Estado de las obligaciones del corte actual
   const [obligaciones, setObligaciones] = useState([])
   const [totalObligaciones, setTotalObligaciones] = useState(0)
+  const [errorCargaObligaciones, setErrorCargaObligaciones] = useState('')
   const [paginaActual, setPaginaActual] = useState(1)
   const [versionCarga, setVersionCarga] = useState(0)
   const claveObligaciones = corteActual?.id
@@ -113,9 +114,10 @@ export default function ExtractionPage() {
         if (cancelado) return
         setObligaciones(items)
         setTotalObligaciones(total)
+        setErrorCargaObligaciones('')
       })
       .catch((err) => {
-        if (!cancelado) toast.error(`Error al cargar obligaciones: ${err.message}`)
+        if (!cancelado) setErrorCargaObligaciones(err.message)
       })
       .finally(() => {
         if (!cancelado) setClaveCargada(clave)
@@ -201,6 +203,11 @@ export default function ExtractionPage() {
     setCorteActual(corteActualizado)
     setCortes((prev) => prev.map((c) => (c.id === corteActualizado.id ? corteActualizado : c)))
     toast.success('Envío a TransUnion registrado exitosamente.')
+  }
+
+  const reintentarCargaObligaciones = () => {
+    setErrorCargaObligaciones('')
+    setVersionCarga((version) => version + 1)
   }
 
   // Cambiar selección de corte
@@ -355,8 +362,8 @@ export default function ExtractionPage() {
                 </p>
               </div>
               <div className="rounded-ctl bg-fondo p-3">
-                <span className="text-xs text-muted">Saldo consolidado</span>
-                <p className="font-hd text-xl font-bold text-bosque-d">
+                <span className="text-xs text-muted">Saldo neto reportado</span>
+                <p className="font-hd text-xl font-bold text-slate-700">
                   {formatearCOP(corteActual.saldoConsolidado)}
                 </p>
               </div>
@@ -436,9 +443,26 @@ export default function ExtractionPage() {
               </span>
             </div>
 
+            <div className="border-b border-gris-d px-4 py-3 text-sm text-muted">
+              El contrato actual informa saldo neto, días de mora y edad de mora. No incluye el estado
+              individual de consolidación ni el detalle de facturación y pagos; esos valores no se
+              infieren en esta pantalla.
+            </div>
+
             {cargandoObligaciones ? (
               <div role="status" aria-label="Cargando obligaciones" className="flex justify-center p-12">
                 <Spinner className="size-6" />
+              </div>
+            ) : errorCargaObligaciones ? (
+              <div className="flex flex-wrap items-center gap-3 p-4">
+                <Alert>{errorCargaObligaciones}</Alert>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={reintentarCargaObligaciones}
+                >
+                  Reintentar carga de obligaciones
+                </Button>
               </div>
             ) : obligaciones.length === 0 ? (
               <EmptyState>No hay obligaciones en este corte.</EmptyState>
@@ -456,7 +480,7 @@ export default function ExtractionPage() {
                         <th scope="col" className="text-center">Días Mora</th>
                         <th scope="col">Edad Mora (T9)</th>
                         <th scope="col" className="text-right">Valor Mora</th>
-                        <th scope="col" className="text-right">Saldo Consolidado</th>
+                        <th scope="col" className="text-right">Saldo neto (COP)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -492,7 +516,7 @@ export default function ExtractionPage() {
                           <td className="text-right font-medium text-slate-700">
                             {formatearCOP(o.valorMora)}
                           </td>
-                          <td className="text-right font-semibold text-bosque-d">
+                          <td className="text-right font-semibold text-slate-700">
                             {formatearCOP(o.valorSaldo)}
                           </td>
                         </tr>

@@ -61,9 +61,10 @@ export default function AuthProvider({ initialUser = null, children }) {
   }, [])
 
   const logout = useCallback(async (motivo) => {
-    setMotivoSalida(motivo === 'inactividad' ? 'inactividad' : 'manual')
+    const motivoFinal = motivo === 'inactividad' ? 'inactividad' : 'manual'
+    setMotivoSalida(motivoFinal)
     try {
-      await logoutRequest()
+      await logoutRequest(motivoFinal)
     } finally {
       // Aunque el backend no responda, en este equipo la sesión local se cierra.
       setUser(null)

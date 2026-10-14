@@ -69,3 +69,16 @@ export function expectCumpleContrato(metodo, ruta, status, data) {
     throw new Error(`${etiqueta} no cumple el contrato: ${ajv.errorsText(validar.errors, { dataVar: 'cuerpo' })}\nRespuesta: ${JSON.stringify(data)}`)
   }
 }
+
+// Lo mismo para lo que ENVÍA el frontend: valida `data` contra el `requestBody` de la operación.
+export function expectPeticionCumpleContrato(metodo, ruta, data) {
+  const m = metodo.toLowerCase()
+  const etiqueta = `${m.toUpperCase()} ${ruta} (petición)`
+  if (!doc.paths?.[ruta]?.[m]?.requestBody?.content?.['application/json']?.schema) {
+    throw new Error(`El contrato no define el cuerpo de ${etiqueta}.`)
+  }
+  const validar = ajv.getSchema(`contrato#/paths/${escapar(ruta)}/${m}/requestBody/content/application~1json/schema`)
+  if (!validar(data)) {
+    throw new Error(`${etiqueta} no cumple el contrato: ${ajv.errorsText(validar.errors, { dataVar: 'cuerpo' })}\nPetición: ${JSON.stringify(data)}`)
+  }
+}

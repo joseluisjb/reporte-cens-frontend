@@ -3,6 +3,7 @@ import { keepAlive } from '../features/auth/authService'
 import { MSG_SALIDA } from '../features/auth/authConfig'
 import { useIdleTimeout } from '../features/auth/useIdleTimeout'
 import { getCurrentUser, login } from '../features/auth/authService'
+import { espiarLogout } from './espiarLogout'
 import { renderApp } from './renderApp'
 
 // Solo se simulan el reloj y los intervalos; setTimeout queda real para que MSW responda.
@@ -150,6 +151,25 @@ describe('cierre por inactividad en la aplicación (10 minutos, aviso 1 minuto a
     await pasar(10 * MIN)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
     expect(await getCurrentUser()).toBeNull()
+  })
+
+  test('al vencer, el servidor recibe el motivo "inactividad" (queda así en la auditoría)', async () => {
+    const cuerpos = espiarLogout()
+    await entrar()
+    await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
+    await pasar(10 * MIN)
+    await screen.findByRole('button', { name: 'Iniciar sesión' })
+    expect(cuerpos).toEqual([{ motivo: 'inactividad' }])
+  })
+
+  test('"Cerrar sesión ahora" envía el motivo "manual"', async () => {
+    const cuerpos = espiarLogout()
+    await entrar()
+    await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
+    await pasar(9 * MIN)
+    fireEvent.click(await screen.findByRole('button', { name: 'Cerrar sesión ahora' }))
+    await screen.findByRole('button', { name: 'Iniciar sesión' })
+    expect(cuerpos).toEqual([{ motivo: 'manual' }])
   })
 })
 

@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: NexoVolt — API REST (Iteración 1)
-  version: 0.6.0-borrador
+  version: 0.7.0-borrador
   description: |
     Contrato entre el frontend (React) y el backend (Django REST Framework) de NexoVolt.
     Cubre la **Iteración 1**: HU-A (extracción, consolidación y trazabilidad) y HU-D (seguridad,
@@ -35,6 +35,12 @@ info:
     log hechos por el sistema (`usuario_id` y `rol` en `null`). También documenta que
     `GET /conceptos/` devuelve `descripcion: ""` cuando la base la tiene vacía.
 
+    La **versión 0.7** (14/10/2026) recoge los arreglos del backend en la rama
+    `fix/api-mensajes-seguridad-auditoria` (PR #34 a `dev`, sin fusionar todavía): cuerpo opcional
+    `{ motivo }` en `POST /auth/logout/` (AF), `404` en JSON para rutas inexistentes (AD), el texto
+    del `409` sin la ruta de la API (AC) y la auditoría que ya no tumba una acción si falla (AG).
+    Nada de esto rompe al frontend actual: el backend sigue aceptando un logout sin cuerpo.
+
     ## Reglas generales
 
     **Sesión y CSRF.** Sesión por cookie de Django (`sessionid`, HttpOnly). Para métodos que
@@ -62,7 +68,9 @@ info:
     (por ejemplo, un `403` por CSRF de uno por permisos). La extracción y el historial del backend
     responden con `{ detail }` en español también para reglas de negocio con `400`, `404` y `409`
     (fecha futura, grupo inexistente o inactivo, corte en otro estado); solo la validación del
-    cuerpo (campo ausente o con formato inválido) llega por campo.
+    cuerpo (campo ausente o con formato inválido) llega por campo. Una ruta que no existe responde
+    `404` con `{ "detail": "Recurso no encontrado." }` en JSON, no con la página HTML de Django
+    (0.7; diferencia AD, rama `fix/api-mensajes-seguridad-auditoria`).
 
     **Formatos.** JSON UTF-8. Fechas y horas en ISO 8601 con zona (`America/Bogota`, UTC−05:00).
     Fechas de corte como `YYYY-MM-DD`. Montos en pesos colombianos como número (sin símbolo ni
@@ -194,10 +202,19 @@ paths:
       summary: Cerrar sesión (RF26)
       description: |
         Invalida la sesión en el servidor. *Implementado en el backend.* Queda en el log de
-        auditoría con el detalle "Cierre manual", también cuando el frontend la llama al vencer la
-        inactividad (diferencia AF del README).
+        auditoría. El cuerpo es **opcional** (0.7): `motivo: inactividad` deja el detalle
+        "Cierre por inactividad"; `manual`, otro valor o ningún cuerpo dejan "Cierre manual". El
+        frontend envía `inactividad` cuando vence la sesión (RF26) y `manual` en los demás casos.
+        El backend lo implementa en la rama `fix/api-mensajes-seguridad-auditoria` (PR #34, sin
+        fusionar); mientras tanto, `main` ignora el cuerpo y todo queda como "Cierre manual"
+        (diferencia AF del README).
       operationId: authLogout
       x-roles: [Analista de Cartera, Administrador]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LogoutRequest' }
       responses:
         '204': { description: Sesión cerrada. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -791,9 +808,9 @@ paths:
           description: |
             Grupo inactivo, corte existente que no se puede reemplazar, ya hay un borrador de otra
             fecha o la fecha de corte no es posterior a la del último corte enviado. El texto del
-            borrador de otra fecha es el que propone el contrato: hoy el backend
-            incluye la ruta `DELETE /api/extracciones/{id}/` en el mensaje, y ese texto lo ve el
-            usuario (diferencia AC del README).
+            borrador de otra fecha ya no incluye la ruta de la API: el backend lo corrigió en la
+            rama `fix/api-mensajes-seguridad-auditoria` (PR #34, sin fusionar; diferencia AC del
+            README). Hasta que se fusione, `main` todavía muestra `DELETE /api/extracciones/{id}/`.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
@@ -1549,6 +1566,15 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string, format: password }
+    LogoutRequest:
+      type: object
+      description: Opcional (0.7). Solo cambia el detalle del registro de auditoría.
+      properties:
+        motivo:
+          type: string
+          enum: [manual, inactividad]
+          description: "`inactividad` → \"Cierre por inactividad\"; `manual` → \"Cierre manual\"."
+      example: { motivo: inactividad }
     ChangePasswordRequest:
       type: object
       required: [current_password, new_password]
@@ -2004,6 +2030,7 @@ components:
           example: "Usuario jperez@example.com actualizado: ['is_active']"
           description: |
             Sin contraseñas, tokens ni datos personales de deudores; `""` si no hay. Ejemplos del
-            backend: `Acceso correcto`, `Cierre manual`, `Campos: descripcion, activo`,
+            backend: `Acceso correcto`, `Cierre manual`, `Cierre por inactividad` (0.7),
+            `Campos: descripcion, activo`,
             `Fecha de corte 2026-08-31`. En usuarios incluye el correo del usuario afectado y los
             nombres de los campos que cambiaron (diferencia AE del README).

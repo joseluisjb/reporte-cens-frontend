@@ -171,7 +171,7 @@ Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400
 
 **Siguen abiertas** (filas de [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
 - **R.** `edad_mora`, `tipo_id_tu` y `estado_tu` son textos sin validar; los mocks de extracción devuelven siempre códigos válidos de las tablas del manual (`edad_mora` coherente con `dias_mora`).
-- **Y.** `ejecutada_por` siempre `null`: ya hay login, pero `NV_CORTE` sigue ligada a la tabla anterior `NV_USUARIO` (fila 42, José Luis y Johan). Los mocks devuelven el nombre de quien generó el corte.
+- **Y. Resuelta en el PR #34 del backend (sin fusionar).** `ejecutada_por` trae el nombre de quien generó el corte (fila 42). **Antes de desplegar, aplicar en Oracle `config/sql/09_fila42_nv_corte_usuario.sql`**, que quita la llave de `NV_CORTE` hacia la tabla anterior `NV_USUARIO`; sin él, generar un corte con sesión falla. Los mocks ya devuelven el nombre.
 - **Z.** "Último estado" de un deudor: ya no cuenta los `ANULADO`, pero puede ser un `BORRADOR`. Es del historial, que aún no se simula.
 - **AA (el resto).** Un corte `ANULADO` de la misma fecha bloquea la generación con `409` (los mocks hacen lo mismo que el backend) y `observacion` del reporte no se puede escribir.
 - **AC. Resuelta en el PR #34 del backend (sin fusionar).** El `409` por un BORRADOR de otra fecha ya no muestra la ruta `DELETE /api/extracciones/{id}/`: dice `Ya existe un corte en BORRADOR con fecha AAAA-MM-DD. Elimínelo o complételo antes de generar otro.`, como el contrato y los mocks.
@@ -217,10 +217,10 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 
 | Punto | Qué falta | Responsable |
 |---|---|---|
-| PR #34 del backend | Revisar y fusionar `fix/api-mensajes-seguridad-auditoria` en `dev` y luego en `main`. Antes, confirmar `DJANGO_SECRET_KEY` en Render (punto 1.4.9) | José Luis |
+| PR #34 del backend | Revisar y fusionar `fix/api-mensajes-seguridad-auditoria` en `dev` y luego en `main`. Antes de pasar a `main`: confirmar `DJANGO_SECRET_KEY` en Render (punto 1.4.9) y aplicar en Oracle el script 09 (fila 42) | José Luis |
 | `DJANGO_SECRET_KEY` y `FRONTEND_URL` en Render | Verificar que las dos variables existan en el servicio del backend (`FRONTEND_URL=https://reporte-cens.onrender.com`; sin ella, el enlace de recuperación apunta a `localhost`) | José Luis |
 | SQL 08 en Oracle (AG) | Confirmar que `config/sql/08_rf30_nv_bitacora.sql` se ejecutó en el Oracle de Render | Dilan |
-| Y: `ejecutada_por` siempre `null` (fila 42) | Quitar la llave de `NV_CORTE` a `NV_USUARIO` y guardar el usuario de la sesión, como RF30 hizo con `NV_BITACORA`. Necesita un cambio de esquema en Oracle | José Luis y Johan |
+| Y: `ejecutada_por` (fila 42) | El código ya está en el PR #34. Falta aplicar `config/sql/09_fila42_nv_corte_usuario.sql` en el Oracle de Render **antes** de desplegar, y luego probar generar → ver → eliminar en Render | José Luis (aplicar el SQL) y Johan (probar) |
 | SQL de saldo neto RF3-RF5 | El SQL de referencia está escrito sobre tablas de ejemplo; falta conectarlo a las vistas reales y al endpoint. Depende de las respuestas de CENS sobre abonos parciales, mora y conceptos | Clara |
 | Informe de rendimiento (fila 51) | Medir tiempos con 1.000, 10.000 y 100.000 registros y guardar los planes de ejecución; no se inventan tiempos. La base Oracle del wallet **es de pruebas**: datos sensibles cambiados y solo los primeros 1.000 registros de cada tabla. Con ella se puede medir el caso de 1.000; para 10.000 y 100.000 hay que generar datos ficticios (o pedirle más volumen a CENS) y confirmar que la cuenta puede escribir y ver los planes (`V$SQL`, `V$SQL_PLAN`) | Clara y Dilan |
 | Pruebas de aceptación HU-A | Faltan CA-A2, CA-A3 y CA-A5 (ya están CA-A1, CA-A4 y CA-A6) | Santiago |

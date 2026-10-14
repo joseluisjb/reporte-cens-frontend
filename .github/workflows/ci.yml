@@ -1,0 +1,33 @@
+name: CI
+
+# Todo PR debe pasar este flujo antes de fusionarse (regla del equipo, seccion 4 de la
+# Asignacion de RF). Las pruebas corren contra los mocks de MSW: no necesitan el backend.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  pruebas:
+    name: Lint y pruebas (vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Revisar el estilo del codigo
+        run: npm run lint
+
+      - name: Ejecutar las pruebas
+        run: npm test

@@ -10,7 +10,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     server: { proxy: { '/api': { target: env.API_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true } } },
+    // TZ fija: las fechas con hora se muestran en la zona del navegador y las pruebas esperan la hora
+    // de Colombia. Sin esto fallan en GitHub Actions, que corre en UTC.
     test: { environment: 'jsdom', globals: true, setupFiles: './src/test/setup.js', testTimeout: 15000,
+      env: { TZ: 'America/Bogota' },
       coverage: { provider: 'v8', include: ['src/**/*.{js,jsx}'], exclude: ['src/main.jsx', 'src/test/**', 'src/mocks/browser.js', 'src/app/CatalogPage.jsx'], reporter: ['text'] },
     },
   }

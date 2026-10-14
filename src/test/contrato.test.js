@@ -301,3 +301,34 @@ describe('conformidad de los mocks de extracción con el contrato', () => {
     await verifica('get', '/extracciones/{id}/obligaciones/', 404, { url: '/extracciones/abc/obligaciones/' })
   })
 })
+
+describe('conformidad del mock de auditoría con el contrato', () => {
+  test('GET /auditoria/ 200 cumple ListaPaginada de RegistroAuditoria (con filtros, paginación y acciones del sistema); 401 y 403', async () => {
+    await verifica('get', '/auditoria/', 401)
+    await entrar(ANALISTA)
+    await verifica('get', '/auditoria/', 403) // solo Administrador
+    await entrar(ADMIN)
+    const pagina = await verifica('get', '/auditoria/', 200)
+    expect(pagina.total).toBeGreaterThan(20)
+    expect(pagina.resultados).toHaveLength(20)
+    const filtrada = await verifica('get', '/auditoria/', 200, { url: '/auditoria/?modulo=Usuarios&tipo_accion=creacion&usuario=2&desde=2026-09-01&hasta=2026-10-31&limite=5&desplazamiento=0' })
+    expect(filtrada.total).toBeGreaterThan(0)
+    expect(filtrada.resultados.every((r) => r.modulo === 'Usuarios' && r.tipo_accion === 'creacion' && r.usuario_id === 2)).toBe(true)
+    const sistema = await verifica('get', '/auditoria/', 200, { url: '/auditoria/?tipo_accion=calculo&limite=100' })
+    expect(sistema.resultados.some((r) => r.usuario === 'Sistema' && r.usuario_id === null && r.rol === null)).toBe(true)
+    const vacia = await verifica('get', '/auditoria/', 200, { url: '/auditoria/?desde=2030-01-01' })
+    expect(vacia).toEqual({ total: 0, resultados: [] })
+  })
+
+  test('GET /auditoria/ 400 cumple ErrorCampos en cada filtro inválido (mensajes del contrato)', async () => {
+    await entrar(ADMIN)
+    const desde = await verifica('get', '/auditoria/', 400, { url: '/auditoria/?desde=2026-02-30' })
+    expect(desde).toEqual({ desde: ['Usa una fecha válida (AAAA-MM-DD).'] })
+    const hasta = await verifica('get', '/auditoria/', 400, { url: '/auditoria/?desde=2026-10-05&hasta=2026-10-01' })
+    expect(hasta).toEqual({ hasta: ['La fecha final no puede ser anterior a la inicial.'] })
+    expect(await verifica('get', '/auditoria/', 400, { url: '/auditoria/?usuario=abc' })).toEqual({ usuario: ['Indica el id numérico del usuario.'] })
+    expect(await verifica('get', '/auditoria/', 400, { url: '/auditoria/?usuario=0' })).toEqual({ usuario: ['Indica el id numérico del usuario.'] })
+    expect(await verifica('get', '/auditoria/', 400, { url: '/auditoria/?tipo_accion=baile' })).toEqual({ tipo_accion: ['Tipo de acción no válido.'] })
+    expect(await verifica('get', '/auditoria/', 400, { url: '/auditoria/?modulo=Cocina' })).toEqual({ modulo: ['Módulo no válido.'] })
+  })
+})

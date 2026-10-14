@@ -45,6 +45,17 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     // y acepta las formas válidas, incluido `nullable` (observacion y last_login en null)
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 30, descripcion: 'A', activo: true, observacion: null }])).not.toThrow()
     expect(() => expectCumpleContrato('get', '/auth/me/', 200, { user: { id: 7, nombre: 'A', email: 'a@example.com', rol: 'ANALISTA_CARTERA', is_active: true, last_login: null, must_change_password: true } })).not.toThrow()
+    // 0.6: `descripcion` vacía en conceptos y nula dentro de los grupos (columna nullable en Oracle)
+    expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 30, descripcion: '', activo: true, observacion: null }])).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/grupos-conceptos/{id}/', 200, { id: 1, nombre: 'G', activo: true, conceptos: [{ codigo: 30, descripcion: null }], creado: '2026-10-10' })).not.toThrow()
+  })
+
+  test('auditoría: RegistroAuditoria acepta las acciones del sistema (0.6) y rechaza un rol desconocido', () => {
+    const registro = { id: 7, fecha_hora: '2026-10-12T08:30:00-05:00', usuario_id: 3, usuario: 'Rosa Martínez', rol: 'ADMINISTRADOR', accion: 'Usuario desactivado', tipo_accion: 'desactivacion', modulo: 'Usuarios', detalle: '' }
+    const sistema = { ...registro, id: 8, usuario_id: null, usuario: 'Sistema', rol: null, accion: 'Actualización mensual', tipo_accion: 'calculo', modulo: 'Extracción' }
+    expect(() => expectCumpleContrato('get', '/auditoria/', 200, { total: 2, resultados: [registro, sistema] })).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/auditoria/', 200, { total: 1, resultados: [{ ...registro, rol: 'JEFE' }] })).toThrow(/no cumple el contrato/)
+    expect(() => expectCumpleContrato('get', '/auditoria/', 200, { total: 1, resultados: [{ ...registro, tipo_accion: 'borrado' }] })).toThrow(/no cumple el contrato/)
   })
 
   test('autenticación: POST /auth/login/ 200 cumple UserEnvelope y 401 cumple ErrorDetail', async () => {

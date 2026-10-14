@@ -1,73 +1,48 @@
 // Panel lateral "Agregar concepto" / "Editar concepto" (RF35).
 // Se monta solo mientras está abierto, para iniciar con formulario limpio.
-import { useRef, useState } from 'react'
+// Usa el formulario reutilizable de RF31 (`useFormulario`).
 import { Alert, Button, Input, Modal } from '../../components/ui'
+import { ApiError } from '../../lib/api'
+import { useFormulario } from '../../lib/useFormulario'
 import { createConcept, updateConcept } from './parametersService'
 import { validarConcepto } from './conceptValidation'
 
 export default function ConceptFormPanel({ concepto, onClose, onGuardado }) {
   const editando = Boolean(concepto)
-  const [valores, setValores] = useState({
-    codigo: concepto?.codigo !== undefined ? String(concepto.codigo) : '',
-    descripcion: concepto?.descripcion ?? '',
-    observacion: concepto?.observacion ?? '',
+  const form = useFormulario({
+    valoresIniciales: {
+      codigo: concepto?.codigo !== undefined ? String(concepto.codigo) : '',
+      descripcion: concepto?.descripcion ?? '',
+      observacion: concepto?.observacion ?? '',
+    },
+    // Al editar, el código no es un campo: un error sobre él sale como aviso general.
+    orden: editando ? ['descripcion', 'observacion'] : ['codigo', 'descripcion', 'observacion'],
+    validar: (valores) => validarConcepto(valores, { editando }),
+    onSubmit: async (valores) => {
+      try {
+        if (editando) {
+          const datos = {
+            descripcion: valores.descripcion.trim(),
+            observacion: valores.observacion.trim() || null,
+          }
+          onGuardado({ concepto: await updateConcept(concepto.codigo, datos), creado: false })
+        } else {
+          const datos = {
+            codigo: Number(valores.codigo.trim()),
+            descripcion: valores.descripcion.trim(),
+            observacion: valores.observacion.trim() || undefined,
+          }
+          onGuardado({ concepto: await createConcept(datos), creado: true })
+        }
+      } catch (err) {
+        // El 409 ("El código de concepto ya existe.") llega como { detail }: va al campo del código.
+        if (err.status === 409 && !Object.keys(err.fieldErrors ?? {}).length) {
+          throw new ApiError(err.message, { status: 409, fieldErrors: { codigo: err.message } })
+        }
+        throw err
+      }
+    },
   })
-  const [errores, setErrores] = useState({})
-  const [errorGeneral, setErrorGeneral] = useState('')
-  const [enviando, setEnviando] = useState(false)
-
-  const codigoRef = useRef(null)
-  const descripcionRef = useRef(null)
-  const observacionRef = useRef(null)
-
-  const enfocar = (campo) => ({ codigo: codigoRef, descripcion: descripcionRef, observacion: observacionRef })[campo]?.current?.focus()
-
-  const cambiar = (campo) => (e) => {
-    setValores((v) => ({ ...v, [campo]: e.target.value }))
-    setErrores((er) => ({ ...er, [campo]: undefined }))
-    setErrorGeneral('')
-  }
-
-  const enviar = async (e) => {
-    e.preventDefault()
-    const encontrados = validarConcepto(valores, { editando })
-    setErrores(encontrados)
-    setErrorGeneral('')
-
-    const primero = (editando ? ['descripcion', 'observacion'] : ['codigo', 'descripcion', 'observacion']).find((c) => encontrados[c])
-    if (primero) return enfocar(primero)
-
-    setEnviando(true)
-    try {
-      if (editando) {
-        const datos = {
-          descripcion: valores.descripcion.trim(),
-          observacion: valores.observacion.trim() || null,
-        }
-        const guardado = await updateConcept(concepto.codigo, datos)
-        onGuardado({ concepto: guardado, creado: false })
-      } else {
-        const datos = {
-          codigo: Number(valores.codigo.trim()),
-          descripcion: valores.descripcion.trim(),
-          observacion: valores.observacion.trim() || undefined,
-        }
-        const guardado = await createConcept(datos)
-        onGuardado({ concepto: guardado, creado: true })
-      }
-    } catch (err) {
-      if (err.fieldErrors && Object.keys(err.fieldErrors).length) {
-        setErrores(err.fieldErrors)
-        enfocar(Object.keys(err.fieldErrors)[0])
-      } else if (err.status === 409) {
-        setErrores((er) => ({ ...er, codigo: err.message }))
-        enfocar('codigo')
-      } else {
-        setErrorGeneral(err.message)
-      }
-      setEnviando(false)
-    }
-  }
 
   return (
     <Modal
@@ -76,12 +51,12 @@ export default function ConceptFormPanel({ concepto, onClose, onGuardado }) {
       onClose={onClose}
       title={editando ? `Editar concepto ${concepto.codigo}` : 'Agregar concepto de energía'}
       footer={
-        <Button type="submit" form="form-concepto" block loading={enviando}>
+        <Button type="submit" form="form-concepto" block loading={form.enviando}>
           {editando ? 'Guardar cambios' : 'Agregar concepto'}
         </Button>
       }
     >
-      <form id="form-concepto" onSubmit={enviar} noValidate>
+      <form id="form-concepto" {...form.formProps}>
         {editando ? (
           <div>
             <span className="block text-[13px] font-medium text-slate-700">Código de concepto</span>
@@ -90,43 +65,23 @@ export default function ConceptFormPanel({ concepto, onClose, onGuardado }) {
           </div>
         ) : (
           <Input
-            ref={codigoRef}
             label="Código de concepto"
             required
             type="number"
             min={1}
             max={9999}
             autoComplete="off"
-            value={valores.codigo}
-            onChange={cambiar('codigo')}
-            error={errores.codigo}
+            {...form.campo('codigo')}
           />
         )}
 
-        <Input
-          ref={descripcionRef}
-          className="mt-5"
-          label="Descripción"
-          required
-          autoComplete="off"
-          value={valores.descripcion}
-          onChange={cambiar('descripcion')}
-          error={errores.descripcion}
-        />
+        <Input className="mt-5" label="Descripción" required autoComplete="off" {...form.campo('descripcion')} />
 
-        <Input
-          ref={observacionRef}
-          className="mt-5"
-          label="Observación (opcional)"
-          autoComplete="off"
-          value={valores.observacion}
-          onChange={cambiar('observacion')}
-          error={errores.observacion}
-        />
+        <Input className="mt-5" label="Observación (opcional)" autoComplete="off" {...form.campo('observacion')} />
 
-        {errorGeneral && (
+        {form.errorGeneral && (
           <div className="mt-4">
-            <Alert>{errorGeneral}</Alert>
+            <Alert>{form.errorGeneral}</Alert>
           </div>
         )}
       </form>

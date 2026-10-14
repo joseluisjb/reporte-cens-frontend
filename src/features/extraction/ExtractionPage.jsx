@@ -23,6 +23,7 @@ import {
   hoyISO,
   plural,
 } from '../../lib/format'
+import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { listConceptGroups } from '../parameters/parametersService'
 import {
@@ -38,17 +39,17 @@ import ValidationErrorsModal from './ValidationErrorsModal'
 
 const FILAS_POR_PAGINA = 20
 
+function validarExtraccion({ fechaCorte }) {
+  if (!fechaCorte) return { fechaCorte: 'Selecciona una fecha de corte.' }
+  if (fechaCorte > hoyISO()) return { fechaCorte: 'La fecha de corte no puede ser futura.' }
+  return {}
+}
+
 export default function ExtractionPage() {
   usePageTitle('Extracción y Consolidación de Cartera')
   const toast = useToast()
 
-  // Estado del formulario de nueva extracción
-  const [fechaCorte, setFechaCorte] = useState(hoyISO)
-  const [grupoId, setGrupoId] = useState('')
   const [gruposDisponibles, setGruposDisponibles] = useState([])
-  const [generando, setGenerando] = useState(false)
-  const [erroresFormulario, setErroresFormulario] = useState({})
-  const [errorExtraccion, setErrorExtraccion] = useState('')
 
   // Estado de cortes y selección
   const [cortes, setCortes] = useState(null) // null = cargando
@@ -128,24 +129,12 @@ export default function ExtractionPage() {
     }
   }, [corteActual?.id, paginaActual, versionCarga, claveObligaciones, toast])
 
-  // Iniciar / Generar nuevo corte (síncrono)
-  const iniciarExtraccion = async (e) => {
-    e.preventDefault()
-    setErroresFormulario({})
-    setErrorExtraccion('')
-
-    const hoy = hoyISO()
-    if (!fechaCorte) {
-      setErroresFormulario({ fechaCorte: 'Selecciona una fecha de corte.' })
-      return
-    }
-    if (fechaCorte > hoy) {
-      setErroresFormulario({ fechaCorte: 'La fecha de corte no puede ser futura.' })
-      return
-    }
-
-    setGenerando(true)
-    try {
+  // Iniciar / Generar nuevo corte (síncrono). Formulario reutilizable de RF31 (`useFormulario`).
+  const formExtraccion = useFormulario({
+    valoresIniciales: { fechaCorte: hoyISO(), grupoId: '' },
+    validar: validarExtraccion,
+    traducirErrores: mapCorteFieldErrors,
+    onSubmit: async ({ fechaCorte, grupoId }) => {
       const nuevoCorte = await generateCut({
         fechaCorte,
         grupoId: grupoId ? Number(grupoId) : null,
@@ -163,16 +152,8 @@ export default function ExtractionPage() {
       toast.success(
         `Corte de cartera generado correctamente (${plural(nuevoCorte.totalObligaciones, 'obligación', 'obligaciones')}).`,
       )
-    } catch (err) {
-      if (err.fieldErrors && Object.keys(err.fieldErrors).length) {
-        setErroresFormulario(mapCorteFieldErrors(err.fieldErrors))
-      } else {
-        setErrorExtraccion(err.message)
-      }
-    } finally {
-      setGenerando(false)
-    }
-  }
+    },
+  })
 
   // Validar corte en BORRADOR
   const ejecutarValidacion = async () => {
@@ -238,7 +219,7 @@ export default function ExtractionPage() {
           vigente según las reglas de negocio de CENS.
         </p>
 
-        <form onSubmit={iniciarExtraccion} className="mt-5" noValidate>
+        <form {...formExtraccion.formProps} className="mt-5">
           <div className="grid gap-4 md:grid-cols-3 md:items-end">
             <div>
               <Input
@@ -246,26 +227,12 @@ export default function ExtractionPage() {
                 type="date"
                 required
                 max={hoyISO()}
-                value={fechaCorte}
-                onChange={(e) => {
-                  setFechaCorte(e.target.value)
-                  setErroresFormulario((prev) => ({ ...prev, fechaCorte: undefined }))
-                  setErrorExtraccion('')
-                }}
-                error={erroresFormulario.fechaCorte}
+                {...formExtraccion.campo('fechaCorte')}
               />
             </div>
 
             <div>
-              <Select
-                label="Grupo de conceptos de energía"
-                value={grupoId}
-                onChange={(e) => {
-                  setGrupoId(e.target.value)
-                  setErroresFormulario((prev) => ({ ...prev, grupoId: undefined }))
-                }}
-                error={erroresFormulario.grupoId}
-              >
+              <Select label="Grupo de conceptos de energía" {...formExtraccion.campo('grupoId')}>
                 <option value="">Todos los conceptos reportables (predeterminado)</option>
                 {gruposDisponibles.map((g) => (
                   <option key={g.id} value={g.id}>
@@ -276,16 +243,16 @@ export default function ExtractionPage() {
             </div>
 
             <div>
-              <Button type="submit" loading={generando} block>
+              <Button type="submit" loading={formExtraccion.enviando} block>
                 <Icon name="bolt" size={16} />
                 Iniciar extracción
               </Button>
             </div>
           </div>
 
-          {errorExtraccion && (
+          {formExtraccion.errorGeneral && (
             <div className="mt-4">
-              <Alert>{errorExtraccion}</Alert>
+              <Alert>{formExtraccion.errorGeneral}</Alert>
             </div>
           )}
         </form>

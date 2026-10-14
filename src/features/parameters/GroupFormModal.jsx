@@ -1,15 +1,20 @@
 // Modal para crear o editar grupos de conceptos (RF43).
-import { useRef, useState } from 'react'
+// Usa el formulario reutilizable de RF31 (`useFormulario`); la lista de conceptos se maneja con `setValor`.
 import { Alert, Button, Input, Modal } from '../../components/ui'
+import { ApiError } from '../../lib/api'
+import { useFormulario } from '../../lib/useFormulario'
 import { createConceptGroup, updateConceptGroup } from './parametersService'
 import { validarGrupo } from './conceptValidation'
 
 export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponibles = [], onClose, onGuardado }) {
   const editando = Boolean(grupo)
-  const [nombre, setNombre] = useState(grupo?.nombre ?? '')
 
   // Lista consolidada de conceptos
   const listaConceptos = conceptos.length > 0 ? conceptos : conceptosDisponibles
+  const estaActivo = (codigo) => {
+    const match = listaConceptos.find((c) => c.codigo === codigo)
+    return match ? match.activo : true
+  }
 
   // Detecta conceptos del grupo que actualmente están inactivos
   const inactivosEnGrupo = (grupo?.conceptos ?? []).filter((gc) => {
@@ -17,72 +22,39 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
     return match ? !match.activo : false
   })
 
-  // Solo preseleccionamos conceptos que permanezcan activos
-  const [seleccionados, setSeleccionados] = useState(() => {
-    if (!grupo?.conceptos) return []
-    return grupo.conceptos
-      .map((c) => c.codigo)
-      .filter((codigo) => {
-        const match = listaConceptos.find((c) => c.codigo === codigo)
-        return match ? match.activo : true
-      })
+  const form = useFormulario({
+    valoresIniciales: {
+      nombre: grupo?.nombre ?? '',
+      // Solo preseleccionamos conceptos que permanezcan activos
+      conceptos: (grupo?.conceptos ?? []).map((c) => c.codigo).filter(estaActivo),
+    },
+    orden: ['nombre', 'conceptos'],
+    // Filtra para garantizar que solo viajen conceptos activos
+    validar: ({ nombre, conceptos: codigos }) => validarGrupo({ nombre, conceptos: codigos.filter(estaActivo) }),
+    onSubmit: async ({ nombre, conceptos: codigos }) => {
+      const datos = { nombre: nombre.trim(), conceptos: codigos.filter(estaActivo) }
+      try {
+        if (editando) {
+          onGuardado({ grupo: await updateConceptGroup(grupo.id, datos), creado: false })
+        } else {
+          onGuardado({ grupo: await createConceptGroup(datos), creado: true })
+        }
+      } catch (err) {
+        // El 409 ("El nombre de grupo ya existe.") llega como { detail }: va al campo del nombre.
+        if (err.status === 409 && !Object.keys(err.fieldErrors ?? {}).length) {
+          throw new ApiError(err.message, { status: 409, fieldErrors: { nombre: err.message } })
+        }
+        throw err
+      }
+    },
   })
-  const [errores, setErrores] = useState({})
-  const [errorGeneral, setErrorGeneral] = useState('')
-  const [enviando, setEnviando] = useState(false)
-
-  const nombreRef = useRef(null)
+  const seleccionados = form.valores.conceptos
 
   const toggleConcepto = (codigo) => {
-    setSeleccionados((prev) =>
-      prev.includes(codigo) ? prev.filter((c) => c !== codigo) : [...prev, codigo],
+    form.setValor(
+      'conceptos',
+      seleccionados.includes(codigo) ? seleccionados.filter((c) => c !== codigo) : [...seleccionados, codigo],
     )
-    setErrores((er) => ({ ...er, conceptos: undefined }))
-    setErrorGeneral('')
-  }
-
-  const enviar = async (e) => {
-    e.preventDefault()
-    // Filtra para garantizar que solo viajen conceptos activos
-    const conceptosValidos = seleccionados.filter((codigo) => {
-      const match = listaConceptos.find((c) => c.codigo === codigo)
-      return match ? match.activo : true
-    })
-
-    const encontrados = validarGrupo({ nombre, conceptos: conceptosValidos })
-    setErrores(encontrados)
-    setErrorGeneral('')
-
-    if (encontrados.nombre) return nombreRef.current?.focus()
-    if (encontrados.conceptos) return
-
-    setEnviando(true)
-    try {
-      if (editando) {
-        const guardado = await updateConceptGroup(grupo.id, {
-          nombre: nombre.trim(),
-          conceptos: conceptosValidos,
-        })
-        onGuardado({ grupo: guardado, creado: false })
-      } else {
-        const guardado = await createConceptGroup({
-          nombre: nombre.trim(),
-          conceptos: conceptosValidos,
-        })
-        onGuardado({ grupo: guardado, creado: true })
-      }
-    } catch (err) {
-      if (err.fieldErrors && Object.keys(err.fieldErrors).length) {
-        setErrores(err.fieldErrors)
-        if (err.fieldErrors.nombre) nombreRef.current?.focus()
-      } else if (err.status === 409) {
-        setErrores((er) => ({ ...er, nombre: err.message }))
-        nombreRef.current?.focus()
-      } else {
-        setErrorGeneral(err.message)
-      }
-      setEnviando(false)
-    }
   }
 
   return (
@@ -92,29 +64,17 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
       title={editando ? `Editar grupo: ${grupo.nombre}` : 'Crear nuevo grupo de conceptos'}
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={enviando}>
+          <Button variant="ghost" onClick={onClose} disabled={form.enviando}>
             Cancelar
           </Button>
-          <Button type="submit" form="form-grupo" loading={enviando}>
+          <Button type="submit" form="form-grupo" loading={form.enviando}>
             {editando ? 'Guardar cambios' : 'Crear grupo'}
           </Button>
         </div>
       }
     >
-      <form id="form-grupo" onSubmit={enviar} noValidate>
-        <Input
-          ref={nombreRef}
-          label="Nombre del grupo"
-          required
-          autoComplete="off"
-          value={nombre}
-          onChange={(e) => {
-            setNombre(e.target.value)
-            setErrores((er) => ({ ...er, nombre: undefined }))
-            setErrorGeneral('')
-          }}
-          error={errores.nombre}
-        />
+      <form id="form-grupo" {...form.formProps}>
+        <Input label="Nombre del grupo" required autoComplete="off" {...form.campo('nombre')} />
 
         {inactivosEnGrupo.length > 0 && (
           <div className="mt-4">
@@ -128,9 +88,9 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
           <span className="block text-[13px] font-medium text-slate-700">
             Conceptos de energía incluidos <span className="text-danger">*</span>
           </span>
-          {errores.conceptos && (
+          {form.errores.conceptos && (
             <p className="mt-1 text-[13px] text-danger" role="alert">
-              {errores.conceptos}
+              {form.errores.conceptos}
             </p>
           )}
           <div className="mt-2.5 max-h-56 space-y-2 overflow-y-auto rounded-ctl border border-gris-d p-3">
@@ -184,9 +144,9 @@ export default function GroupFormModal({ grupo, conceptos = [], conceptosDisponi
           </p>
         </div>
 
-        {errorGeneral && (
+        {form.errorGeneral && (
           <div className="mt-4">
-            <Alert>{errorGeneral}</Alert>
+            <Alert>{form.errorGeneral}</Alert>
           </div>
         )}
       </form>

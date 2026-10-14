@@ -15,11 +15,13 @@ Cada punto trae una **suposición** del frontend. Si es correcta, basta responde
 - **José Luis:** RF28 (usuarios) y RF29 (cambio y recuperación de contraseña), en la fila 40; ver la sección 2.1.
 - **José Luis y Johan:** la fila 42, conectar la extracción con la autenticación.
 
-**Ninguna de estas filas tiene todavía código en el backend.**
+**Estado al 13/10/2026 (`main` `260d31e`, contrato 0.6):** RF25, RF26 y RF27 (PR #15 y #18 de Dilan), RF28 y RF29 (PR #25 de José Luis) y RF30 y RF31 (PR #27 de Dilan) ya están en el backend y desplegados en Render. Johan probó en local el recorrido real de login, usuarios, primer ingreso, desactivación y recuperación. La fila 42 sigue abierta (diferencia Y). Lo que queda pendiente está marcado **Abierto** en esta sección y en la 1.6.
 
-**Estado en vivo (11/10/2026, backend en Render, `main` `e835f31`):** `GET /api/salud/` responde 200, pero `/api/conceptos/` y `/api/extracciones/ultima/` responden **403** y `/api/auth/csrf/` responde **404**. Sin esta sección, **ninguna pantalla del frontend puede funcionar con el backend real**: los permisos (`usuarios/permisos.py`) leen `request.user.rol`, y hoy ningún usuario tiene ese campo. Las pruebas del backend pasan porque usan un usuario simulado con `rol` (`tests/ayudas.py`).
+~~**Estado en vivo (11/10/2026, backend en Render, `main` `e835f31`):** `GET /api/salud/` responde 200, pero `/api/conceptos/` y `/api/extracciones/ultima/` responden **403** y `/api/auth/csrf/` responde **404**. Sin esta sección, **ninguna pantalla del frontend puede funcionar con el backend real**: los permisos (`usuarios/permisos.py`) leen `request.user.rol`, y hoy ningún usuario tiene ese campo. Las pruebas del backend pasan porque usan un usuario simulado con `rol` (`tests/ayudas.py`).~~ **Resuelto el 13/10/2026:** sin sesión, `401`; con sesión, cada rol recibe lo suyo.
 
-### 1.1 Antes de la primera migración (urgente)
+### 1.1 Antes de la primera migración — **resuelto (RF25)**
+
+`AUTH_USER_MODEL = "usuarios.Usuario"`, con el correo como identificador y los campos de abajo. Lo que sigue queda como referencia.
 
 El repositorio todavía no tiene migraciones. **El modelo de usuario propio debe definirse antes del primer `migrate`**, también en la base de Render; cambiarlo después es muy doloroso en Django.
 
@@ -28,7 +30,9 @@ El repositorio todavía no tiene migraciones. **El modelo de usuario propio debe
 - Con ese campo, `EsAdministrador` y `EsAnalistaOAdministrador` funcionan sin cambios. Además `ejecutada_por` del corte (diferencia Y) puede llenarse con `request.user`.
 - ~~`rest_framework` y `usuarios` no están en `INSTALLED_APPS`.~~ Resuelto: ya están.
 
-### 1.2 Sesión: cookie de Django + CSRF, mismo origen en Render (decidido 11/10/2026)
+### 1.2 Sesión: cookie de Django + CSRF, mismo origen en Render — **resuelto (RF25, RF26)**
+
+Los ajustes de abajo ya están en `config/settings.py` (la duración sale de `DJANGO_SESSION_MINUTES`, 10 por defecto). Se dejan como referencia.
 
 El frontend usa la **cookie de sesión HttpOnly de Django** y el token CSRF. No guarda nada en `localStorage`.
 
@@ -54,7 +58,9 @@ CSRF_TRUSTED_ORIGINS = os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhos
 
 Variable en Render (servicio del backend): `DJANGO_CSRF_TRUSTED_ORIGINS=https://reporte-cens.onrender.com,http://localhost:5173`.
 
-### 1.3 Endpoints
+### 1.3 Endpoints — **implementados en el backend** (contrato 0.6)
+
+Además de lo de la tabla: el login exige `X-CSRFToken` (`403` `csrf_failed` sin él), y responde `401` con `code: authentication_failed` y `429` con `code: throttled` (10 intentos por minuto por IP y otros 10 por correo). La recuperación admite 5 intentos por hora por IP.
 
 | Método y ruta | Cuerpo | Respuesta esperada |
 |---|---|---|
@@ -72,16 +78,18 @@ Variable en Render (servicio del backend): `DJANGO_CSRF_TRUSTED_ORIGINS=https://
 
 1. **Mensajes de error en español** (RF31). **Resuelto en `dev` (10/10/2026):** `LANGUAGE_CODE = 'es-co'` y `TIME_ZONE = 'America/Bogota'`. Los validadores de contraseña propios (punto 6) también deben responder en español. El frontend traduce solo cuatro mensajes por defecto de DRF; el resto debe venir ya en español.
 2. **Formato de error de DRF:** `{ "detail": "..." }` o `{ "campo": ["mensaje"] }`. El frontend los convierte en errores por campo.
-3. **Usuario desactivado:** `authenticate()` de Django devuelve `None` para un usuario inactivo, igual que con una clave mala. Para poder responder 403 *"Tu usuario está desactivado. Contacta al administrador."* hay que comprobar `is_active` aparte (sin revelar nada si la contraseña es incorrecta).
-4. **Un 403 por CSRF** debe distinguirse de un 403 por falta de permiso. Sugerencia: `CSRF_FAILURE_VIEW` que devuelva JSON `{ "detail": "No se pudo verificar la seguridad de la solicitud. Recarga la página e intenta de nuevo." }`.
-5. **Contraseñas con Argon2** (RNF-04): falta `PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher', ...]`. Además `argon2-cffi` **no llega a Render**: no está en `requirements.docker.txt` (el que usa el `Dockerfile`), y en `requirements.txt` aparece con rutas locales de conda (`@ file:///...`) que `pip` no puede instalar en otra máquina. Hay que agregarlo con versión fija a `requirements.docker.txt` y dejar `requirements.txt` sin rutas locales.
-6. **Reglas de contraseña** que muestra la maqueta y valida el frontend: mínimo 8 caracteres, al menos una mayúscula y al menos un número. Hay que replicarlas en `AUTH_PASSWORD_VALIDATORS` con un validador propio (Django solo trae el de longitud), con errores en español en la clave `new_password`.
-7. **Usuario con contraseña temporal** (`must_change_password = true`): el backend debería rechazar (403) todo endpoint salvo `me`, `logout` y `change-password`. El frontend ya lo obliga a la pantalla de cambio, pero la regla real es del servidor.
-8. **Roles (RF27):** un Analista que llama a un endpoint de administración recibe **403**. El frontend oculta esas pantallas, pero no es seguridad. **Sin sesión, en cambio, 401** (diferencia K): hoy DRF responde 403 porque `SessionAuthentication` no tiene `authenticate_header`. Con el 403 el frontend muestra "Acceso restringido" en vez de volver al login. Se arregla con una subclase de `SessionAuthentication` cuyo `authenticate_header` devuelva, por ejemplo, `'Session'`.
-9. **Seguridad menor:** `SECRET_KEY`, `DEBUG` y `ALLOWED_HOSTS` ya se leen del `.env` (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`; `DEBUG` es falso por defecto). Queda una clave de ejemplo escrita en `settings.py` como valor por defecto: en producción conviene que falte y el servidor no arranque. Hay que confirmar que en Render está definida `DJANGO_SECRET_KEY`; si no, el backend desplegado firma las sesiones con la clave que está publicada en el repositorio.
-10. **Cuentas de prueba en la base de Render**, para verificar la integración: un Administrador y un Analista con datos **ficticios** (los mismos correos del README del frontend: `rmartinez@example.com` y `jperez@example.com`). Las contraseñas no van en el repositorio: se comparten por privado.
+3. **Resuelto (RF25).** **Usuario desactivado:** `authenticate()` de Django devuelve `None` para un usuario inactivo, igual que con una clave mala. Para poder responder 403 *"Tu usuario está desactivado. Contacta al administrador."* hay que comprobar `is_active` aparte (sin revelar nada si la contraseña es incorrecta).
+4. **Resuelto (RF25, `csrf_failed`).** **Un 403 por CSRF** debe distinguirse de un 403 por falta de permiso. Sugerencia: `CSRF_FAILURE_VIEW` que devuelva JSON `{ "detail": "No se pudo verificar la seguridad de la solicitud. Recarga la página e intenta de nuevo." }`.
+5. **Resuelto (RF25: `PASSWORD_HASHERS` con Argon2 y `argon2-cffi==25.1.0` en `requirements.docker.txt`).** **Contraseñas con Argon2** (RNF-04): falta `PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher', ...]`. Además `argon2-cffi` **no llega a Render**: no está en `requirements.docker.txt` (el que usa el `Dockerfile`), y en `requirements.txt` aparece con rutas locales de conda (`@ file:///...`) que `pip` no puede instalar en otra máquina. Hay que agregarlo con versión fija a `requirements.docker.txt` y dejar `requirements.txt` sin rutas locales.
+6. **Resuelto (RF25):** validadores propios de mayúscula y número, más los de Django (longitud, contraseña común y parecido al correo o al nombre). **Reglas de contraseña** que muestra la maqueta y valida el frontend: mínimo 8 caracteres, al menos una mayúscula y al menos un número. Hay que replicarlas en `AUTH_PASSWORD_VALIDATORS` con un validador propio (Django solo trae el de longitud), con errores en español en la clave `new_password`.
+7. **Resuelto (RF25):** el middleware deja pasar `/api/auth/` y `/api/salud/` y responde `403` `password_change_required` en lo demás. **Usuario con contraseña temporal** (`must_change_password = true`): el backend debería rechazar (403) todo endpoint salvo `me`, `logout` y `change-password`. El frontend ya lo obliga a la pantalla de cambio, pero la regla real es del servidor.
+8. **Resuelto (RF25, RF27; diferencia K).** **Roles (RF27):** un Analista que llama a un endpoint de administración recibe **403**. El frontend oculta esas pantallas, pero no es seguridad. **Sin sesión, en cambio, 401** (diferencia K): hoy DRF responde 403 porque `SessionAuthentication` no tiene `authenticate_header`. Con el 403 el frontend muestra "Acceso restringido" en vez de volver al login. Se arregla con una subclase de `SessionAuthentication` cuyo `authenticate_header` devuelva, por ejemplo, `'Session'`.
+9. **Abierto.** **Seguridad menor:** `SECRET_KEY`, `DEBUG` y `ALLOWED_HOSTS` ya se leen del `.env` (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`; `DEBUG` es falso por defecto). Queda una clave de ejemplo escrita en `settings.py` como valor por defecto: en producción conviene que falte y el servidor no arranque. Hay que confirmar que en Render está definida `DJANGO_SECRET_KEY`; si no, el backend desplegado firma las sesiones con la clave que está publicada en el repositorio.
+10. **Resuelto:** el comando `seed_usuarios` crea el Administrador y el Analista desde variables `SEED_ADMIN_*` y `SEED_ANALISTA_*` al arrancar. Como la contraseña temporal y el enlace de recuperación llegan por correo real, para probar esos flujos hace falta un buzón real del probador (nunca del dominio de CENS). **Cuentas de prueba en la base de Render**, para verificar la integración: un Administrador y un Analista con datos **ficticios** (los mismos correos del README del frontend: `rmartinez@example.com` y `jperez@example.com`). Las contraseñas no van en el repositorio: se comparten por privado.
 
-### 1.5 Recuperación de contraseña (RF29, José Luis): ¿cómo se prueba sin enviar correos reales?
+### 1.5 Recuperación de contraseña (RF29, José Luis) — **resuelto**
+
+El backend envía los correos por Google Apps Script (`DJANGO_APPS_SCRIPT_URL`, 100 correos al día), con un enlace `{FRONTEND_URL}/restablecer?token=uidb64.token` de un solo uso que vence en 30 minutos. **Abierto:** verificar que `FRONTEND_URL` esté definida en Render con `https://reporte-cens.onrender.com`; si no, el enlace apunta a `http://localhost:5173`. Lo que sigue era la propuesta original.
 
 Es una de las "decisiones por cerrar" de la asignación. Propuesta:
 - En desarrollo, `EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'`: el correo se imprime en la consola del servidor.
@@ -90,11 +98,21 @@ Es una de las "decisiones por cerrar" de la asignación. Propuesta:
 
 **Nota:** la pantalla "Restablecer contraseña" no está en la maqueta ni en la asignación; el frontend la agregó porque sin ella el enlace del correo no tiene a dónde llevar. Hay que confirmarla con Santiago.
 
+### 1.6 Auditoría (RF30, RF31, Dilan) — **implementada en el backend** (`6f596bb`, contrato 0.6)
+
+`GET /api/auditoria/`, solo Administrador, con los filtros y mensajes del contrato. Un middleware registra en `NV_BITACORA` cada acción que termina bien. La pantalla es de Omar. Quedan abiertos (detalle en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
+- **AG (urgente).** Confirmar que `config/sql/08_rf30_nv_bitacora.sql` se ejecutó en el Oracle que usa Render. Crear o editar usuarios, eliminar un borrador y la actualización mensual escriben en la bitácora sin atrapar errores: si faltan las columnas nuevas, esas acciones responden `500`.
+- **AF.** El cierre por inactividad queda como "Cierre manual". Propuesta: `POST /auth/logout/` con un `motivo` opcional (`manual` o `inactividad`).
+- **AE.** El detalle de usuario creado o editado lleva el correo del usuario. Aceptable porque el log solo lo ve el Administrador; confirmarlo con Santiago.
+- Las acciones del sistema llegan con `usuario: "Sistema"` y `usuario_id` y `rol` en `null`. El contrato 0.6 ya lo admite.
+
 ---
 
 ## 2. Para José Luis — usuarios y parámetros (RF28, RF29, RF35)
 
-### 2.1 Endpoints de usuarios (solo Administrador; un Analista recibe 403)
+### 2.1 Endpoints de usuarios (solo Administrador; un Analista recibe 403) — **implementados en el backend** (contrato 0.6)
+
+Además de la tabla: `GET /api/users/{id}/` (el frontend no lo usa) y `502` en `POST /api/users/` si el correo no sale (la creación se revierte).
 
 | Método y ruta | Cuerpo | Respuesta esperada |
 |---|---|---|
@@ -129,8 +147,8 @@ Reglas que el servidor debe imponer (el frontend ya las aplica en pantalla, pero
 Diferencias que afectan a estas rutas (detalle y propuesta en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
 - **A. Resuelta en `fix/api-reglas` y fusionada en `main` (`e835f31`):** solo el Administrador escribe, como en el contrato y los mocks.
 - **B.** El concepto no expone fecha de creación (RF35 la pide). La rama `feature/RF35-sql` de Angel agrega la columna `FECHA_CREACION`; falta que la API la devuelva.
-- **J.** Sin modelo de usuario con `rol`, el permiso `EsAnalistaOAdministrador` respondería 403 siempre; depende de Dilan. Confirmado en vivo en Render el 11/10/2026: los endpoints de negocio responden 403 y no existe `/api/auth/`.
-- **K.** Un anónimo recibe 403 en vez de 401 (el frontend cierra la sesión con 401). Confirmado en vivo en Render el 11/10/2026: `403` con `Las credenciales de autenticación no se proveyeron.`
+- ~~**J.**~~ **Resuelta (RF25).** ~~Sin modelo de usuario con `rol`, el permiso `EsAnalistaOAdministrador` respondería 403 siempre; depende de Dilan. Confirmado en vivo en Render el 11/10/2026: los endpoints de negocio responden 403 y no existe `/api/auth/`.~~
+- ~~**K.**~~ **Resuelta (RF25).** ~~Un anónimo recibe 403 en vez de 401 (el frontend cierra la sesión con 401). Confirmado en vivo en Render el 11/10/2026: `403` con `Las credenciales de autenticación no se proveyeron.`~~
 - **AB.** Resuelta en `3610b63` (`main` `e835f31`): `creado` de los grupos vuelve a llegar como fecha (`AAAA-MM-DD`).
 
 Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400` con `No se permiten códigos repetidos.`) y P (código no numérico en la ruta: `404`).
@@ -151,7 +169,7 @@ Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400
 
 **Siguen abiertas** (filas de [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
 - **R.** `edad_mora`, `tipo_id_tu` y `estado_tu` son textos sin validar; los mocks de extracción devuelven siempre códigos válidos de las tablas del manual (`edad_mora` coherente con `dias_mora`).
-- **Y.** `ejecutada_por` siempre `null` (no hay usuario autenticado); los mocks devuelven el nombre de quien generó el corte.
+- **Y.** `ejecutada_por` siempre `null`: ya hay login, pero `NV_CORTE` sigue ligada a la tabla anterior `NV_USUARIO` (fila 42, José Luis y Johan). Los mocks devuelven el nombre de quien generó el corte.
 - **Z.** "Último estado" de un deudor: ya no cuenta los `ANULADO`, pero puede ser un `BORRADOR`. Es del historial, que aún no se simula.
 - **AA (el resto).** Un corte `ANULADO` de la misma fecha bloquea la generación con `409` (los mocks hacen lo mismo que el backend) y `observacion` del reporte no se puede escribir.
 - **AC.** El `409` por un BORRADOR de otra fecha muestra al usuario la ruta `DELETE /api/extracciones/{id}/`. El contrato 0.5 propone `Ya existe un corte en BORRADOR con fecha AAAA-MM-DD. Elimínelo o complételo antes de generar otro.`
@@ -179,12 +197,12 @@ con el esquema PostgreSQL propuesto mientras no se confirmen sus endpoints y con
 | # | Pregunta | Suposición del frontend |
 |---|---|---|
 | 1 | ¿Front y back en el mismo dominio? | **Resuelto (11/10/2026):** mismo origen. En Render, el sitio del frontend reescribirá `/api/*` al backend; en desarrollo, el proxy de Vite. Sin CORS (sección 1.2) |
-| 2 | ¿Vencimiento deslizante de 10 minutos (`SESSION_SAVE_EVERY_REQUEST`)? | Sí |
-| 3 | ¿`GET /auth/me/` sirve de "ping" para renovar la sesión? | Sí |
-| 4 | Campo del login | `email` |
-| 5 | Forma del usuario | `{ id, nombre, email, rol, is_active, last_login, must_change_password }` |
+| 2 | ¿Vencimiento deslizante de 10 minutos (`SESSION_SAVE_EVERY_REQUEST`)? | **Resuelto:** sí (RF26) |
+| 3 | ¿`GET /auth/me/` sirve de "ping" para renovar la sesión? | **Resuelto:** sí |
+| 4 | Campo del login | **Resuelto:** `email` |
+| 5 | Forma del usuario | **Resuelto:** `{ id, nombre, email, rol, is_active, last_login, must_change_password }` |
 | 6 | Valores de `rol` | Códigos `"ANALISTA_CARTERA"` y `"ADMINISTRADOR"` (resuelto en el contrato 0.2) |
 | 7 | Contraseña temporal | Resuelto: se envía por correo; `temporary_password` llega en `null` |
-| 8 | Reglas de contraseña | 8 caracteres, mayúscula y número |
+| 8 | Reglas de contraseña | **Resuelto:** 8 caracteres, mayúscula y número, más las de Django (común, parecida al correo o al nombre) |
 | 9 | Pantalla "Restablecer" con `?token=` | Sí, hay que confirmarla con Santiago |
-| 10 | ¿Quién hace el modelo de usuario propio? (`LANGUAGE_CODE` ya está en español) | Dilan, antes del primer `migrate` |
+| 10 | ¿Quién hace el modelo de usuario propio? (`LANGUAGE_CODE` ya está en español) | **Resuelto:** Dilan (RF25) |

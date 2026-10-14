@@ -49,6 +49,9 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     await screen.findByText('Corte #2 al 30/09/2026')
     expect(screen.getByRole('status', { name: 'Cargando obligaciones' })).toBeInTheDocument()
 
+    // El aviso de carga aparece antes de que la petición llegue al mock: en un equipo lento
+    // (GitHub Actions) resolverRespuesta aún no existe. Se espera a que el mock la reciba.
+    await waitFor(() => expect(resolverRespuesta).toBeTypeOf('function'))
     resolverRespuesta()
     expect(await screen.findByText('No hay obligaciones en este corte.')).toBeInTheDocument()
   })

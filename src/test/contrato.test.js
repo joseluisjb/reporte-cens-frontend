@@ -5,7 +5,7 @@
 import { api } from '../lib/api'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
-import { expectCumpleContrato } from './contrato'
+import { expectCumpleContrato, expectPeticionCumpleContrato } from './contrato'
 
 const ADMIN = ['rmartinez@example.com', 'Admin12345'] // id 2
 const ANALISTA = ['jperez@example.com', 'Analista123']
@@ -56,6 +56,16 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     expect(() => expectCumpleContrato('get', '/auditoria/', 200, { total: 2, resultados: [registro, sistema] })).not.toThrow()
     expect(() => expectCumpleContrato('get', '/auditoria/', 200, { total: 1, resultados: [{ ...registro, rol: 'JEFE' }] })).toThrow(/no cumple el contrato/)
     expect(() => expectCumpleContrato('get', '/auditoria/', 200, { total: 1, resultados: [{ ...registro, tipo_accion: 'borrado' }] })).toThrow(/no cumple el contrato/)
+  })
+
+  test('autenticación: POST /auth/logout/ acepta { motivo } opcional (0.7) y 204 no trae cuerpo', async () => {
+    expect(() => expectPeticionCumpleContrato('post', '/auth/logout/', { motivo: 'inactividad' })).not.toThrow()
+    expect(() => expectPeticionCumpleContrato('post', '/auth/logout/', { motivo: 'manual' })).not.toThrow()
+    expect(() => expectPeticionCumpleContrato('post', '/auth/logout/', {})).not.toThrow()
+    expect(() => expectPeticionCumpleContrato('post', '/auth/logout/', { motivo: 'aburrimiento' })).toThrow(/no cumple el contrato/)
+    expect(() => expectPeticionCumpleContrato('get', '/auth/me/', {})).toThrow(/no define el cuerpo/)
+    await entrar(ANALISTA)
+    await verifica('post', '/auth/logout/', 204, { datos: { motivo: 'inactividad' } })
   })
 
   test('autenticación: POST /auth/login/ 200 cumple UserEnvelope y 401 cumple ErrorDetail', async () => {

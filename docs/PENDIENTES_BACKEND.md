@@ -17,6 +17,8 @@ Cada punto trae una **suposición** del frontend. Si es correcta, basta responde
 
 **Estado al 13/10/2026 (`main` `260d31e`, contrato 0.6):** RF25, RF26 y RF27 (PR #15 y #18 de Dilan), RF28 y RF29 (PR #25 de José Luis) y RF30 y RF31 (PR #27 de Dilan) ya están en el backend y desplegados en Render. Johan probó en local el recorrido real de login, usuarios, primer ingreso, desactivación y recuperación. La fila 42 sigue abierta (diferencia Y). Lo que queda pendiente está marcado **Abierto** en esta sección y en la 1.6.
 
+**Actualización 14/10/2026 (backend `main` `011d30b`, contrato 0.7):** el `500` de `POST /api/extracciones/` quedó resuelto (marcadores SQL `:1` → `%s`, PR #32 de José Luis) y el backend ya registra los errores en el log de Render. El frontend tiene CI en GitHub Actions (PR #34 del frontend). La rama del backend `fix/api-mensajes-seguridad-auditoria` (**PR #34 del backend, a `dev`, sin fusionar**) resuelve AC, AD, AF, la parte de código de AG y la clave secreta por defecto (punto 1.4.9). Lo que sigue abierto, con su responsable, está en la [sección 4](#4-lo-que-sigue-abierto-y-quién-lo-tiene).
+
 ~~**Estado en vivo (11/10/2026, backend en Render, `main` `e835f31`):** `GET /api/salud/` responde 200, pero `/api/conceptos/` y `/api/extracciones/ultima/` responden **403** y `/api/auth/csrf/` responde **404**. Sin esta sección, **ninguna pantalla del frontend puede funcionar con el backend real**: los permisos (`usuarios/permisos.py`) leen `request.user.rol`, y hoy ningún usuario tiene ese campo. Las pruebas del backend pasan porque usan un usuario simulado con `rol` (`tests/ayudas.py`).~~ **Resuelto el 13/10/2026:** sin sesión, `401`; con sesión, cada rol recibe lo suyo.
 
 ### 1.1 Antes de la primera migración — **resuelto (RF25)**
@@ -66,7 +68,7 @@ Además de lo de la tabla: el login exige `X-CSRFToken` (`403` `csrf_failed` sin
 |---|---|---|
 | `GET /api/auth/csrf/` | — | 204, y entrega la cookie `csrftoken` (decorador `ensure_csrf_cookie`) |
 | `POST /api/auth/login/` | `{ "email", "password" }` | 200 `{ "user": {...} }` · 401 credenciales malas · 403 usuario desactivado |
-| `POST /api/auth/logout/` | — | 204 (invalida la sesión en el servidor) |
+| `POST /api/auth/logout/` | `{ "motivo"? }` (`manual` o `inactividad`, contrato 0.7) | 204 (invalida la sesión en el servidor). El motivo solo cambia el detalle de la auditoría |
 | `GET /api/auth/me/` | — | 200 `{ "user": {...} }` · 401 sin sesión. **También sirve de "ping"**: el frontend lo llama cada ~5 min mientras el usuario trabaja para renovar la sesión |
 | `POST /api/auth/change-password/` (RF29, José Luis) | `{ "current_password", "new_password" }` | 204 · 400 con error por campo |
 | `POST /api/auth/password-reset/` (RF29, José Luis) | `{ "email" }` | **202 siempre igual**, exista o no el correo |
@@ -84,7 +86,7 @@ Además de lo de la tabla: el login exige `X-CSRFToken` (`403` `csrf_failed` sin
 6. **Resuelto (RF25):** validadores propios de mayúscula y número, más los de Django (longitud, contraseña común y parecido al correo o al nombre). **Reglas de contraseña** que muestra la maqueta y valida el frontend: mínimo 8 caracteres, al menos una mayúscula y al menos un número. Hay que replicarlas en `AUTH_PASSWORD_VALIDATORS` con un validador propio (Django solo trae el de longitud), con errores en español en la clave `new_password`.
 7. **Resuelto (RF25):** el middleware deja pasar `/api/auth/` y `/api/salud/` y responde `403` `password_change_required` en lo demás. **Usuario con contraseña temporal** (`must_change_password = true`): el backend debería rechazar (403) todo endpoint salvo `me`, `logout` y `change-password`. El frontend ya lo obliga a la pantalla de cambio, pero la regla real es del servidor.
 8. **Resuelto (RF25, RF27; diferencia K).** **Roles (RF27):** un Analista que llama a un endpoint de administración recibe **403**. El frontend oculta esas pantallas, pero no es seguridad. **Sin sesión, en cambio, 401** (diferencia K): hoy DRF responde 403 porque `SessionAuthentication` no tiene `authenticate_header`. Con el 403 el frontend muestra "Acceso restringido" en vez de volver al login. Se arregla con una subclase de `SessionAuthentication` cuyo `authenticate_header` devuelva, por ejemplo, `'Session'`.
-9. **Abierto.** **Seguridad menor:** `SECRET_KEY`, `DEBUG` y `ALLOWED_HOSTS` ya se leen del `.env` (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`; `DEBUG` es falso por defecto). Queda una clave de ejemplo escrita en `settings.py` como valor por defecto: en producción conviene que falte y el servidor no arranque. Hay que confirmar que en Render está definida `DJANGO_SECRET_KEY`; si no, el backend desplegado firma las sesiones con la clave que está publicada en el repositorio.
+9. **En revisión (PR #34 del backend).** La rama `fix/api-mensajes-seguridad-auditoria` quita el valor por defecto: con `DJANGO_DEBUG=False` y sin `DJANGO_SECRET_KEY`, el servidor no arranca. **Antes de pasar `dev` a `main`, José Luis confirma que la variable existe en Render.** Texto original: **Seguridad menor:** `SECRET_KEY`, `DEBUG` y `ALLOWED_HOSTS` ya se leen del `.env` (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`; `DEBUG` es falso por defecto). Queda una clave de ejemplo escrita en `settings.py` como valor por defecto: en producción conviene que falte y el servidor no arranque. Hay que confirmar que en Render está definida `DJANGO_SECRET_KEY`; si no, el backend desplegado firma las sesiones con la clave que está publicada en el repositorio.
 10. **Resuelto:** el comando `seed_usuarios` crea el Administrador y el Analista desde variables `SEED_ADMIN_*` y `SEED_ANALISTA_*` al arrancar. Como la contraseña temporal y el enlace de recuperación llegan por correo real, para probar esos flujos hace falta un buzón real del probador (nunca del dominio de CENS). **Cuentas de prueba en la base de Render**, para verificar la integración: un Administrador y un Analista con datos **ficticios** (los mismos correos del README del frontend: `rmartinez@example.com` y `jperez@example.com`). Las contraseñas no van en el repositorio: se comparten por privado.
 
 ### 1.5 Recuperación de contraseña (RF29, José Luis) — **resuelto**
@@ -101,8 +103,8 @@ Es una de las "decisiones por cerrar" de la asignación. Propuesta:
 ### 1.6 Auditoría (RF30, RF31, Dilan) — **implementada en el backend** (`6f596bb`, contrato 0.6)
 
 `GET /api/auditoria/`, solo Administrador, con los filtros y mensajes del contrato. Un middleware registra en `NV_BITACORA` cada acción que termina bien. La pantalla de Omar ya está en el frontend (filtros, paginación y acciones del "Sistema" sin rol). Quedan abiertos (detalle en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
-- **AG (urgente).** Confirmar que `config/sql/08_rf30_nv_bitacora.sql` se ejecutó en el Oracle que usa Render. Crear o editar usuarios, eliminar un borrador y la actualización mensual escriben en la bitácora sin atrapar errores: si faltan las columnas nuevas, esas acciones responden `500`.
-- **AF.** El cierre por inactividad queda como "Cierre manual". Propuesta: `POST /auth/logout/` con un `motivo` opcional (`manual` o `inactividad`).
+- **AG (urgente, Dilan).** Confirmar que `config/sql/08_rf30_nv_bitacora.sql` se ejecutó en el Oracle que usa Render; sin él no se registra nada y `GET /auditoria/` falla. **La parte de código está resuelta en el PR #34 del backend:** crear o editar usuarios, eliminar un borrador y la actualización mensual ya no responden `500` si falla la bitácora; el fallo queda en el log.
+- **AF. Resuelta en el PR #34 del backend (sin fusionar).** `POST /auth/logout/` acepta `{ "motivo": "inactividad" }` y registra "Cierre por inactividad". El frontend ya lo envía; hasta la fusión, `main` lo ignora y todo queda como "Cierre manual".
 - **AE.** El detalle de usuario creado o editado lleva el correo del usuario. Aceptable porque el log solo lo ve el Administrador; confirmarlo con Santiago.
 - Las acciones del sistema llegan con `usuario: "Sistema"` y `usuario_id` y `rol` en `null`. El contrato 0.6 ya lo admite.
 
@@ -172,8 +174,8 @@ Ya resueltas en `dev`: L (validaciones en español), O (códigos repetidos: `400
 - **Y.** `ejecutada_por` siempre `null`: ya hay login, pero `NV_CORTE` sigue ligada a la tabla anterior `NV_USUARIO` (fila 42, José Luis y Johan). Los mocks devuelven el nombre de quien generó el corte.
 - **Z.** "Último estado" de un deudor: ya no cuenta los `ANULADO`, pero puede ser un `BORRADOR`. Es del historial, que aún no se simula.
 - **AA (el resto).** Un corte `ANULADO` de la misma fecha bloquea la generación con `409` (los mocks hacen lo mismo que el backend) y `observacion` del reporte no se puede escribir.
-- **AC.** El `409` por un BORRADOR de otra fecha muestra al usuario la ruta `DELETE /api/extracciones/{id}/`. El contrato 0.5 propone `Ya existe un corte en BORRADOR con fecha AAAA-MM-DD. Elimínelo o complételo antes de generar otro.`
-- **AD.** Un id no numérico en la ruta da `404` con la página HTML de Django, no con `{ detail }`.
+- **AC. Resuelta en el PR #34 del backend (sin fusionar).** El `409` por un BORRADOR de otra fecha ya no muestra la ruta `DELETE /api/extracciones/{id}/`: dice `Ya existe un corte en BORRADOR con fecha AAAA-MM-DD. Elimínelo o complételo antes de generar otro.`, como el contrato y los mocks.
+- **AD. Resuelta en el PR #34 del backend (sin fusionar).** Una ruta inexistente (por ejemplo, un id no numérico) responde `404` con `{ "detail": "Recurso no encontrado." }`, no con la página HTML de Django.
 
 **Contrato pendiente para mostrar el detalle RF3–RF5/RF7 por obligación.** El contrato actual de
 `GET /api/extracciones/{id}/obligaciones/` documenta `limite` y `desplazamiento`, con respuesta
@@ -206,3 +208,22 @@ con el esquema PostgreSQL propuesto mientras no se confirmen sus endpoints y con
 | 8 | Reglas de contraseña | **Resuelto:** 8 caracteres, mayúscula y número, más las de Django (común, parecida al correo o al nombre) |
 | 9 | Pantalla "Restablecer" con `?token=` | Sí, hay que confirmarla con Santiago |
 | 10 | ¿Quién hace el modelo de usuario propio? (`LANGUAGE_CODE` ya está en español) | **Resuelto:** Dilan (RF25) |
+
+---
+
+## 4. Lo que sigue abierto y quién lo tiene
+
+Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` `011d30b`, frontend `main` `d1eaaef`).
+
+| Punto | Qué falta | Responsable |
+|---|---|---|
+| PR #34 del backend | Revisar y fusionar `fix/api-mensajes-seguridad-auditoria` en `dev` y luego en `main`. Antes, confirmar `DJANGO_SECRET_KEY` en Render (punto 1.4.9) | José Luis |
+| `DJANGO_SECRET_KEY` y `FRONTEND_URL` en Render | Verificar que las dos variables existan en el servicio del backend (`FRONTEND_URL=https://reporte-cens.onrender.com`; sin ella, el enlace de recuperación apunta a `localhost`) | José Luis |
+| SQL 08 en Oracle (AG) | Confirmar que `config/sql/08_rf30_nv_bitacora.sql` se ejecutó en el Oracle de Render | Dilan |
+| Y: `ejecutada_por` siempre `null` (fila 42) | Quitar la llave de `NV_CORTE` a `NV_USUARIO` y guardar el usuario de la sesión, como RF30 hizo con `NV_BITACORA`. Necesita un cambio de esquema en Oracle | José Luis y Johan |
+| SQL de saldo neto RF3-RF5 | El SQL de referencia está escrito sobre tablas de ejemplo; falta conectarlo a las vistas reales y al endpoint. Depende de las respuestas de CENS sobre abonos parciales, mora y conceptos | Clara |
+| Informe de rendimiento (fila 51) | Medir tiempos con 1.000, 10.000 y 100.000 registros y guardar los planes de ejecución; no se inventan tiempos. La base Oracle del wallet **es de pruebas**: datos sensibles cambiados y solo los primeros 1.000 registros de cada tabla. Con ella se puede medir el caso de 1.000; para 10.000 y 100.000 hay que generar datos ficticios (o pedirle más volumen a CENS) y confirmar que la cuenta puede escribir y ver los planes (`V$SQL`, `V$SQL_PLAN`) | Clara y Dilan |
+| Pruebas de aceptación HU-A | Faltan CA-A2, CA-A3 y CA-A5 (ya están CA-A1, CA-A4 y CA-A6) | Santiago |
+| Z | "Último estado" de un deudor puede venir de un `BORRADOR`: decidir si solo cuenta lo `ENVIADO` | José Luis |
+| AA (el resto) | Un corte `ANULADO` de la misma fecha bloquea la generación; `observacion` del reporte no se puede escribir | José Luis |
+| AE | El detalle del log lleva el correo del usuario creado o editado. Aceptable porque solo lo ve el Administrador; falta confirmarlo | Dilan y Santiago |

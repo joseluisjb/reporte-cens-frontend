@@ -1,7 +1,8 @@
 // Registros de auditoría FICTICIOS (RF30) para el backend simulado. Forma = `RegistroAuditoria` del contrato 0.6.
 // Solo usan las acciones que registra el backend real (`EVENTOS` de config/bitacora.py), con sus textos y el
 // formato de su `detalle`. Por eso no hay `generacion`, `exportacion` ni `correccion`: nadie las produce
-// todavía (Iteración 2). El cierre de sesión siempre dice "Cierre manual", también por inactividad (diferencia AF).
+// todavía (Iteración 2). El cierre de sesión dice "Cierre manual" o "Cierre por inactividad" según el `motivo`
+// que envía el frontend (contrato 0.7; en el backend, PR #34).
 // La actualización mensual programada llega como "Sistema", con `usuario_id` y `rol` en null.
 // El `detalle` nunca lleva contraseñas ni datos de deudores (es lo que garantiza el contrato).
 // Se generan ordenados del más antiguo al más reciente (id ascendente); el mock los entrega al revés.
@@ -37,7 +38,7 @@ const FILAS = [
   ['2026-09-29T11:45:00', U.rosa, 'Concepto editado', 'edicion', 'Parametrización', 'Campos: descripcion'],
   ['2026-09-29T12:05:00', U.rosa, 'Grupo de conceptos creado', 'creacion', 'Parametrización', ''],
   ['2026-09-29T12:20:00', U.rosa, 'Concepto desactivado', 'desactivacion', 'Parametrización', 'Campos: activo'],
-  ['2026-09-29T17:40:00', U.carlos, 'Cierre de sesión', 'cierre_sesion', 'Seguridad', 'Cierre manual'],
+  ['2026-09-29T17:40:00', U.carlos, 'Cierre de sesión', 'cierre_sesion', 'Seguridad', 'Cierre por inactividad'],
   ['2026-09-30T07:51:00', U.pablo, 'Inicio de sesión', 'inicio_sesion', 'Seguridad', 'Acceso correcto'],
   ['2026-09-30T08:14:00', U.juan, 'Inicio de sesión', 'inicio_sesion', 'Seguridad', 'Acceso correcto'],
   ['2026-09-30T08:20:00', U.pablo, 'Usuario editado', 'edicion', 'Usuarios', "Usuario csanchez@example.com actualizado: ['nombre']"],

@@ -23,8 +23,9 @@ export async function login(identificador, password) {
   }
 }
 
-export async function logout() {
-  await api.post(ENDPOINTS.logout, null, { skipAuthRedirect: true })
+// `motivo` ('manual' | 'inactividad') solo cambia el detalle del log de auditoría (RF26, RF30).
+export async function logout(motivo) {
+  await api.post(ENDPOINTS.logout, motivo ? { motivo } : null, { skipAuthRedirect: true })
 }
 
 // Usuario de la sesión actual, o null si no hay sesión. Se llama al abrir la app.

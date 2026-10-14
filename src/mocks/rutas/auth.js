@@ -25,6 +25,7 @@ export const authHandlers = [
     return HttpResponse.json({ user: publico(u) })
   }),
 
+  // Acepta el cuerpo opcional { motivo } (contrato 0.7); el log de auditoría del mock es fijo.
   http.post(url(ENDPOINTS.logout), () => {
     guardarSesion(null)
     return new HttpResponse(null, { status: 204 })

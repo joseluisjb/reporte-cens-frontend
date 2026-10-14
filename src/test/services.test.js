@@ -3,6 +3,8 @@ import { MSG_CREDENCIALES, reglasIncumplidas } from '../features/auth/authConfig
 import { ROLES, rolACodigo, rolATexto } from '../features/auth/roles'
 import { createUser, listUsers, setUserActive, updateUser } from '../features/users/usersService'
 import { CLAVE_TEMPORAL_MOCK, db, TOKEN_RECUPERACION_VALIDO, ultimoCorreo } from '../mocks/db'
+import { expectPeticionCumpleContrato } from './contrato'
+import { espiarLogout } from './espiarLogout'
 
 describe('authService', () => {
   test('login correcto devuelve el usuario en el formato de la interfaz', async () => {
@@ -32,6 +34,16 @@ describe('authService', () => {
     expect((await getCurrentUser()).nombre).toBe('Juan Pérez')
     await logout()
     expect(await getCurrentUser()).toBeNull()
+  })
+
+  test('logout envía el motivo cuando lo hay, y sin motivo no envía cuerpo', async () => {
+    const cuerpos = espiarLogout()
+    await login('jperez@example.com', 'Analista123')
+    await logout('inactividad')
+    await login('jperez@example.com', 'Analista123')
+    await logout()
+    expect(cuerpos).toEqual([{ motivo: 'inactividad' }, null])
+    expectPeticionCumpleContrato('post', '/auth/logout/', cuerpos[0])
   })
 
   test('cambiar la contraseña temporal quita la marca de primer ingreso', async () => {

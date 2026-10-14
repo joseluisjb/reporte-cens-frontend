@@ -1,8 +1,8 @@
 // Cambio obligatorio de la contraseña temporal en el primer ingreso (RF28). Maqueta 2.
-// Estructura: Johan. Omar puede sustituir los campos por el formulario reutilizable de RF31;
-// la validación está en passwordValidation.js y el envío en authService.changePassword.
-import { useRef, useState } from 'react'
+// Estructura: Johan. Usa el formulario reutilizable de RF31 (`useFormulario`); la validación está
+// en passwordValidation.js y el envío en authService.changePassword.
 import { Alert, Button, PasswordField, useToast } from '../../components/ui'
+import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
 import AuthCard from './AuthCard'
 import { useAuth } from './authContext'
@@ -10,51 +10,23 @@ import PasswordRequirements from './PasswordRequirements'
 import { changePassword } from './authService'
 import { validarCambioPassword } from './passwordValidation'
 
-const CAMPOS_BACKEND = { current_password: 'actual', new_password: 'nueva' }
+// Solo estos dos errores del servidor van a su campo; cualquier otro sale como aviso general.
+const traducirErrores = (fe) => ({ actual: fe.current_password, nueva: fe.new_password })
 
 export default function ChangePasswordPage() {
   usePageTitle('Cambio de contraseña')
   const { logout, refrescarUsuario } = useAuth()
   const toast = useToast()
-  const [valores, setValores] = useState({ actual: '', nueva: '', repetir: '' })
-  const [errores, setErrores] = useState({})
-  const [errorGeneral, setErrorGeneral] = useState('')
-  const [enviando, setEnviando] = useState(false)
-  const actualRef = useRef(null)
-  const nuevaRef = useRef(null)
-  const repetirRef = useRef(null)
-  const enfocar = (campo) => ({ actual: actualRef, nueva: nuevaRef, repetir: repetirRef })[campo]?.current?.focus()
-
-  const cambiar = (campo) => (e) => {
-    setValores((v) => ({ ...v, [campo]: e.target.value }))
-    setErrores((er) => ({ ...er, [campo]: undefined }))
-    setErrorGeneral('')
-  }
-
-  const enviar = async (e) => {
-    e.preventDefault()
-    const encontrados = validarCambioPassword(valores)
-    setErrores(encontrados)
-    setErrorGeneral('')
-    const primero = ['actual', 'nueva', 'repetir'].find((c) => encontrados[c])
-    if (primero) return enfocar(primero)
-
-    setEnviando(true)
-    try {
+  const form = useFormulario({
+    valoresIniciales: { actual: '', nueva: '', repetir: '' },
+    validar: validarCambioPassword,
+    traducirErrores,
+    onSubmit: async (valores) => {
       await changePassword({ actual: valores.actual, nueva: valores.nueva })
       await refrescarUsuario() // la marca de primer ingreso cambia y el guard deja pasar al inicio
       toast.success('Contraseña actualizada correctamente.')
-    } catch (err) {
-      const deCampo = {}
-      for (const [campoApi, campo] of Object.entries(CAMPOS_BACKEND)) {
-        if (err.fieldErrors?.[campoApi]) deCampo[campo] = err.fieldErrors[campoApi]
-      }
-      setErrores(deCampo)
-      if (!Object.keys(deCampo).length) setErrorGeneral(err.message)
-      setEnviando(false)
-      enfocar(Object.keys(deCampo)[0])
-    }
-  }
+    },
+  })
 
   return (
     <AuthCard
@@ -62,44 +34,30 @@ export default function ChangePasswordPage() {
       title="Debes cambiar tu contraseña"
       subtitle="Por seguridad, debes definir una nueva contraseña antes de continuar."
     >
-      <form onSubmit={enviar} noValidate>
+      <form {...form.formProps}>
         <PasswordField
-          ref={actualRef}
           className="mb-4.5"
           label="Contraseña temporal"
           required
           autoComplete="current-password"
-          value={valores.actual}
-          onChange={cambiar('actual')}
-          error={errores.actual}
+          {...form.campo('actual')}
         />
         <PasswordField
-          ref={nuevaRef}
           describedBy="requisitos-password"
           className="mb-4.5"
           label="Nueva contraseña"
           required
           autoComplete="new-password"
-          value={valores.nueva}
-          onChange={cambiar('nueva')}
-          error={errores.nueva}
+          {...form.campo('nueva')}
         />
-        <PasswordField
-          ref={repetirRef}
-          label="Confirmar nueva contraseña"
-          required
-          autoComplete="new-password"
-          value={valores.repetir}
-          onChange={cambiar('repetir')}
-          error={errores.repetir}
-        />
-        <PasswordRequirements id="requisitos-password" password={valores.nueva} />
-        {errorGeneral && (
+        <PasswordField label="Confirmar nueva contraseña" required autoComplete="new-password" {...form.campo('repetir')} />
+        <PasswordRequirements id="requisitos-password" password={form.valores.nueva} />
+        {form.errorGeneral && (
           <div className="mb-4">
-            <Alert>{errorGeneral}</Alert>
+            <Alert>{form.errorGeneral}</Alert>
           </div>
         )}
-        <Button type="submit" size="lg" block loading={enviando}>
+        <Button type="submit" size="lg" block loading={form.enviando}>
           Guardar y continuar
         </Button>
       </form>

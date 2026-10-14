@@ -1,9 +1,9 @@
 // Inicio de sesión (RF25), fiel a la maqueta. Textos del campo de usuario en authConfig.js.
-import { useRef, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Alert, Button, Input, PasswordField, TextLink } from '../../components/ui'
 import { RUTA_INICIAL } from '../../app/navigation'
 import logo from '../../assets/brand/logo-nexovolt.png'
+import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { IDENTIFICADOR, MSG_SALIDA } from './authConfig'
 import { useAuth } from './authContext'
@@ -31,12 +31,21 @@ export default function LoginPage() {
   usePageTitle('Iniciar sesión')
   const { user, login, motivoSalida } = useAuth()
   const location = useLocation()
-  const [valores, setValores] = useState({ identificador: '', password: '' })
-  const [errores, setErrores] = useState({})
-  const [errorGeneral, setErrorGeneral] = useState('')
-  const [enviando, setEnviando] = useState(false)
-  const idRef = useRef(null)
-  const passRef = useRef(null)
+  // Formulario reutilizable de RF31. Si las credenciales fallan, se limpia la contraseña y se
+  // vuelve a ella; el hook muestra el mensaje como aviso general.
+  const form = useFormulario({
+    valoresIniciales: { identificador: '', password: '' },
+    validar: validarLogin,
+    onSubmit: async (valores) => {
+      try {
+        await login(valores.identificador.trim(), valores.password)
+      } catch (err) {
+        form.setValor('password', '')
+        form.enfocar('password')
+        throw err
+      }
+    },
+  })
 
   // Si ya hay sesión (o se acaba de iniciar), se sale del login hacia donde corresponda.
   if (user) {
@@ -44,36 +53,11 @@ export default function LoginPage() {
     return <Navigate to={destino} replace />
   }
 
-  const cambiar = (campo) => (e) => {
-    setValores((v) => ({ ...v, [campo]: e.target.value }))
-    setErrores((er) => ({ ...er, [campo]: undefined }))
-    setErrorGeneral('')
-  }
-
-  const enviar = async (e) => {
-    e.preventDefault()
-    const encontrados = validarLogin(valores)
-    setErrores(encontrados)
-    setErrorGeneral('')
-    if (encontrados.identificador) return idRef.current?.focus()
-    if (encontrados.password) return passRef.current?.focus()
-
-    setEnviando(true)
-    try {
-      await login(valores.identificador.trim(), valores.password)
-    } catch (err) {
-      setErrorGeneral(err.message)
-      setValores((v) => ({ ...v, password: '' }))
-      setEnviando(false)
-      passRef.current?.focus()
-    }
-  }
-
   return (
     <main className="flex min-h-screen bg-white">
       <PanelMarca />
       <div className="flex flex-1 items-center justify-center p-8">
-        <form onSubmit={enviar} noValidate className="flex w-full max-w-95 flex-col" aria-label="Iniciar sesión">
+        <form {...form.formProps} className="flex w-full max-w-95 flex-col" aria-label="Iniciar sesión">
           <h1 className="sr-only">Iniciar sesión en NexoVolt</h1>
           <img src={logo} alt="NexoVolt, desarrollo de software" width="448" height="344" className="mx-auto mb-6 h-auto w-56" />
           {MSG_SALIDA[motivoSalida] && (
@@ -82,32 +66,26 @@ export default function LoginPage() {
             </div>
           )}
           <Input
-            ref={idRef}
             label={IDENTIFICADOR.etiqueta}
             required
             type={IDENTIFICADOR.tipoInput}
             placeholder={IDENTIFICADOR.placeholder}
             autoComplete={IDENTIFICADOR.autoComplete}
-            value={valores.identificador}
-            onChange={cambiar('identificador')}
-            error={errores.identificador}
+            {...form.campo('identificador')}
           />
           <PasswordField
-            ref={passRef}
             className="mt-5"
             label="Contraseña"
             required
             autoComplete="current-password"
-            value={valores.password}
-            onChange={cambiar('password')}
-            error={errores.password}
+            {...form.campo('password')}
           />
-          {errorGeneral && (
+          {form.errorGeneral && (
             <div className="mt-4">
-              <Alert>{errorGeneral}</Alert>
+              <Alert>{form.errorGeneral}</Alert>
             </div>
           )}
-          <Button type="submit" size="lg" block loading={enviando} className="mt-6">
+          <Button type="submit" size="lg" block loading={form.enviando} className="mt-6">
             Iniciar sesión
           </Button>
           <TextLink to="/recuperar" block>

@@ -1,38 +1,33 @@
 // Recuperación de contraseña (RF29). Maqueta 3. Paso 1: pedir el enlace.
 // Importante: la respuesta es siempre la misma exista o no el correo; nunca se revela si existe.
-import { useRef, useState } from 'react'
+// Usa el formulario reutilizable de RF31 (`useFormulario`).
+import { useState } from 'react'
 import { Alert, Button, Input, TextLink } from '../../components/ui'
+import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { IDENTIFICADOR } from './authConfig'
 import AuthCard from './AuthCard'
 import { requestPasswordReset } from './authService'
 
+function validarCorreo({ correo }) {
+  const valor = correo.trim()
+  if (!valor) return { correo: IDENTIFICADOR.msgVacio }
+  if (!IDENTIFICADOR.regla.test(valor)) return { correo: IDENTIFICADOR.msgInvalido }
+  return {}
+}
+
 export default function RecoverPasswordPage() {
   usePageTitle('Recuperar contraseña')
-  const [correo, setCorreo] = useState('')
-  const [error, setError] = useState('')
-  const [errorGeneral, setErrorGeneral] = useState('')
-  const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
-  const inputRef = useRef(null)
-
-  const enviar = async (e) => {
-    e.preventDefault()
-    const valor = correo.trim()
-    const invalido = !valor ? IDENTIFICADOR.msgVacio : !IDENTIFICADOR.regla.test(valor) ? IDENTIFICADOR.msgInvalido : ''
-    setError(invalido)
-    setErrorGeneral('')
-    if (invalido) return inputRef.current?.focus()
-
-    setEnviando(true)
-    try {
-      await requestPasswordReset(valor)
+  const form = useFormulario({
+    valoresIniciales: { correo: '' },
+    validar: validarCorreo,
+    traducirErrores: (fe) => ({ correo: fe.email }),
+    onSubmit: async ({ correo }) => {
+      await requestPasswordReset(correo.trim())
       setEnviado(true)
-    } catch (err) {
-      setErrorGeneral(err.message)
-      setEnviando(false)
-    }
-  }
+    },
+  })
 
   if (enviado) {
     return (
@@ -54,29 +49,22 @@ export default function RecoverPasswordPage() {
       subtitle="Ingresa tu correo corporativo y te enviaremos un enlace para restablecer tu contraseña."
       narrow
     >
-      <form onSubmit={enviar} noValidate>
+      <form {...form.formProps}>
         <Input
-          ref={inputRef}
           className="mb-5"
           label={IDENTIFICADOR.etiquetaCorporativo}
           required
           type={IDENTIFICADOR.tipoInput}
           placeholder={IDENTIFICADOR.placeholder}
           autoComplete={IDENTIFICADOR.autoComplete}
-          value={correo}
-          onChange={(e) => {
-            setCorreo(e.target.value)
-            setError('')
-            setErrorGeneral('')
-          }}
-          error={error}
+          {...form.campo('correo')}
         />
-        {errorGeneral && (
+        {form.errorGeneral && (
           <div className="mb-4">
-            <Alert>{errorGeneral}</Alert>
+            <Alert>{form.errorGeneral}</Alert>
           </div>
         )}
-        <Button type="submit" size="lg" block loading={enviando}>
+        <Button type="submit" size="lg" block loading={form.enviando}>
           Enviar enlace de recuperación
         </Button>
       </form>

@@ -24,6 +24,8 @@ export const ENDPOINTS = {
   validarExtraccion: (id) => `/extracciones/${id}/validar/`,
   registrarEnvio: (id) => `/extracciones/${id}/registrar-envio/`,
   obligacionesCorte: (id) => `/extracciones/${id}/obligaciones/`,
+  // Auditoría (RF30). Implementado en el backend (contrato 0.6). Solo Administrador.
+  auditoria: '/auditoria/',
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

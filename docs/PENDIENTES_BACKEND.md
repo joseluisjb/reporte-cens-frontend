@@ -100,7 +100,7 @@ Es una de las "decisiones por cerrar" de la asignación. Propuesta:
 
 ### 1.6 Auditoría (RF30, RF31, Dilan) — **implementada en el backend** (`6f596bb`, contrato 0.6)
 
-`GET /api/auditoria/`, solo Administrador, con los filtros y mensajes del contrato. Un middleware registra en `NV_BITACORA` cada acción que termina bien. La pantalla es de Omar. Quedan abiertos (detalle en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
+`GET /api/auditoria/`, solo Administrador, con los filtros y mensajes del contrato. Un middleware registra en `NV_BITACORA` cada acción que termina bien. La pantalla de Omar ya está en el frontend (filtros, paginación y acciones del "Sistema" sin rol). Quedan abiertos (detalle en [`contrato/README.md`](contrato/README.md#diferencias-con-lo-implementado-en-el-backend)):
 - **AG (urgente).** Confirmar que `config/sql/08_rf30_nv_bitacora.sql` se ejecutó en el Oracle que usa Render. Crear o editar usuarios, eliminar un borrador y la actualización mensual escriben en la bitácora sin atrapar errores: si faltan las columnas nuevas, esas acciones responden `500`.
 - **AF.** El cierre por inactividad queda como "Cierre manual". Propuesta: `POST /auth/logout/` con un `motivo` opcional (`manual` o `inactividad`).
 - **AE.** El detalle de usuario creado o editado lleva el correo del usuario. Aceptable porque el log solo lo ve el Administrador; confirmarlo con Santiago.

@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "humo": "node scripts/humo-api.mjs",
+    "datos:prueba": "node scripts/datos-prueba.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage"

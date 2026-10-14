@@ -118,6 +118,22 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('log de auditoría con datos', async () => {
+    await renderConSesion('/auditoria')
+    await screen.findByRole('table', { name: 'Registros de auditoría' })
+    await expectAccesible()
+  })
+
+  test('log de auditoría con un error de validación en los filtros', async () => {
+    await renderConSesion('/auditoria')
+    await screen.findByRole('table', { name: 'Registros de auditoría' })
+    await userEvent.type(screen.getByLabelText('Desde'), '2026-10-05')
+    await userEvent.type(screen.getByLabelText('Hasta'), '2026-10-01')
+    await userEvent.click(boton('Filtrar'))
+    await screen.findByText('La fecha final no puede ser anterior a la inicial.')
+    await expectAccesible()
+  })
+
   test('acceso restringido (Analista)', async () => {
     renderApp('/usuarios', ANALISTA)
     await screen.findByRole('heading', { name: 'Acceso restringido' })

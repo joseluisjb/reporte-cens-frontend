@@ -118,6 +118,15 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('confirmación de eliminar corte en borrador', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('Corte #2 al 30/09/2026')
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar borrador' }))
+    await screen.findByRole('alertdialog', { name: 'Eliminar corte en borrador' })
+    await expectAccesible()
+  })
+
+
   test('log de auditoría con datos', async () => {
     await renderConSesion('/auditoria')
     await screen.findByRole('table', { name: 'Registros de auditoría' })

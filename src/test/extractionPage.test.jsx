@@ -177,4 +177,47 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     // Comprueba que dice "30/09/2026" formateado y no "2026-09-30"
     expect(dialog.getByText('30/09/2026')).toBeInTheDocument()
   })
+
+  test('cancela la eliminación de un corte en borrador', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('Corte #2 al 30/09/2026')
+
+    expect(screen.getByRole('button', { name: 'Eliminar borrador' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar borrador' }))
+
+    const dialog = within(
+      await screen.findByRole('alertdialog', { name: 'Eliminar corte en borrador' }),
+    )
+    expect(
+      dialog.getByText(/¿Eliminar permanentemente el corte #2 al 30\/09\/2026\?/),
+    ).toBeInTheDocument()
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancelar' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    })
+    expect(screen.getByText('Corte #2 al 30/09/2026')).toBeInTheDocument()
+    expect(screen.getByText('BORRADOR')).toBeInTheDocument()
+  })
+
+  test('elimina un corte en borrador y actualiza al corte anterior', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('Corte #2 al 30/09/2026')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar borrador' }))
+
+    const dialog = within(
+      await screen.findByRole('alertdialog', { name: 'Eliminar corte en borrador' }),
+    )
+    await userEvent.click(dialog.getByRole('button', { name: 'Eliminar borrador' }))
+
+    expect(await screen.findByText('Corte #2 en borrador eliminado.')).toBeInTheDocument()
+
+    // Ahora el corte actual es el corte #1 (ENVIADO)
+    expect(await screen.findByText('Corte #1 al 31/08/2026')).toBeInTheDocument()
+    expect(screen.getByText('ENVIADO')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Eliminar borrador' })).not.toBeInTheDocument()
+  })
 })
+

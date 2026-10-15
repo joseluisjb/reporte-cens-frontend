@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   FilterSelect,
   Icon,
@@ -27,6 +28,7 @@ import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { listConceptGroups } from '../parameters/parametersService'
 import {
+  deleteCut,
   generateCut,
   getCut,
   listCutObligations,
@@ -75,6 +77,8 @@ export default function ExtractionPage() {
   const [advertencias, setAdvertencias] = useState([])
   const [erroresCorrectivos, setErroresCorrectivos] = useState(null)
   const [modalEnvioAbierto, setModalEnvioAbierto] = useState(false)
+  const [aEliminarCorte, setAEliminarCorte] = useState(null)
+  const [eliminando, setEliminando] = useState(false)
 
   // Carga inicial de cortes y grupos de conceptos
   useEffect(() => {
@@ -184,6 +188,32 @@ export default function ExtractionPage() {
     setCorteActual(corteActualizado)
     setCortes((prev) => prev.map((c) => (c.id === corteActualizado.id ? corteActualizado : c)))
     toast.success('Envío a TransUnion registrado exitosamente.')
+  }
+
+  // Eliminar corte en BORRADOR. Queda seleccionado el más reciente de los que siguen, desde la página 1
+  // (igual que al cambiar de corte). Los demás estados se actualizan fuera de `setCortes`: la función
+  // que recibe un `set...` debe ser pura.
+  const eliminarCorte = async (corte) => {
+    if (!corte) return
+    setEliminando(true)
+    try {
+      await deleteCut(corte.id)
+      const siguiente = (cortes ?? []).find((c) => c.id !== corte.id) ?? null
+      setCortes((prev) => (prev ?? []).filter((c) => c.id !== corte.id))
+      setCorteActual(siguiente)
+      setPaginaActual(1)
+      if (!siguiente) {
+        setObligaciones([])
+        setTotalObligaciones(0)
+      }
+      setAdvertencias([])
+      setAEliminarCorte(null)
+      toast.success(`Corte #${corte.id} en borrador eliminado.`)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setEliminando(false)
+    }
   }
 
   const reintentarCargaObligaciones = () => {
@@ -376,10 +406,20 @@ export default function ExtractionPage() {
 
               <div className="flex items-center gap-3">
                 {corteActual.esBorrador && (
-                  <Button onClick={ejecutarValidacion} loading={validando}>
-                    <Icon name="check" size={16} />
-                    Validar corte
-                  </Button>
+                  <>
+                    <Button
+                      variant="danger"
+                      onClick={() => setAEliminarCorte(corteActual)}
+                      disabled={validando || eliminando}
+                    >
+                      <Icon name="close" size={16} />
+                      Eliminar borrador
+                    </Button>
+                    <Button onClick={ejecutarValidacion} loading={validando} disabled={eliminando}>
+                      <Icon name="check" size={16} />
+                      Validar corte
+                    </Button>
+                  </>
                 )}
 
                 {corteActual.esValidado && (
@@ -546,6 +586,18 @@ export default function ExtractionPage() {
           onEnviado={corteEnviado}
         />
       )}
+
+      {/* Diálogo de confirmación para eliminar corte en borrador */}
+      <ConfirmDialog
+        open={Boolean(aEliminarCorte)}
+        danger
+        title="Eliminar corte en borrador"
+        message={`¿Eliminar permanentemente el corte #${aEliminarCorte?.id} al ${aEliminarCorte ? formatearFechaISO(aEliminarCorte.fechaCorte) : ''}? Esta acción eliminará el borrador y sus obligaciones consolidadas.`}
+        confirmLabel="Eliminar borrador"
+        loading={eliminando}
+        onConfirm={() => eliminarCorte(aEliminarCorte)}
+        onCancel={() => !eliminando && setAEliminarCorte(null)}
+      />
     </>
   )
 }

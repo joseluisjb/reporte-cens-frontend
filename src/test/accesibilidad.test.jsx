@@ -126,7 +126,6 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
-
   test('log de auditoría con datos', async () => {
     await renderConSesion('/auditoria')
     await screen.findByRole('table', { name: 'Registros de auditoría' })

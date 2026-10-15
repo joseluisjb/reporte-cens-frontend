@@ -190,22 +190,22 @@ export default function ExtractionPage() {
     toast.success('Envío a TransUnion registrado exitosamente.')
   }
 
-  // Eliminar corte en BORRADOR
+  // Eliminar corte en BORRADOR. Queda seleccionado el más reciente de los que siguen, desde la página 1
+  // (igual que al cambiar de corte). Los demás estados se actualizan fuera de `setCortes`: la función
+  // que recibe un `set...` debe ser pura.
   const eliminarCorte = async (corte) => {
     if (!corte) return
     setEliminando(true)
     try {
       await deleteCut(corte.id)
-      setCortes((prev) => {
-        const restantes = (prev ?? []).filter((c) => c.id !== corte.id)
-        const siguiente = restantes[0] ?? null
-        setCorteActual(siguiente)
-        if (!siguiente) {
-          setObligaciones([])
-          setTotalObligaciones(0)
-        }
-        return restantes
-      })
+      const siguiente = (cortes ?? []).find((c) => c.id !== corte.id) ?? null
+      setCortes((prev) => (prev ?? []).filter((c) => c.id !== corte.id))
+      setCorteActual(siguiente)
+      setPaginaActual(1)
+      if (!siguiente) {
+        setObligaciones([])
+        setTotalObligaciones(0)
+      }
       setAdvertencias([])
       setAEliminarCorte(null)
       toast.success(`Corte #${corte.id} en borrador eliminado.`)

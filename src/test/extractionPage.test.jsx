@@ -219,5 +219,21 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     expect(screen.getByText('ENVIADO')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Eliminar borrador' })).not.toBeInTheDocument()
   })
-})
 
+  test('al eliminar un borrador desde la página 2, el corte anterior se abre en la página 1', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('Corte #2 al 30/09/2026')
+    await userEvent.click(await screen.findByRole('button', { name: 'Siguiente' }))
+    expect(await screen.findByText('Página 2 de 2')).toBeInTheDocument()
+
+    await userEvent.click(boton('Eliminar borrador'))
+    const dialog = within(
+      await screen.findByRole('alertdialog', { name: 'Eliminar corte en borrador' }),
+    )
+    await userEvent.click(dialog.getByRole('button', { name: 'Eliminar borrador' }))
+
+    expect(await screen.findByText('Corte #1 al 31/08/2026')).toBeInTheDocument()
+    expect(await screen.findByText('Página 1 de 2')).toBeInTheDocument()
+    expect(screen.getByText(/Mostrando 1 a 20 de 24 obligaciones/)).toBeInTheDocument()
+  })
+})

@@ -141,6 +141,17 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('reporte a TransUnion (pantalla 12), con el checklist y el archivo generado', async () => {
+    await renderConSesion('/reporte', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('list', { name: 'Validaciones antes de generar' })
+    await screen.findByRole('table', { name: 'Archivos generados' })
+    await expectAccesible()
+    await userEvent.click(boton('Validar corte'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Generar archivo plano' }, { timeout: 4000 }))
+    await screen.findByRole('region', { name: 'Archivo generado' })
+    await expectAccesible()
+  })
+
   test('parametrización de conceptos con datos', async () => {
     await renderConSesion('/parametrizacion')
     await screen.findByText('CUOTA FINANCIACION ENERGIA')

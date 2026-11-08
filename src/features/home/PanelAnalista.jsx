@@ -3,10 +3,11 @@
 // El Administrador no lo ve ni lo pide (HomePage lo muestra solo al Analista). Mockup v3: vPanel2.
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Badge, Button, buttonClasses, Card, Icon, Spinner } from '../../components/ui'
+import { Alert, Button, buttonClasses, Card, Icon, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
 import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../../lib/format'
+import EstadoArchivoBadge from '../report/EstadoArchivoBadge'
 import { getPanelSummary } from './panelService'
 
 // Color de cada estado en la barra (tokens estado-* de index.css, como la maqueta).
@@ -131,12 +132,6 @@ function EstadoCartera({ resumen }) {
   )
 }
 
-function EstadoArchivo({ archivo }) {
-  if (archivo.enviado) return <Badge tone="ok">Enviado</Badge>
-  if (archivo.aptoEnvio) return <Badge tone="info">Apto para envío</Badge>
-  return <Badge tone="error">No apto para envío</Badge>
-}
-
 function Dato({ etiqueta, valor, nota }) {
   return (
     <div>
@@ -154,7 +149,7 @@ function UltimoArchivo({ archivo }) {
       <Encabezado id={id} icono="file" titulo="Último archivo para TransUnion" enlace="/reporte" textoEnlace="Ir a Reporte a TransUnion">
         {archivo ? (
           <span className="inline-flex flex-wrap items-center gap-x-1.5">
-            Generado por {archivo.generadoPor ?? '—'} · <span className="font-mono">{archivo.nombre}</span> · <EstadoArchivo archivo={archivo} />
+            Generado por {archivo.generadoPor ?? '—'} · <span className="font-mono">{archivo.nombre}</span> · <EstadoArchivoBadge archivo={archivo} />
           </span>
         ) : (
           'Aún no se ha generado ningún archivo.'

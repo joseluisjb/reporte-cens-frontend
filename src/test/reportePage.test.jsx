@@ -1,0 +1,179 @@
+// Pantalla 12 · Reporte a TransUnion, parte 1 (RF20, RF21, RF22, RF51, RF53, RF57). Corte del mock:
+// el 30/09/2026 (corte 2, en BORRADOR) con su actualización mensual; el último enviado es el 31/08/2026.
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { API_URL } from '../lib/config'
+import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
+import { db } from '../mocks/db'
+import { server } from '../mocks/server'
+import { renderConSesion } from './renderApp'
+
+const ANALISTA = ['jperez@example.com', 'Analista123']
+
+const abrir = async () => {
+  await renderConSesion('/reporte', ...ANALISTA)
+  await screen.findByRole('heading', { name: 'Reporte a TransUnion', level: 1 })
+  await screen.findByRole('list', { name: 'Validaciones antes de generar' })
+  await screen.findByRole('table', { name: 'Archivos generados' })
+}
+const editar = (numero, cambios) => Object.assign(db.obligaciones.find((o) => o.numero === numero), cambios)
+const item = (titulo) => within(screen.getByRole('list', { name: 'Validaciones antes de generar' })).getByText(titulo).closest('li')
+const boton = (nombre) => screen.getByRole('button', { name: nombre })
+const validarYGenerar = async () => {
+  await userEvent.click(boton('Validar corte'))
+  await screen.findByText('Corte validado: ya puedes generar el archivo plano.')
+  await waitFor(() => expect(boton('Generar archivo plano')).toBeEnabled())
+  await userEvent.click(boton('Generar archivo plano'))
+}
+
+describe('pantalla 12 · validaciones (RF53)', () => {
+  test('muestra el corte, el aviso de entidad y el checklist con su nivel', async () => {
+    await abrir()
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('30 de septiembre de 2026Último corte · BORRADOR')
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Nombre: SSRXXXXXX20260930')
+    expect(screen.getByText(/TransUnion aún no asigna los datos de la entidad/)).toHaveTextContent('no aptos para envío')
+    expect(item('Actualización mensual del corte')).toHaveTextContent('(Pasó)RF10RF11Ejecutada el 30/09/2026 10:02 por Juan Pérez.')
+    // RF21: compara con el último corte enviado.
+    expect(item('Obligaciones del último corte')).toHaveTextContent('9 de 9 obligaciones activas del último corte incluidas.')
+    // RF22: los dos cierres del corte están completos.
+    expect(item('Campos de cierre (RF22)')).toHaveTextContent('(Pasó)RF222 cierres con saldo, mora y cuota en cero')
+    // RF51: informativo y por confirmar. RF57: la entidad con relleno solo advierte.
+    expect(item('Valores en miles de pesos (RF51)')).toHaveTextContent('(Informativa)RF51por confirmar')
+    expect(item('Datos de la entidad (RF57)')).toHaveTextContent('(Advertencia)RF57')
+    expect(boton('Validar corte')).toBeEnabled()
+  })
+
+  test('una omisión frente al último corte bloquea y enlaza a la obligación (RF21)', async () => {
+    server.use(
+      http.get(`${API_URL}/extracciones/2/validaciones/`, () =>
+        HttpResponse.json({
+          corte_id: 2, fecha_corte: '2026-09-30', estado_corte: 'BORRADOR', puede_generar: false,
+          resultados: [
+            {
+              regla: 'OMISION_VS_ULTIMO_CORTE', titulo: 'Obligaciones del último corte', nivel: 'correctiva', rf: ['RF21'], por_confirmar: false,
+              detalle: '8 de 9 obligaciones activas del último corte incluidas.',
+              obligaciones: [{ obligacion_id: 4, numero_obligacion: '2260-5543', campo: null, mensaje: 'Estaba activa en el último corte enviado y no está en este.' }],
+            },
+          ],
+        }),
+      ),
+    )
+    await abrir()
+    const omision = item('Obligaciones del último corte')
+    expect(omision).toHaveTextContent('(Bloquea)RF218 de 9 obligaciones activas del último corte incluidas.')
+    expect(within(omision).getByRole('link', { name: '2260-5543' })).toHaveAttribute('href', '/obligaciones?obligacion=4')
+    expect(boton('Validar corte')).toBeDisabled()
+    expect(screen.getByText('Corrige las validaciones en rojo para poder validar el corte y generar el archivo.')).toBeInTheDocument()
+  })
+
+  test('un cierre sin fecha de pago o con cuota es correctivo (RF22)', async () => {
+    editar('2259-1092', { cierre: { ...db.obligaciones[2].cierre, fecha_pago: null } })
+    editar('2255-7788', { cuota: 5000 })
+    await abrir()
+    const cierre = item('Campos de cierre (RF22)')
+    expect(cierre).toHaveTextContent('(Bloquea)')
+    expect(within(cierre).getByRole('link', { name: '2259-1092' }).closest('li')).toHaveTextContent('2259-1092fecha_pago · Falta la fecha de pago del cierre.')
+    expect(within(cierre).getByRole('link', { name: '2255-7788' }).closest('li')).toHaveTextContent('valor_cuota · La cuota debe ser 0 al cerrar.')
+    expect(boton('Validar corte')).toBeDisabled()
+  })
+
+  test('valores de $9.000 y de $120 millones dan advertencia (RF51)', async () => {
+    editar('2257-4156', { cuota: 9000, saldo: 120000000, valor_inicial: 150000000 })
+    await abrir()
+    const rango = item('Valores fuera de rango')
+    expect(rango).toHaveTextContent('(Advertencia)')
+    expect(rango).toHaveTextContent('La cuota es de $9.000: está fuera de $10.000 a $99.000.000.')
+    expect(rango).toHaveTextContent('El saldo es de $120.000.000')
+    expect(boton('Validar corte')).toBeEnabled()
+  })
+
+  test('identificación faltante y número de 21 caracteres bloquean; saldo mayor que el inicial informa (RF53)', async () => {
+    forzarErrorCorrectivo(2)
+    editar('2262-3318', { numero: '2262-3318-REFINANC-01' })
+    editar('2257-4156', { valor_inicial: 1000000 })
+    await abrir()
+    expect(item('Campos obligatorios')).toHaveTextContent('(Bloquea)RF53Falta el tipo o el número de identificación.')
+    expect(item('Números de obligación')).toHaveTextContent('(Bloquea)RF53Con más de 20 caracteres o caracteres no permitidos: 2262-3318-REFINANC-01.')
+    expect(item('Saldo y valor inicial')).toHaveTextContent('(Informativa)')
+    expect(item('Saldo y valor inicial')).toHaveTextContent('El saldo ($1.276.016) es mayor que el valor inicial ($1.000.000).')
+    expect(boton('Validar corte')).toBeDisabled()
+  })
+})
+
+describe('pantalla 12 · generar y descargar (RF20)', () => {
+  test('valida, genera con los 6 pasos y muestra el archivo no apto con relleno (RF20, RF57)', async () => {
+    await abrir()
+    await validarYGenerar()
+    const tarjeta = await screen.findByRole('region', { name: 'Archivo generado' })
+    expect(screen.getByRole('region', { name: 'Generación del archivo completada' })).toHaveTextContent('redondeo por confirmar con TransUnion')
+    expect(within(screen.getByRole('region', { name: 'Generación del archivo completada' })).getAllByRole('listitem')).toHaveLength(6)
+    expect(tarjeta).toHaveTextContent('SSRXXXXXX20260930No apto para envío')
+    expect(tarjeta).toHaveTextContent('No apto para envío: La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.')
+    expect(tarjeta).toHaveTextContent('Obligaciones (registros 2)1113 registros con el 1 y el 9')
+    expect(tarjeta).toHaveTextContent('No incluidas1Cerradas antes o eliminadas')
+    expect(await screen.findByText('Archivo generado: SSRXXXXXX20260930 (no apto para envío).')).toBeInTheDocument()
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Archivos generados' })).getAllByRole('row')).toHaveLength(4))
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · VALIDADO')
+  })
+
+  test('con los datos de la entidad, el archivo se llama SSR001123… y sale apto (RF57)', async () => {
+    db.entidad = { ...db.entidad, tipo_entidad: '001', codigo_entidad: '123', codigo_sucursal: 'A1B2C3' }
+    await abrir()
+    expect(screen.queryByText(/TransUnion aún no asigna los datos de la entidad/)).not.toBeInTheDocument()
+    await validarYGenerar()
+    const tarjeta = await screen.findByRole('region', { name: 'Archivo generado' })
+    expect(tarjeta).toHaveTextContent('SSR00112320260930Apto para envío')
+    expect(within(tarjeta).queryByText(/No apto para envío/)).not.toBeInTheDocument()
+  })
+
+  test('un campo que no cabe en su posición no genera el archivo e indica la obligación y el campo (RF20)', async () => {
+    editar('2262-3318', { titular: 'Centro Educativo Las Palmas de la Ciudad de San José de Cúcuta' })
+    await abrir()
+    await validarYGenerar()
+    const alerta = await screen.findByText(/No se generó el archivo: hay campos que no caben en su posición\./)
+    expect(alerta).toHaveTextContent('2262-3318 · nombre_titular: El nombre del titular tiene 62 caracteres y el campo admite 60.')
+    expect(within(alerta).getByRole('link', { name: '2262-3318' })).toHaveAttribute('href', '/obligaciones?obligacion=6')
+    expect(screen.queryByRole('region', { name: 'Archivo generado' })).not.toBeInTheDocument()
+  })
+
+  test('descarga el archivo con el nombre que manda el servidor', async () => {
+    const crear = vi.fn(() => 'blob:archivo')
+    const revocar = vi.fn()
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: crear, revokeObjectURL: revocar }))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    await abrir()
+    await userEvent.click(boton('Descargar el archivo SSR00112320260831'))
+    expect(await screen.findByText('Descarga iniciada: SSR00112320260831.txt.')).toBeInTheDocument()
+    expect(crear).toHaveBeenCalledWith(expect.any(Blob))
+    expect(click).toHaveBeenCalled()
+    expect(revocar).toHaveBeenCalledWith('blob:archivo')
+    click.mockRestore()
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('pantalla 12 · estados', () => {
+  test('sin cortes lo dice y enlaza a la extracción', async () => {
+    db.cortes = []
+    await renderConSesion('/reporte', ...ANALISTA)
+    expect(await screen.findByText(/Aún no hay cortes/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ir a Extracción de Cartera' })).toHaveAttribute('href', '/extraccion')
+  })
+
+  test('muestra la carga y, si fallan las validaciones o los archivos, el error con «Reintentar»', async () => {
+    let fallar = true
+    server.use(
+      http.get(`${API_URL}/extracciones/2/validaciones/`, () => (fallar ? HttpResponse.json({ detail: 'x' }, { status: 503 }) : undefined)),
+      http.get(`${API_URL}/archivos/`, () => (fallar ? HttpResponse.json({ detail: 'x' }, { status: 503 }) : undefined)),
+    )
+    await renderConSesion('/reporte', ...ANALISTA)
+    expect(await screen.findByRole('status', { name: 'Cargando el corte' })).toBeInTheDocument()
+    expect(await screen.findByText(/^No se pudo cargar el corte\./)).toBeInTheDocument()
+    expect(await screen.findByText(/^No se pudieron cargar los archivos\./)).toBeInTheDocument()
+    fallar = false
+    for (const b of screen.getAllByRole('button', { name: 'Reintentar' })) await userEvent.click(b)
+    expect(await screen.findByRole('list', { name: 'Validaciones antes de generar' })).toBeInTheDocument()
+    expect(await screen.findByRole('table', { name: 'Archivos generados' })).toBeInTheDocument()
+  })
+})

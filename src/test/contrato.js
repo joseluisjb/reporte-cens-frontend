@@ -58,7 +58,9 @@ function validadorDe(metodo, ruta, status) {
   }
   const contenido = respuesta?.content?.['application/json']?.schema
   let resultado
-  if (!contenido) resultado = { sinCuerpo: true }
+  // Descargas (`text/plain`, p. ej. el archivo plano): basta con que llegue texto no vacío.
+  if (!contenido && respuesta?.content?.['text/plain']) resultado = { textoPlano: true }
+  else if (!contenido) resultado = { sinCuerpo: true }
   else {
     const validar = ajv.getSchema(`contrato${base}/content/application~1json/schema`)
     if (!validar) throw new Error(`No se pudo compilar el esquema de ${metodo.toUpperCase()} ${ruta} ${status}.`)
@@ -72,8 +74,12 @@ function validadorDe(metodo, ruta, status) {
 // estado. `ruta` es la clave exacta de `paths`, por ejemplo '/conceptos/{codigo}/'.
 export function expectCumpleContrato(metodo, ruta, status, data) {
   const m = metodo.toLowerCase()
-  const { validar, sinCuerpo } = validadorDe(m, ruta, status)
+  const { validar, sinCuerpo, textoPlano } = validadorDe(m, ruta, status)
   const etiqueta = `${m.toUpperCase()} ${ruta} ${status}`
+  if (textoPlano) {
+    if (typeof data !== 'string' || !data) throw new Error(`${etiqueta}: se esperaba texto plano y llegó ${JSON.stringify(data)}.`)
+    return
+  }
   if (sinCuerpo) {
     const vacio = data === undefined || data === null || data === ''
     if (!vacio) throw new Error(`${etiqueta}: el contrato no declara cuerpo y la respuesta trae ${JSON.stringify(data)}.`)

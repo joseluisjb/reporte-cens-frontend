@@ -254,3 +254,7 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
 - **`ENVIADO_CON_INCONSISTENCIAS` cuenta como enviado.** Vale para el historial de reportes, para la regla A9 y para saber cuál es el último corte enviado.
 - **Errores de paginación de `/obligaciones/`.** El contrato 0.9 los define por campo (`{ limite: [...] }`, `ErrorCampos`), pero la paginación que ya tiene el backend en extracción responde `{ detail }`. Hay que elegir una de las dos formas y ajustar el contrato (0.9.x) o el backend.
 - **Plazo de los reclamos.** Son 15 días hábiles, sin contar fines de semana ni festivos de Colombia. La regla exacta de conteo está por confirmar con jurídica.
+
+**Criterios de aceptación para el backend** (los «Listo cuando» de las fichas; el frontend ya los prueba contra los mocks):
+
+- **Entidad (RF57, `PUT /entidad/`).** El Administrador guarda `001` / `123` / `A1B2C3`: responde 200 con `con_marcador: false` y `prefijo_archivo: SSR001123`, y los archivos nuevos salen aptos. Con `12` en el tipo de entidad responde 400 `{ tipo_entidad: [...] }` (3 dígitos o `XXX`). El Analista recibe 403. Los tres marcadores (`XXX`, `XXX`, `XXXXXX`) son válidos: así se «vuelve al relleno». Cada cambio queda en la bitácora con quién y cuándo (`actualizado_por`, `fecha_actualizacion`).

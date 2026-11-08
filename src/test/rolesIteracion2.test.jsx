@@ -21,10 +21,12 @@ const DEL_ADMIN = [
 const menu = () => within(screen.getByRole('navigation', { name: 'Navegación principal' }))
 
 describe('pantallas del Analista de Cartera (9 a 14)', () => {
+  // Con sesión real en el mock: las pantallas ya construidas (la 9) piden datos al abrir.
   test.each(DEL_ANALISTA)('el Analista abre %s', async (ruta, _seccion, titulo) => {
-    renderApp(ruta, ANALISTA)
+    await renderConSesion(ruta, 'jperez@example.com', 'Analista123')
     expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Acceso restringido' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('status', { name: /^Cargando/ })).not.toBeInTheDocument())
   })
 
   test.each(DEL_ANALISTA)('el Administrador ve «Acceso restringido» en %s', async (ruta, seccion, titulo) => {

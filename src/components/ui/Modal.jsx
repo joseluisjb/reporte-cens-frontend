@@ -7,8 +7,9 @@ const FOCUSABLE =
 
 // Diálogo accesible: aria-modal, foco inicial, trampa de Tab, Escape y clic fuera para cerrar,
 // y devuelve el foco al elemento que lo abrió (o a `returnFocusRef` si ese ya no existe). `initialFocusRef` elige qué recibe el foco al abrir. `alert` lo marca como alertdialog (un aviso
-// que exige respuesta, ej. confirmar o "¿sigues ahí?"): el lector de pantalla lo lee completo al abrirse. `side` lo muestra como panel lateral.
-export default function Modal({ open, onClose, title, subtitle, footer, side = false, alert = false, returnFocusRef, initialFocusRef, children }) {
+// que exige respuesta, ej. confirmar o "¿sigues ahí?"): el lector de pantalla lo lee completo al abrirse. `side` lo muestra como panel lateral
+// (420 px; con `wide`, 540 px, como el detalle de la obligación).
+export default function Modal({ open, onClose, title, subtitle, footer, side = false, wide = false, alert = false, returnFocusRef, initialFocusRef, children }) {
   const titleId = useId()
   const bodyId = useId()
   const dlgRef = useRef(null)
@@ -72,7 +73,7 @@ export default function Modal({ open, onClose, title, subtitle, footer, side = f
         aria-describedby={alert ? bodyId : undefined}
         className={cx(
           'flex w-full flex-col overflow-hidden bg-white shadow-dlg',
-          side ? 'h-screen max-w-105' : 'max-h-[90vh] max-w-140 rounded-dlg',
+          side ? cx('h-screen', wide ? 'max-w-135' : 'max-w-105') : 'max-h-[90vh] max-w-140 rounded-dlg',
         )}
       >
         <div className="px-7 pt-6">

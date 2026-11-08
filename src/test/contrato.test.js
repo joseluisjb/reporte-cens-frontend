@@ -703,6 +703,17 @@ describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): vali
     expect(lineas[0]).toBe('111XXXXXX          0120260930')
     expect(lineas[0]).toHaveLength(29)
     expect(lineas[1]).toHaveLength(930)
+    // Registro tipo 2 según la Tabla 2 (pp. 45-51). 2259-1092 cerró como Saldada en este corte (RF22).
+    const saldada = lineas.find((l) => l.slice(88, 108).trim() === '2259-1092')
+    expect(saldada.slice(0, 1)).toBe('2')
+    expect(saldada.slice(18, 78)).toBe('Jorge Iván Salcedo'.padEnd(60)) // nombre del titular, 19-78
+    expect(saldada.slice(108, 114)).toBe('XXXXXX') // sucursal con relleno
+    expect(saldada.slice(119, 123)).toBe('0200') // estado 02 y edad de mora 00
+    expect(saldada.slice(125, 133)).toBe('20260930') // fecha de corte
+    expect(saldada.slice(165, 177)).toBe('202609120101') // fecha de pago, modo de extinción y tipo de pago
+    expect(saldada.slice(188, 191)).toBe('000') // cuotas en mora
+    expect(saldada.slice(191, 203)).toBe('000000001020') // valor inicial en miles (.020.000)
+    expect(saldada.slice(203, 239)).toBe('0'.repeat(36)) // mora, saldo y cuota en cero
     expect(lineas.at(-1)).toBe('900000013000000110000000000000000')
     expect(lineas.at(-1)).toHaveLength(33)
     expect(await verifica('get', '/archivos/{id}/descarga/', 404, { url: '/archivos/99/descarga/' })).toEqual({ detail: 'Archivo no encontrado.' })
@@ -717,7 +728,12 @@ describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): vali
     expect(archivo).toMatchObject({ n_registros: 10, total_registros: 12 })
     expect(lineas).toHaveLength(12)
     expect(lineas.at(-1)).toBe('900000012000000100000000000000000')
-    expect(lineas.find((l) => l.includes('2259-1092')).slice(21, 30)).toBe('A1B2C301' + '0') // sucursal del archivo, Vigente (01) al 31/08
+    // Tabla 2: número de obligación en 89-108, sucursal en 109-114, calidad en 115 y estado en 120-121.
+    const r2 = lineas.find((l) => l.includes('2259-1092'))
+    expect(r2.slice(88, 108)).toBe('2259-1092'.padStart(20))
+    expect(r2.slice(108, 114)).toBe('A1B2C3') // la sucursal con que se generó
+    expect(r2.slice(114, 115)).toBe('P')
+    expect(r2.slice(119, 121)).toBe('01') // Vigente al 31/08: cerró después
     // Ya armado, no cambia con la entidad ni con las obligaciones de hoy.
     db.entidad.codigo_sucursal = 'Z9Z9Z9'
     db.obligaciones = db.obligaciones.filter((o) => o.numero !== '2259-1092')
@@ -814,6 +830,9 @@ describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, R
     // El número de línea cuenta las líneas vacías.
     const conLineaVacia = new File(['LINEA|TIPO ID\r\n\r\n000000000001|01'], 'Detalle_Inco_CSR_001_123_Correctivas_20260831.txt')
     expect((await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(conLineaVacia) })).detail).toMatch(/\(línea 3: no trae el registro tipo 2/)
+    // La Tabla 22 da SSR como sigla de Servicios: también se acepta en el nombre (la p. 43 escribe CSR).
+    const conSSR = new File(['CODIGO|CANTIDAD'], 'Esta_Inco_SSR_001_123_Correctivas_20260731.txt')
+    expect((await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(conSSR) })).code).toBe('archivo_de_otro_corte')
     const conOtroNombre = new File(['A|B'], 'resultados.txt')
     expect((await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(conOtroNombre) })).code).toBe('estructura_invalida')
     expect(db.resultadosCargue[1]).toBeUndefined()

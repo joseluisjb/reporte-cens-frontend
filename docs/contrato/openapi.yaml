@@ -2560,8 +2560,10 @@ paths:
         `953_Detalle_Inco_CSR_XXX_XXX_Alertas_AAAAMMDD.txt`, y `norep.XXX.XXX.CODIGOPRODUCTO.AAAAMMDD.0.txt`.
         El detalle de inconsistencias (pp. 52-53) trae por línea el registro tipo 2 enviado y hasta cinco
         grupos de código, descripción y tipo; como la tabla del Manual salta el campo 7, se exige un mínimo de
-        campos y el total queda **por confirmar con TransUnion**. La estructura de los estadísticos no está en
-        el Manual (por confirmar).
+        campos y el total queda **por confirmar con TransUnion**; el número de obligación sale de las posiciones
+        89 a 108 del registro tipo 2 (Tabla 2). La estructura de los estadísticos no está en el Manual (por
+        confirmar). La p. 43 escribe `CSR`, pero en la Tabla 22 la sigla de cartera servicios es `SSR`
+        (`CSR` es cartera préstamos): se aceptan las dos hasta que TransUnion confirme.
       operationId: archivosResultadosCreate
       x-roles: [Analista de Cartera]
       parameters:

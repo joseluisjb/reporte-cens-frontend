@@ -10,16 +10,19 @@
 // Los radicados y cierres de reclamos (RF23) son de la pantalla 13 y no se reconocen aquí.
 import { formatearFechaISO } from '../../lib/format'
 
+// La p. 43 escribe CSR, pero en la Tabla 22 (p. 75) CSR es «cartera préstamos» y la sigla de «cartera
+// servicios» es SSR: se aceptan las dos mientras TransUnion confirma cuál usa para Servicios.
+const PAQUETE = '(?:CSR|SSR)'
 const ENTIDAD = '([0-9A-Z]{3})_([0-9A-Z]{3})'
 const FECHA = '(\\d{4})(\\d{2})(\\d{2})'
 // [patrón del nombre, tipo_archivo]. Los grupos 3 a 5 (o 1 a 3 en `est.` y `norep.`) son la fecha de corte.
 const PATRONES = [
-  [new RegExp(`^Esta_Inco_CSR_${ENTIDAD}_(?:Correctivas|Alertas)_${FECHA}\\.txt$`), 'ESTADISTICOS'],
+  [new RegExp(`^Esta_Inco_${PAQUETE}_${ENTIDAD}_(?:Correctivas|Alertas)_${FECHA}\\.txt$`), 'ESTADISTICOS'],
   [new RegExp(`^est\\.[0-9A-Z]{3}\\.[0-9A-Z]{3}\\.[^.]+\\.${FECHA}\\.\\.?txt$`), 'ESTADISTICOS'], // el Manual lo escribe con «..txt»
-  [new RegExp(`^Detalle_Inco_CSR_${ENTIDAD}_Correctivas_${FECHA}\\.txt$`), 'CORRECTIVAS'],
-  [new RegExp(`^Detalle_Inco_CSR_${ENTIDAD}_Alertas_${FECHA}\\.txt$`), 'ALERTAS'],
-  [new RegExp(`^Detalle_Inco_CSR_${ENTIDAD}_Especiales_${FECHA}\\.txt$`), 'ESPECIALES'],
-  [new RegExp(`^953_Detalle_Inco_CSR_${ENTIDAD}_Alertas_${FECHA}\\.txt$`), 'DETALLE_953'],
+  [new RegExp(`^Detalle_Inco_${PAQUETE}_${ENTIDAD}_Correctivas_${FECHA}\\.txt$`), 'CORRECTIVAS'],
+  [new RegExp(`^Detalle_Inco_${PAQUETE}_${ENTIDAD}_Alertas_${FECHA}\\.txt$`), 'ALERTAS'],
+  [new RegExp(`^Detalle_Inco_${PAQUETE}_${ENTIDAD}_Especiales_${FECHA}\\.txt$`), 'ESPECIALES'],
+  [new RegExp(`^953_Detalle_Inco_${PAQUETE}_${ENTIDAD}_Alertas_${FECHA}\\.txt$`), 'DETALLE_953'],
   [new RegExp(`^norep\\.[0-9A-Z]{3}\\.[0-9A-Z]{3}\\.[^.]+\\.${FECHA}\\.0\\.txt$`), 'NOREP'],
 ]
 // Las correctivas no ingresan a TransUnion; las alertas (y sus detalles Especiales y 953) sí (Manual, p. 42).

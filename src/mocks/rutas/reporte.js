@@ -50,6 +50,20 @@ function contenidoDe(archivo) {
   return db.contenidosArchivo[archivo.id]
 }
 
+// El archivo plano va en ANSI (Manual, p. 43): Windows-1252, un byte por carácter, para que cada campo
+// quede en su posición. Coincide con Latin-1 salvo de 0x80 a 0x9F; un carácter que no existe en
+// Windows-1252 sale como «?».
+const WINDOWS_1252 = new Map(
+  [...'€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ'].map((c, i) => [c, [0x80, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8e, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9e, 0x9f][i]]),
+)
+function enWindows1252(texto) {
+  return Uint8Array.from(texto, (c) => {
+    const codigo = c.codePointAt(0)
+    if (WINDOWS_1252.has(c)) return WINDOWS_1252.get(c)
+    return codigo <= 0xff && (codigo < 0x80 || codigo > 0x9f) ? codigo : 0x3f
+  })
+}
+
 export const reporteHandlers = [
   http.get(url(ENDPOINTS.validacionesCorte(':id')), async ({ params }) => {
     await espera()
@@ -123,7 +137,7 @@ export const reporteHandlers = [
     if (respuesta) return respuesta
     const archivo = buscarArchivo(params.id)
     if (!archivo) return error(404, SIN_ARCHIVO)
-    return new HttpResponse(contenidoDe(archivo), {
+    return new HttpResponse(enWindows1252(contenidoDe(archivo)), {
       status: 200,
       headers: { 'Content-Type': 'text/plain; charset=windows-1252', 'Content-Disposition': `attachment; filename="${archivo.nombre}.txt"` },
     })

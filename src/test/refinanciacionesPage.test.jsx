@@ -145,17 +145,38 @@ describe('pantalla 11 · registro manual', () => {
     expect(db.obligaciones.find((o) => o.numero === '2272-6101')).toMatchObject({ estado: '01', primer_reporte: true, saldo: 5420000, cuota: 226000 })
   })
 
-  test('si la matriz no permite cerrar la original (04), el 409 se muestra como aviso', async () => {
+  test('si la matriz no permite cerrar la original (04), lo avisa antes de enviar y no deja registrar', async () => {
     db.obligaciones.find((o) => o.numero === '2261-8820').estado = '04'
     await abrir()
     const dialogo = await abrirModal()
     await llenar(dialogo, { numero: '2261-8820' })
-    await registrar(dialogo)
-    expect(await within(dialogo).findByText(/TransUnion no acepta pasar de 04 · Suspendida por la entidad a 02 · Saldada \(error 713\)/)).toBeInTheDocument()
-    expect(screen.getByRole('dialog', { name: 'Registrar refinanciación' })).toBeInTheDocument()
+    expect(within(dialogo).getByRole('status')).toHaveTextContent('TransUnion no acepta pasar de 04 · Suspendida por la entidad a 02 · Saldada (error 713)')
+    expect(within(dialogo).getByRole('button', { name: 'Registrar refinanciación' })).toBeDisabled()
     // Al elegir otra obligación, el aviso se quita.
     await userEvent.selectOptions(within(dialogo).getByLabelText('Obligación original'), opcionDe(dialogo, '2257-4156'))
     expect(within(dialogo).queryByText(/error 713/)).not.toBeInTheDocument()
+    expect(within(dialogo).getByRole('button', { name: 'Registrar refinanciación' })).toBeEnabled()
+  })
+
+  test('un 409 del servidor se muestra como aviso sin cerrar el registro', async () => {
+    server.use(
+      http.post(`${API_URL}/refinanciaciones/`, () =>
+        HttpResponse.json({ detail: 'La obligación 2257-4156 ya está cerrada: no se puede refinanciar.', code: 'obligacion_cerrada' }, { status: 409 }),
+      ),
+    )
+    await abrir()
+    const dialogo = await abrirModal()
+    await llenar(dialogo, { numero: '2257-4156' })
+    await registrar(dialogo)
+    expect(await within(dialogo).findByText('La obligación 2257-4156 ya está cerrada: no se puede refinanciar.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Registrar refinanciación' })).toBeInTheDocument()
+  })
+
+  test('un enlace a una obligación cerrada no la deja elegida y lo explica', async () => {
+    await abrir('/refinanciaciones?obligacion=3')
+    const dialogo = await screen.findByRole('dialog', { name: 'Registrar refinanciación' })
+    expect(await within(dialogo).findByText(/La obligación del enlace no se puede refinanciar/)).toBeInTheDocument()
+    expect(within(dialogo).getByLabelText('Obligación original')).toHaveValue('')
   })
 
   test('si no cargan las opciones lo dice y se puede reintentar', async () => {

@@ -45,12 +45,21 @@ export default function RefinancingPage() {
         setLista(r)
         setError('')
       },
-      (err) => !cancelado && setError(mensajeDeError(err)),
+      (err) => {
+        if (cancelado) return
+        setError(mensajeDeError(err))
+        setLista(null) // no se deja a la vista una lista vieja bajo el error
+      },
     )
     return () => {
       cancelado = true
     }
   }, [intento])
+
+  const reintentar = useCallback(() => {
+    setError('')
+    setIntento((n) => n + 1)
+  }, [])
 
   const cerrar = useCallback(() => {
     setAbierto(false)
@@ -85,7 +94,7 @@ export default function RefinancingPage() {
         ))}
       </ol>
 
-      <Registradas lista={lista} error={error} onReintentar={() => setIntento((n) => n + 1)} />
+      <Registradas lista={lista} error={error} onReintentar={reintentar} />
       <RefinancingModal open={modalAbierto} obligacionInicial={obligacionDeUrl} onCerrar={cerrar} onRegistrada={registrada} />
     </>
   )

@@ -7,7 +7,8 @@ import { Alert, Button, Input, Modal, PorConfirmar, Select, Spinner } from '../.
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearCOP, hoyISO } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
-import { listObligations } from '../obligations/obligationsService'
+import { getStateMatrix } from '../cycle/cycleService'
+import { getObligation, listObligations } from '../obligations/obligationsService'
 import { CATALOGOS, getCatalog } from '../transunion/catalogosService'
 import EstadoBadge from '../transunion/EstadoBadge'
 import { mapRefinanciacionFieldErrors } from './refinancingMapper'
@@ -16,8 +17,25 @@ import { CUOTAS_MAX, CUOTAS_MIN, ESTADOS_QUE_CIERRAN_EN_07, estadoDeCierre, vali
 
 const ORDEN = ['obligacionOriginalId', 'naturaleza', 'numeroCuotas', 'fecha']
 // Máximo de obligaciones que acepta la API en una página: alcanza para la cartera simulada. Con la
-// cartera real hará falta buscar en vez de listar (anotado en docs/PENDIENTES_BACKEND.md).
+// cartera real hará falta filtrar las abiertas en el servidor o buscar (docs/PENDIENTES_BACKEND.md).
 const LIMITE_OPCIONES = 100
+const AVISO_ENLACE = 'La obligación del enlace no se puede refinanciar: está cerrada o eliminada en TransUnion. Elige otra.'
+const abierta = (o) => !o.cerrada && !o.eliminada
+
+// Opciones del formulario. La obligación que llega por el enlace (`?obligacion=`) se agrega si no vino en
+// la página; si ya no está abierta, `aviso` lo explica y no queda elegida.
+async function cargarOpciones(obligacionInicial) {
+  const [pagina, naturalezas, matriz] = await Promise.all([
+    listObligations({ limite: LIMITE_OPCIONES }),
+    getCatalog(CATALOGOS.naturalezasReestructuracion),
+    getStateMatrix(),
+  ])
+  const obligaciones = pagina.items.filter(abierta)
+  if (!obligacionInicial || obligaciones.some((o) => o.id === obligacionInicial)) return { obligaciones, naturalezas, matriz, aviso: '' }
+  const inicial = await getObligation(obligacionInicial).catch(() => null)
+  if (inicial && abierta(inicial)) return { obligaciones: [inicial, ...obligaciones], naturalezas, matriz, aviso: '' }
+  return { obligaciones, naturalezas, matriz, aviso: AVISO_ENLACE }
+}
 
 export default function RefinancingModal({ open, obligacionInicial, onCerrar, onRegistrada }) {
   if (!open) return null
@@ -25,21 +43,10 @@ export default function RefinancingModal({ open, obligacionInicial, onCerrar, on
 }
 
 function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
-  const [opciones, setOpciones] = useState(null) // { obligaciones, naturalezas } | null
+  const [opciones, setOpciones] = useState(null) // { obligaciones, naturalezas, matriz } | null
   const [errorCarga, setErrorCarga] = useState('')
   const [intento, setIntento] = useState(0)
-  const [aviso, setAviso] = useState('') // 409: la original no se puede cerrar
-
-  useEffect(() => {
-    let cancelado = false
-    Promise.all([listObligations({ limite: LIMITE_OPCIONES }), getCatalog(CATALOGOS.naturalezasReestructuracion)]).then(
-      ([pagina, naturalezas]) => !cancelado && setOpciones({ obligaciones: pagina.items.filter((o) => !o.cerrada && !o.eliminada), naturalezas }),
-      (err) => !cancelado && setErrorCarga(mensajeDeError(err)),
-    )
-    return () => {
-      cancelado = true
-    }
-  }, [intento])
+  const [aviso, setAviso] = useState('') // 409, o la obligación del enlace que ya no se puede refinanciar
 
   const form = useFormulario({
     valoresIniciales: { obligacionOriginalId: obligacionInicial ? String(obligacionInicial) : '', naturaleza: '', numeroCuotas: '', fecha: hoyISO() },
@@ -57,7 +64,30 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
     },
   })
 
+  const { setValor } = form
+
+  useEffect(() => {
+    let cancelado = false
+    cargarOpciones(obligacionInicial).then(
+      ({ aviso: avisoEnlace, ...cargadas }) => {
+        if (cancelado) return
+        setOpciones(cargadas)
+        if (avisoEnlace) {
+          setValor('obligacionOriginalId', '')
+          setAviso(avisoEnlace)
+        }
+      },
+      (err) => !cancelado && setErrorCarga(mensajeDeError(err)),
+    )
+    return () => {
+      cancelado = true
+    }
+  }, [intento, obligacionInicial, setValor])
+
   const elegida = opciones?.obligaciones.find((o) => String(o.id) === form.valores.obligacionOriginalId) ?? null
+  // ¿La matriz deja cerrar la elegida? (desde 04, 10, 11 o 12, o desde 03 o 06 sin mora, no: error 713)
+  const cierre = elegida ? estadoDeCierre(elegida.estado?.codigo) : null
+  const permitida = !elegida || opciones.matriz.permitida(elegida.estado?.codigo, elegida.valorMora > 0, cierre, false)
   const algunaPorConfirmar = opciones?.naturalezas.some((n) => !n.confirmado)
   const campoObligacion = form.campo('obligacionOriginalId')
 
@@ -72,7 +102,7 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
           <Button variant="ghost" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="submit" form="form-refinanciacion" loading={form.enviando} disabled={!opciones}>
+          <Button type="submit" form="form-refinanciacion" loading={form.enviando} disabled={!opciones || !permitida}>
             Registrar refinanciación
           </Button>
         </>
@@ -145,9 +175,16 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
             <span className="text-muted">Número de la nueva obligación</span>
             <b>Se asigna automáticamente</b>
           </div>
-          <Alert tone="info">
-            <NotaCierre obligacion={elegida} />
-          </Alert>
+          {permitida ? (
+            <Alert tone="info">
+              <NotaCierre obligacion={elegida} />
+            </Alert>
+          ) : (
+            <Alert tone="aviso">
+              TransUnion no acepta pasar de {elegida.estado?.codigo} · {elegida.estado?.descripcion} a <EstadoBadge codigo={cierre} /> (error 713). Define el
+              tratamiento con CENS.
+            </Alert>
+          )}
           {aviso && <Alert tone="aviso">{aviso}</Alert>}
           {form.errorGeneral && <Alert>{form.errorGeneral}</Alert>}
         </form>

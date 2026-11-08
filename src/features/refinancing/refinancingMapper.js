@@ -5,7 +5,6 @@
 //                      naturaleza: { codigo, descripcion, confirmado }, numeroCuotas }
 import { soloFecha } from '../../lib/format'
 import { descripcionEstado } from '../transunion/catalogosTU'
-import { cuotasValidas } from './refinancingValidation'
 
 const estado = (codigo) => (codigo ? { codigo, descripcion: descripcionEstado(codigo) } : null)
 
@@ -36,7 +35,7 @@ export function mapRefinanciacion(raw) {
 export const aPeticionRefinanciacion = ({ obligacionOriginalId, naturaleza, numeroCuotas, fecha }) => ({
   obligacion_original_id: Number(obligacionOriginalId),
   naturaleza,
-  numero_cuotas: cuotasValidas(numeroCuotas) ?? Number(numeroCuotas),
+  numero_cuotas: Number(numeroCuotas), // ya validado (1 a 120) en el formulario
   fecha,
 })
 

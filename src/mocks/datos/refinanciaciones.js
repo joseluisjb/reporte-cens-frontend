@@ -1,5 +1,5 @@
 // Refinanciaciones registradas (pantalla 11, RF18) al inicio del mock. Datos FICTICIOS del mockup v3.
-export const REFINANCIACION = { codigo: '16', descripcion: 'Refinanciación' }
+import { REFINANCIACION } from './obligacionesIteracion2'
 
 // Refinanciación de respaldo del mockup: 2255-7788 → 2271-5502 (ver mocks/datos/obligacionesIteracion2.js).
 export const refinanciacionesIniciales = () => [

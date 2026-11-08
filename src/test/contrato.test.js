@@ -623,7 +623,7 @@ describe('conformidad de los mocks de refinanciaciones (contrato 0.9)', () => {
       numero_cuotas: 24,
     })
     const nueva = await verifica('get', '/obligaciones/{id}/', 200, { url: `/obligaciones/${r.obligacion_nueva.obligacion_id}/` })
-    expect(nueva).toMatchObject({ primer_reporte: true, reestructuracion: { numero_reestructuraciones: 1, obligacion_anterior: { obligacion_id: 7 } } })
+    expect(nueva).toMatchObject({ numero_identificacion: '******0007', nombre_titular: 'Hotel Mirador Cúcuta', primer_reporte: true, reestructuracion: { numero_reestructuraciones: 1, obligacion_anterior: { obligacion_id: 7 } } })
     const original = await verifica('get', '/obligaciones/{id}/', 200, { url: '/obligaciones/7/' })
     expect(original).toMatchObject({ estado_tu: '07', cerrada: true, refinanciada_en: { numero_obligacion: '2272-6101' }, cierre: { tipo_pago: { codigo: '02' } } })
     // Refinanciarla otra vez: ya está cerrada.
@@ -639,6 +639,13 @@ describe('conformidad de los mocks de refinanciaciones (contrato 0.9)', () => {
     expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, numero_cuotas: 121 } })).toEqual({ numero_cuotas: ['Ingresa un número de cuotas entre 1 y 120.'] })
     expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, naturaleza: '99' } })).toEqual({ naturaleza: ['Selecciona la naturaleza de la reestructuración.'] })
     expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, fecha: '2999-01-01' } })).toEqual({ fecha: ['La fecha de la refinanciación no puede ser futura.'] })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, fecha: '2026-02-30' } })).toEqual({ fecha: ['La fecha de la refinanciación no es válida.'] })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, fecha: '2025-01-10' } })).toEqual({
+      fecha: ['La fecha de la refinanciación no puede ser anterior al ingreso de la obligación (30/06/2025).'],
+    })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, fecha: '2026-08-15' } })).toEqual({
+      fecha: ['La fecha de la refinanciación debe ser posterior al último corte enviado (31/08/2026).'],
+    })
     expect(await verifica('post', '/refinanciaciones/', 400, { datos: {} })).toEqual({
       obligacion_original_id: ['Selecciona la obligación original.'],
       naturaleza: ['Selecciona la naturaleza de la reestructuración.'],

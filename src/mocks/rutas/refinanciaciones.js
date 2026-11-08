@@ -6,27 +6,22 @@
 // reestructurada, con número propio. Cada registro guarda una FOTO de las dos obligaciones: un ciclo
 // posterior puede reemplazar `db.obligaciones` (el mock no recalcula), y el historial no debe romperse.
 import { http, HttpResponse } from 'msw'
+import { finDeMes } from '../../features/cycle/cycleValidation'
 import { cuotasValidas, errorFechaRefinanciacion, estadoDeCierre, MSG_REFI } from '../../features/refinancing/refinancingValidation'
-import { descripcionEstado, esEstadoDeCierre } from '../../features/transunion/catalogosTU'
+import { esEstadoDeCierre } from '../../features/transunion/catalogosTU'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { CATALOGOS } from '../datos/catalogos'
-import { REFINANCIACION } from '../datos/refinanciaciones'
 import { matrizEstados } from '../datos/matrizEstados'
-import { aResumen, cuotas, eventos, obligacion } from '../datos/obligacionesIteracion2'
+import { aResumen, cuotas, estadoTexto, eventos, identificacion, NO_VOLUNTARIO, obligacion, REFINANCIACION } from '../datos/obligacionesIteracion2'
 import { db, persistir } from '../db'
 import { aEntero, ahoraBogotaISO, error, espera, exigirSesion, hoyLocalISO, leerCuerpo, SOLO_ANALISTA, url } from '../utilidades'
 import { corteVigente } from './ciclos'
 
-const NO_VOLUNTARIO = { codigo: '02', descripcion: 'No voluntario' }
-const estadoTexto = (codigo) => `${codigo} · ${descripcionEstado(codigo)}`
-const finDeMes = (fecha) => {
-  const [anio, mes] = fecha.split('-').map(Number)
-  return `${anio}-${String(mes).padStart(2, '0')}-${String(new Date(Date.UTC(anio, mes, 0)).getUTCDate()).padStart(2, '0')}`
-}
-
-// El estado de la nueva sale de la base si sigue ahí (un ciclo pudo cambiarlo).
+// El estado de la nueva sale de la base si sigue ahí (un ciclo pudo cambiarlo). Se busca por id Y
+// número: la foto del ciclo del 31/10 reutiliza los ids 13 a 15 para otras obligaciones.
 const aRespuesta = (r) => {
-  const nueva = db.obligaciones.find((o) => o.id === r.obligacion_nueva.obligacion_id)
+  const { obligacion_id: id, numero_obligacion: numero } = r.obligacion_nueva
+  const nueva = db.obligaciones.find((o) => o.id === id && o.numero === numero)
   return nueva ? { ...r, obligacion_nueva: { ...r.obligacion_nueva, estado_tu: nueva.estado } } : r
 }
 
@@ -70,6 +65,11 @@ export const refinanciacionesHandlers = [
 
     const original = db.obligaciones.find((o) => o.id === id)
     if (!original) return error(404, { detail: 'Obligación no encontrada.' })
+    // La fecha no puede ser anterior al ingreso de la obligación ni a un corte ya enviado.
+    const fechaPedida = cuerpo.fecha.trim()
+    const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+    if (fechaPedida < original.ingreso) return error(400, { fecha: [MSG_REFI.antesDelIngreso(original.ingreso)] })
+    if (ultimaEnviada && fechaPedida <= ultimaEnviada) return error(400, { fecha: [MSG_REFI.corteEnviado(ultimaEnviada)] })
     if (original.eliminada) {
       return error(409, { detail: `La obligación ${original.numero} está eliminada en TransUnion: no se puede refinanciar.`, code: 'obligacion_eliminada' })
     }
@@ -97,6 +97,7 @@ export const refinanciacionesHandlers = [
       id: nuevaId,
       numero,
       titular: original.titular,
+      numero_identificacion: identificacion(original), // mismo titular, misma identificación
       concepto: original.concepto,
       estado: '01',
       saldo,

@@ -1,7 +1,8 @@
 // Validación del registro manual de una refinanciación (pantalla 11, RF18). La usan el formulario y el
 // backend simulado, para que digan lo mismo. El backend además comprueba que la obligación exista
 // (404), que siga abierta y que la matriz permita cerrarla (409).
-import { hoyISO } from '../../lib/format'
+import { formatearFechaISO, hoyISO } from '../../lib/format'
+import { esFechaISO } from '../audit/auditValidation'
 
 export const CUOTAS_MIN = 1
 export const CUOTAS_MAX = 120
@@ -13,14 +14,14 @@ export const MSG_REFI = {
   fecha: 'Selecciona la fecha de la refinanciación.',
   fechaInvalida: 'La fecha de la refinanciación no es válida.',
   fechaFutura: 'La fecha de la refinanciación no puede ser futura.',
+  antesDelIngreso: (ingreso) => `La fecha de la refinanciación no puede ser anterior al ingreso de la obligación (${formatearFechaISO(ingreso)}).`,
+  corteEnviado: (corte) => `La fecha de la refinanciación debe ser posterior al último corte enviado (${formatearFechaISO(corte)}).`,
 }
 
 // Cómo se cierra la original (RF18): en 07 si estaba en Dudoso recaudo (03) o Castigada (06), si no en
 // 02. Desde 03 y 06 está por confirmar con TransUnion (P-TU-06).
 export const ESTADOS_QUE_CIERRAN_EN_07 = ['03', '06']
 export const estadoDeCierre = (estadoOriginal) => (ESTADOS_QUE_CIERRAN_EN_07.includes(estadoOriginal) ? '07' : '02')
-
-const esFecha = (texto) => /^\d{4}-\d{2}-\d{2}$/.test(texto) && !Number.isNaN(Date.parse(texto))
 
 // Entero en el rango, como texto del campo ('24') o número (24); si no, null.
 export function cuotasValidas(valor) {
@@ -33,7 +34,7 @@ export function cuotasValidas(valor) {
 export function errorFechaRefinanciacion(fecha, hoy = hoyISO()) {
   const texto = typeof fecha === 'string' ? fecha.trim() : ''
   if (!texto) return MSG_REFI.fecha
-  if (!esFecha(texto)) return MSG_REFI.fechaInvalida
+  if (!esFechaISO(texto)) return MSG_REFI.fechaInvalida
   return texto > hoy ? MSG_REFI.fechaFutura : ''
 }
 

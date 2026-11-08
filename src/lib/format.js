@@ -1,4 +1,4 @@
-const pad = (n) => String(n).padStart(2, '0')
+export const pad = (n) => String(n).padStart(2, '0')
 
 // 30/09/2026 08:14 (formato de la maqueta). Sin fecha devuelve "—".
 export function formatearFechaHora(fecha) {

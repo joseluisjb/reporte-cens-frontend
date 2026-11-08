@@ -22,7 +22,7 @@ export const NAV_ITEMS = [
   { path: '/extraccion', label: 'Extracción de Cartera', icon: 'bolt', roles: null, section: 'Extracción', Page: lazy(() => import('../features/extraction/ExtractionPage')) },
   { path: '/parametrizacion', label: 'Parametrización de Conceptos', icon: 'gear', roles: SOLO_ADMIN, section: 'Extracción', Page: lazy(() => import('../features/parameters/ParametersPage')) },
   { path: '/obligaciones', label: 'Obligaciones y Estados', icon: 'list', roles: SOLO_ANALISTA, section: 'Ciclo de vida', Page: lazy(() => import('../features/obligations/ObligationsPage')) },
-  { path: '/ciclo', label: 'Actualización Mensual', icon: 'refresh', roles: SOLO_ANALISTA, section: 'Ciclo de vida', Page: EnConstruccion.ActualizacionMensual },
+  { path: '/ciclo', label: 'Actualización Mensual', icon: 'refresh', roles: SOLO_ANALISTA, section: 'Ciclo de vida', Page: lazy(() => import('../features/cycle/CyclePage')) },
   { path: '/refinanciaciones', label: 'Refinanciaciones', icon: 'link', roles: SOLO_ANALISTA, section: 'Ciclo de vida', Page: EnConstruccion.Refinanciaciones },
   { path: '/reporte', label: 'Generar Reporte', icon: 'file', roles: SOLO_ANALISTA, section: 'Reporte a TransUnion', Page: EnConstruccion.ReporteTransUnion },
   { path: '/reclamos', label: 'Reclamos Habeas Data', icon: 'flag', roles: SOLO_ANALISTA, section: 'Reporte a TransUnion', Page: EnConstruccion.Reclamos },

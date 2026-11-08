@@ -3,7 +3,9 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expectAccesible } from './axe'
+import { server } from '../mocks/server'
 import { ANALISTA, renderApp, renderConSesion } from './renderApp'
+import { cicloConRechazosYRevisiones } from './escenarios/ciclo'
 
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
 
@@ -114,6 +116,17 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
     await userEvent.click(boton('Ver el detalle de la obligación 2271-5502'))
     await screen.findByRole('list', { name: 'Línea de tiempo de estados' })
+    await expectAccesible()
+  })
+
+  test('actualización mensual (pantalla 10), con el resultado, los rechazos y la matriz', async () => {
+    server.use(...cicloConRechazosYRevisiones())
+    await renderConSesion('/ciclo', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('table', { name: /Matriz de cambios de estado/ })
+    await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
+    await expectAccesible()
+    await userEvent.click(boton('Ejecutar actualización mensual'))
+    await screen.findByRole('table', { name: 'Cambios rechazados' })
     await expectAccesible()
   })
 

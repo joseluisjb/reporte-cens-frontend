@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { resumenCartera } from '../datos/obligacionesIteracion2'
 import { db } from '../db'
+import { corteVigente } from './ciclos'
 import { espera, exigirSesion, SOLO_ANALISTA, url } from '../utilidades'
 import { aEntidad } from './entidad'
 
@@ -13,7 +14,7 @@ import { aEntidad } from './entidad'
 export const NOVEDADES_PENDIENTES_FOTO = 2
 
 export function panelResumen() {
-  const cartera = resumenCartera(db.obligaciones)
+  const cartera = resumenCartera(db.obligaciones, corteVigente())
   const ultimo = [...db.archivos].sort((a, b) => Date.parse(b.fecha_generacion) - Date.parse(a.fecha_generacion))[0] ?? null
   return {
     fecha_ultimo_ciclo: cartera.fecha_ultimo_ciclo,

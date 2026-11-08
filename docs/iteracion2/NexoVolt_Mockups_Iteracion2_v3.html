@@ -535,6 +535,9 @@ const EST = {
   '12':{n:'Ley 1564',           cls:'bd-off',  closed:false}
 };
 const EST_ORDER = ['01','03','06','02','07'];                         // los 5 estados que usa CENS
+/* Estados que muestran Inicio, Obligaciones y la matriz: los 5 de EST_ORDER más los de ley (10, 11, 12)
+   que CENS marque como usados en Homologación (S.estUso) y que tengan obligaciones. Una sola fuente. */
+const estOrden = () => EST_ORDER.concat(['10','11','12'].filter(c => S.estUso[c].usado && S.obls.some(o => o.est === c)));
 const MX_ORDER  = ['01','02','04','08','06','07','03','10','11','12']; // columnas de la matriz de la p. 40
 /* Matriz de cambios de estado · Sector Real Servicios (Manual v34, p. 40).
    Fila = estado del corte anterior (n = sin mora, m = con mora). Cada letra es una columna,
@@ -1064,7 +1067,8 @@ function vAuditoria(){
    ===================================================================== */
 const getO     = num => S.obls.find(o => o.num === num);
 const isClosed = o => EST[o.est].closed;
-const estBd    = c => '<span class="bd ' + EST[c].cls + '">' + c + ' · ' + EST[c].n + '</span>';
+const estTxt   = c => c + ' · ' + EST[c].n;
+const estBd    = c => '<span class="bd ' + EST[c].cls + '">' + estTxt(c) + '</span>';
 const cuotasBd = n => '<span class="bd ' + (n === 0 ? 'bd-off' : n === 1 ? 'bd-warn' : 'bd-bad') + '">' + n + '</span>';
 const rfTag    = t => '<span class="rf">' + t + '</span>';
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
@@ -1097,7 +1101,7 @@ function vPanel2(){
   if(isAdmin()) return '';
   const vivas = S.obls.filter(o => !o.eliminada);
   const tot = vivas.length;
-  const dist = EST_ORDER.map(c => [c, vivas.filter(o => o.est === c).length]);
+  const dist = estOrden().map(c => [c, vivas.filter(o => o.est === c).length]);
   const seg = dist.filter(d => d[1]).map(d => '<i class="s-' + d[0] + '" style="width:' + (d[1] / tot * 100) + '%" title="' + esc(EST[d[0]].n) + ': ' + d[1] + '"></i>').join('');
   const leg = dist.map(d => '<span><i class="sw-c s-' + d[0] + '"></i>' + esc(EST[d[0]].n) + ' <b>' + d[1] + '</b></span>').join('');
   const f = S.files[0];
@@ -1158,7 +1162,7 @@ function oblRows(){
 function vObligaciones(){
   const vivas = S.obls.filter(o => !o.eliminada), act = vivas.filter(o => !isClosed(o)), nElim = S.obls.length - vivas.length;
   const kpi = (v, label, n) => '<button type="button" class="kpi" data-act="f-est" data-v="' + v + '" aria-pressed="' + (S.ui.oEst === v) + '"><span class="kn">' + n + '</span><span class="kl">' + label + '</span></button>';
-  const kpis = kpi('', 'Todas', S.obls.length) + EST_ORDER.map(c => kpi(c, c + ' · ' + EST[c].n, vivas.filter(o => o.est === c).length)).join('') +
+  const kpis = kpi('', 'Todas', S.obls.length) + estOrden().map(c => kpi(c, estTxt(c), vivas.filter(o => o.est === c).length)).join('') +
     (nElim ? kpi('ELIM', 'Eliminadas', nElim) : '');
   const g = [
     ['Al día', act.filter(o => o.cuotasAtr === 0).length, 'bd-off'],
@@ -1222,7 +1226,7 @@ function vCicloRes(){
 }
 function vMatriz(){
   const cols = [];
-  EST_ORDER.forEach(c => { cols.push([c, false]); cols.push([c, true]); });
+  estOrden().forEach(c => { cols.push([c, false]); cols.push([c, true]); });
   const head = '<tr><th class="rh">Desde \\ hacia</th>' + cols.map(c => '<th title="' + esc(EST[c[0]].n) + (c[1] ? ' con mora' : ' sin mora') + '">' + c[0] + (c[1] ? ' m' : ' n') + '</th>').join('') + '</tr>';
   const body = cols.map(r => '<tr><th class="rh">' + estBd(r[0]) + ' <span class="mut">' + (r[1] ? 'con mora' : 'sin mora') + '</span></th>' +
     cols.map(c => { const ok = mxOK(r[0], r[1], c[0], c[1]); return '<td class="' + (ok ? 'mS' : 'mN') + '">' + (ok ? 'S' : 'N') + '</td>'; }).join('') + '</tr>').join('');
@@ -1495,7 +1499,6 @@ function vEntidad(){
 /* =====================================================================
    Vista — Homologación de estados (Administrador · RF48) · pantalla 16, nueva
    ===================================================================== */
-const estTxt = c => c + ' · ' + EST[c].n;
 function homTxt(h){
   if(h.acc === 'CIERRE') return '<span class="bd bd-info">Cierre</span><div class="sub">Saldada (02) o Cartera Recuperada (07), según el estado anterior (RF12, RF15)</div>';
   if(h.acc === 'ESTADO') return estBd(h.tu);
@@ -1513,7 +1516,8 @@ function vHomologacion(){
       '<td>' + (u.usado ? '<span class="bd bd-ok">Sí</span>' : '<span class="bd bd-off">No</span>') + (u.conf ? '' : pc()) + '</td>' +
       '<td class="sub">' + esc(u.nota) + '</td></tr>';
   }).join('');
-  const opciones = sel => codigos.map(c => '<option value="' + c + '"' + (c === sel ? ' selected' : '') + (S.estUso[c].usado ? '' : ' disabled') + '>' +
+  /* Los estados de cierre (02, 07) no se ofrecen: se llega a ellos con la opción «Cierre», que decide según el estado anterior. */
+  const opciones = sel => codigos.filter(c => !EST[c].closed).map(c => '<option value="' + c + '"' + (c === sel ? ' selected' : '') + (S.estUso[c].usado ? '' : ' disabled') + '>' +
     estTxt(c) + (S.estUso[c].usado ? '' : ' (no se usa)') + '</option>').join('');
   const filas = S.homol.map(h => {
     if(S.ui.homEdit === h.sac){
@@ -1556,15 +1560,21 @@ function vHomologacion(){
     '<p class="mut">Cada cambio queda en la bitácora (módulo Parametrización) y se aplica desde la próxima actualización mensual.</p>'
   );
 }
+const focoEditar = sac => { const b = $('[data-act=hom-edit][data-sac="' + sac + '"]'); if(b) b.focus(); };
 function homSave(sac){
   const h = S.homol.find(x => x.sac === sac);
   const acc = $('#hm-acc').value, tu = $('#hm-tu').value, conf = $('#hm-conf').checked;
   if(acc === 'ESTADO' && !tu){ showErr($('#hm-err'), 'Selecciona el estado de TransUnion.'); $('#hm-tu').setAttribute('aria-invalid', 'true'); $('#hm-tu').focus(); return; }
-  if(acc === 'ESTADO' && !S.estUso[tu].usado){ showErr($('#hm-err'), 'El estado ' + estTxt(tu) + ' no se usa en CENS: elige un estado en uso.'); $('#hm-tu').focus(); return; }
-  Object.assign(h, {acc:acc, tu:acc === 'ESTADO' ? tu : null, conf:conf, user:cur().nombre, ts:new Date()});
-  S.ui.homEdit = null; S.flashRow = 'hm-' + sac;
-  logAudit('Homologación de estado actualizada', 'Parametrización', 'Estado ' + sac + ' del SAC → ' + (acc === 'CIERRE' ? 'cierre' : tu) + (conf ? ' (confirmado)' : ''));
-  render(); toast('Homologación guardada: el estado ' + sac + ' se reporta como ' + (acc === 'CIERRE' ? 'cierre' : estTxt(tu)) + '.');
+  /* Los estados no usados (04, 08) ya salen deshabilitados en el selector; el backend responde 400 «no_usado» si llegan. */
+  const nuevoTu = acc === 'ESTADO' ? tu : null;
+  S.ui.homEdit = null;
+  if(acc === h.acc && nuevoTu === h.tu && conf === h.conf){ render(); focoEditar(sac); toast('Sin cambios en la homologación del estado ' + sac + '.'); return; }
+  const txt = x => x.acc === 'CIERRE' ? 'cierre' : x.acc ? x.tu : 'sin homologar';
+  const antes = txt(h) + (h.conf ? ' (confirmado)' : '');
+  Object.assign(h, {acc:acc, tu:nuevoTu, conf:conf, user:cur().nombre, ts:new Date()});
+  S.flashRow = 'hm-' + sac;
+  logAudit('Homologación de estado actualizada', 'Parametrización', 'Estado ' + sac + ' del SAC: ' + antes + ' → ' + txt(h) + (conf ? ' (confirmado)' : ''));
+  render(); focoEditar(sac); toast('Homologación guardada: el estado ' + sac + ' se reporta como ' + (acc === 'CIERRE' ? 'cierre' : estTxt(tu)) + '.');
 }
 
 /* =====================================================================
@@ -1597,6 +1607,7 @@ function onEnter(r){
   if(r === 'extraccion' && !S.run) S.lastResult = null;
   if(r === 'ciclo' && !S.cy) S.cyRes = null;
   if(r === 'reporte' && !S.rp) S.rpRes = null;
+  if(r === 'homologacion') S.ui.homEdit = null;
   S.route = r;
 }
 function go(r){
@@ -2376,7 +2387,7 @@ const ACTIONS = {
   'refi-from':     function(el){ modalRefi(el.getAttribute('data-num')); },
   'ent-reset':     function(){ entReset(); },
   'hom-edit':      function(el){ S.ui.homEdit = el.getAttribute('data-sac'); render(); const s = $('#hm-acc'); if(s) s.focus(); },
-  'hom-cancel':    function(){ S.ui.homEdit = null; render(); },
+  'hom-cancel':    function(){ const sac = S.ui.homEdit; S.ui.homEdit = null; render(); focoEditar(sac); },
   'hom-save':      function(el){ homSave(el.getAttribute('data-sac')); },
   'marcar-env':    function(el){ marcarEnvio(el.getAttribute('data-id')); },
   'cargar-res':    function(el){ cargarRes(el.getAttribute('data-id')); },
@@ -2422,7 +2433,8 @@ document.addEventListener('submit', function(e){
 document.addEventListener('change', function(e){
   const t = e.target;
   if(t.id === 'x-group'){ S.ui.xGroup = t.value; const h = $('#x-group-help'); if(h) h.innerHTML = groupHelp(S.groups.find(g => g.id === t.value)); if(t.value){ hideErr($('#x-group-err')); t.removeAttribute('aria-invalid'); } }
-  else if(t.id === 'hm-acc'){ const tu = $('#hm-tu'); tu.disabled = t.value === 'CIERRE'; if(tu.disabled) tu.value = ''; hideErr($('#hm-err')); }
+  else if(t.id === 'hm-acc'){ const tu = $('#hm-tu'); tu.disabled = t.value === 'CIERRE'; if(tu.disabled){ hideErr($('#hm-err')); tu.removeAttribute('aria-invalid'); } }
+  else if(t.id === 'hm-tu'){ if(t.value){ hideErr($('#hm-err')); t.removeAttribute('aria-invalid'); } }
   else if(t.id === 'x-cut'){ S.ui.xCut = t.value; if(t.value){ hideErr($('#x-cut-err')); t.removeAttribute('aria-invalid'); } }
   else if(t.id === 'g-all'){ $$('input[name=gc]:not([disabled])').forEach(i => { i.checked = t.checked; }); updatePick(); }
   else if(t.name === 'gc'){ updatePick(); }

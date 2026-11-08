@@ -35,6 +35,9 @@ export const ENDPOINTS = {
   catalogo: (nombre) => `/catalogos/${nombre}/`, // propuesto (contrato 0.9) · los dos roles
   panelResumen: '/panel/resumen/', // propuesto (contrato 0.9) · solo Analista
   entidad: '/entidad/', // propuesto (contrato 0.9) · GET de los dos roles; PUT solo Administrador
+  estadosTU: '/estados/', // propuesto (contrato 0.9) · solo Administrador (Tabla 4b con su uso en CENS)
+  homologacionEstados: '/homologacion-estados/', // propuesto (contrato 0.9.1) · solo Administrador
+  homologacionEstado: (estadoSac) => `/homologacion-estados/${estadoSac}/`, // propuesto (contrato 0.9.1) · PUT solo Administrador
   ciclos: '/ciclos/', // propuesto (contrato 0.9) · solo Analista (GET historial, POST ejecutar)
   ciclo: (corteId) => `/ciclos/${corteId}/`, // propuesto (contrato 0.9) · solo Analista
   matrizEstados: '/matriz-estados/', // propuesto (contrato 0.9) · solo Analista

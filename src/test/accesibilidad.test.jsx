@@ -109,6 +109,16 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('homologación de estados (pantalla 16), con una fila en edición y su error', async () => {
+    await renderConSesion('/homologacion-estados')
+    await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+    await expectAccesible()
+    await userEvent.click(boton('Editar la homologación del estado B'))
+    await userEvent.click(boton('Guardar'))
+    await screen.findByText('Selecciona el estado de TransUnion.')
+    await expectAccesible()
+  })
+
   test('obligaciones y estados (pantalla 9), con la lista y el detalle abierto', async () => {
     await renderConSesion('/obligaciones', 'jperez@example.com', 'Analista123')
     await screen.findByRole('table', { name: 'Obligaciones y estados' })

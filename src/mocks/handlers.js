@@ -9,6 +9,7 @@ import { conceptosHandlers } from './rutas/conceptos'
 import { entidadHandlers } from './rutas/entidad'
 import { extraccionesHandlers } from './rutas/extracciones'
 import { gruposHandlers } from './rutas/grupos'
+import { homologacionHandlers } from './rutas/homologacion'
 import { obligacionesHandlers } from './rutas/obligaciones'
 import { panelHandlers } from './rutas/panel'
 import { refinanciacionesHandlers } from './rutas/refinanciaciones'
@@ -32,4 +33,5 @@ export const handlers = [
   ...ciclosHandlers,
   ...refinanciacionesHandlers,
   ...reporteHandlers,
+  ...homologacionHandlers,
 ]

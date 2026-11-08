@@ -861,3 +861,55 @@ describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, R
     expect(db.archivos.find((a) => a.id === archivo.id)).toMatchObject({ enviado: true, estado_corte: 'ENVIADO' })
   })
 })
+
+describe('conformidad de los mocks de la homologación de estados (contrato 0.9.1, RF48)', () => {
+  test('GET /estados/ y GET /homologacion-estados/ cumplen el contrato; 403 al Analista y 401', async () => {
+    await verifica('get', '/estados/', 401)
+    await entrar(ANALISTA)
+    await verifica('get', '/estados/', 403)
+    await verifica('get', '/homologacion-estados/', 403)
+    await entrar(ADMIN)
+    const estados = await verifica('get', '/estados/', 200)
+    // Los 10 de la Tabla 4b (Manual, p. 64).
+    expect(estados.map((e) => e.codigo)).toEqual(['01', '02', '03', '04', '06', '07', '08', '10', '11', '12'])
+    expect(estados.find((e) => e.codigo === '12').nombre).toBe('Ley 1564 de 2012 Insolvencia PNNC')
+    expect(estados.filter((e) => e.es_cierre).map((e) => e.codigo)).toEqual(['02', '07'])
+    expect(estados.filter((e) => !e.usado).map((e) => e.codigo)).toEqual(['04', '08'])
+    // La carga inicial del script de la base, por prioridad.
+    const homologaciones = await verifica('get', '/homologacion-estados/', 200)
+    expect(homologaciones.map((h) => [h.estado_sac, h.prioridad, h.accion, h.estado_tu])).toEqual([
+      ['A', 1, 'ESTADO', '01'],
+      ['C', 2, 'ESTADO', '03'],
+      ['D', 3, null, null],
+      ['B', 4, null, null],
+      ['F', 5, 'CIERRE', null],
+    ])
+  })
+
+  test('PUT /homologacion-estados/{estado_sac}/ 200 guarda quién y cuándo; 400 por estado no usado, de cierre o cierre con estado; 404; 403', async () => {
+    const ruta = (sac) => ({ url: `/homologacion-estados/${sac}/` })
+    await entrar(ADMIN)
+    const a = await verifica('put', '/homologacion-estados/{estado_sac}/', 200, { ...ruta('A'), datos: { accion: 'ESTADO', estado_tu: '01', confirmado: true } })
+    expect(a).toMatchObject({ estado_sac: 'A', prioridad: 1, accion: 'ESTADO', estado_tu: '01', confirmado: true, actualizado_por: 'Rosa Martínez' })
+    expect(a.fecha_actualizacion).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'ESTADO', estado_tu: '08' } })).toEqual({
+      estado_tu: ['El estado 08 · Inactivo no se usa en CENS: elige un estado en uso.'],
+    })
+    expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'ESTADO', estado_tu: '02' } })).toEqual({
+      estado_tu: ['Saldada (02) y Castigada recuperada (07) se asignan con «Cierre», según el estado anterior.'],
+    })
+    expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'CIERRE', estado_tu: '07' } })).toEqual({
+      estado_tu: ['Un estado que cierra el crédito no lleva estado de TransUnion.'],
+    })
+    expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'ESTADO', estado_tu: null } })).toEqual({
+      estado_tu: ['Selecciona el estado de TransUnion.'],
+    })
+    const f = await verifica('put', '/homologacion-estados/{estado_sac}/', 200, { ...ruta('D'), datos: { accion: 'CIERRE', estado_tu: null } })
+    expect(f).toMatchObject({ estado_sac: 'D', prioridad: 3, accion: 'CIERRE', estado_tu: null, confirmado: false })
+    expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 404, { ...ruta('Z'), datos: { accion: 'CIERRE', estado_tu: null } })).toEqual({
+      detail: 'Estado del SAC no encontrado.',
+    })
+    await entrar(ANALISTA)
+    await verifica('put', '/homologacion-estados/{estado_sac}/', 403, { ...ruta('A'), datos: { accion: 'ESTADO', estado_tu: '01' } })
+  })
+})

@@ -37,7 +37,7 @@ export const ESTADOS_OBLIGACION = {
   '08': 'Inactivo',
   '10': 'Ley 550',
   '11': 'Ley 1116',
-  '12': 'Ley 1564 de 2012',
+  '12': 'Ley 1564 de 2012 Insolvencia PNNC',
 }
 
 // Estados de cierre: se reportan una sola vez y después la obligación ya no cambia (RF13, RF16).

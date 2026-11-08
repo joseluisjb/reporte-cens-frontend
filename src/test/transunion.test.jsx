@@ -20,7 +20,7 @@ describe('EstadoBadge', () => {
     ['08', 'Inactivo', 'bg-slate-100'],
     ['10', 'Ley 550', 'bg-slate-100'],
     ['11', 'Ley 1116', 'bg-slate-100'],
-    ['12', 'Ley 1564 de 2012', 'bg-slate-100'],
+    ['12', 'Ley 1564 de 2012 Insolvencia PNNC', 'bg-slate-100'],
   ])('%s se muestra como «%s» con el color de la maqueta', (codigo, texto, fondo) => {
     render(<EstadoBadge codigo={codigo} />)
     const insignia = screen.getByText(`${codigo} · ${texto}`)

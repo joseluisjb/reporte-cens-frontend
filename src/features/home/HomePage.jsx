@@ -24,7 +24,7 @@ export default function HomePage() {
         {esAdmin && <TarjetaUsuariosActivos />}
         <TarjetaUltimaExtraccion />
       </div>
-      {!esAdmin && <PanelAnalista />}
+      {user.rol === ROLES.ANALISTA && <PanelAnalista />}
     </>
   )
 }

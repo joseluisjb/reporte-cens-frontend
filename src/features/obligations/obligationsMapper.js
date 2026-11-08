@@ -14,10 +14,9 @@
 // - `estado` y `edadMora` llegan como { codigo, descripcion } (Tabla 4b y Tabla 9 de catalogosTU).
 // - DATO PERSONAL (Habeas Data): `numero_identificacion` llega enmascarado; se vuelve a enmascarar y
 //   NUNCA se entrega completo a las pantallas.
-import { enmascararIdentificacion } from '../../lib/format'
+import { enmascararIdentificacion, soloFecha as fecha } from '../../lib/format'
 import { descripcionEdadMora, descripcionEstado } from '../transunion/catalogosTU'
 
-const fecha = (valor) => (valor ? String(valor).slice(0, 10) : null)
 const conDescripcion = (codigo, describir) => (codigo ? { codigo, descripcion: describir(codigo) } : null)
 const estado = (codigo) => conDescripcion(codigo, descripcionEstado)
 const edadMora = (codigo) => conDescripcion(codigo, descripcionEdadMora)
@@ -105,7 +104,7 @@ export function mapResumenCartera(raw) {
     fechaUltimoCiclo: fecha(raw.fecha_ultimo_ciclo),
     total: raw.total,
     abiertas: raw.abiertas,
-    porEstado: raw.por_estado.map((c) => ({ estado: estado(c.estado_tu), cantidad: c.cantidad })),
+    porEstado: raw.por_estado.map(mapConteoEstado),
     eliminadas: raw.eliminadas,
     porCuotasMora: { alDia: cuotas.al_dia, una: cuotas.una, dosATres: cuotas.dos_a_tres, cuatroOMas: cuotas.cuatro_o_mas },
     financiacionesNuevas: raw.financiaciones_nuevas.map((f) => ({ numeroObligacion: f.numero_obligacion, nombreTitular: f.nombre_titular })),
@@ -125,3 +124,6 @@ export const mapObligacionesFieldErrors = (fe = {}) => ({
   limite: fe.limite,
   desplazamiento: fe.desplazamiento,
 })
+
+// ConteoEstado { estado_tu, cantidad } → { estado: { codigo, descripcion }, cantidad } (pantalla 9 y panel).
+export const mapConteoEstado = (c) => ({ estado: estado(c.estado_tu), cantidad: c.cantidad })

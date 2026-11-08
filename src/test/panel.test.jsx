@@ -84,6 +84,13 @@ describe('panel del Analista', () => {
   })
 })
 
+test('un error sin mensaje muestra un texto en español y «Reintentar» (no queda cargando)', async () => {
+  server.use(http.get(`${API_URL}/panel/resumen/`, () => HttpResponse.json({ distribucion: null })))
+  await renderConSesion('/panel', ...ANALISTA)
+  expect(await screen.findByText('No se pudo cargar el estado de la cartera. Intenta de nuevo en unos minutos.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+})
+
 describe('panel del Administrador', () => {
   test('no ve nada de HU-B ni de HU-C y no pide /panel/resumen/', async () => {
     let pedidos = 0

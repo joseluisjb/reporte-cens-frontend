@@ -14,21 +14,22 @@ const colorEstado = (codigo) => COLOR_ESTADO[codigo] ?? 'bg-estado-otro'
 
 export default function PanelAnalista() {
   const [resumen, setResumen] = useState(null) // null = cargando
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null) // { detalle } o null
   const [intento, setIntento] = useState(0)
 
   useEffect(() => {
     let cancelado = false
     getPanelSummary()
       .then((r) => !cancelado && setResumen(r))
-      .catch((err) => !cancelado && setError(err.message))
+      // Solo se muestra el mensaje de un ApiError (ya en español); cualquier otro error, uno genérico.
+      .catch((err) => !cancelado && setError({ detalle: err?.status && err.message ? err.message : 'Intenta de nuevo en unos minutos.' }))
     return () => {
       cancelado = true
     }
   }, [intento])
 
   const reintentar = useCallback(() => {
-    setError('')
+    setError(null)
     setResumen(null)
     setIntento((n) => n + 1)
   }, [])
@@ -36,7 +37,7 @@ export default function PanelAnalista() {
   if (error) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Alert>No se pudo cargar el estado de la cartera. {error}</Alert>
+        <Alert>No se pudo cargar el estado de la cartera. {error.detalle}</Alert>
         <Button variant="outline" size="sm" onClick={reintentar}>
           Reintentar
         </Button>
@@ -106,7 +107,7 @@ function EstadoCartera({ resumen }) {
           <div
             role="img"
             aria-label={`Distribución de obligaciones por estado: ${descripcion}`}
-            className="mt-4 mb-3 flex h-3.5 overflow-hidden rounded-full bg-line"
+            className="mt-4 mb-3 flex h-3.5 divide-x-2 divide-white overflow-hidden rounded-full bg-line"
           >
             {distribucion
               .filter((d) => d.cantidad > 0)

@@ -3,7 +3,7 @@
 //   Archivo → { id, corteId, fechaCorte ('YYYY-MM-DD'), nombre, tipoReporte, fechaGeneracion (Date),
 //               generadoPor, nRegistros, totalRegistros, nExcluidas, saldoTotal, longitudRegistroTipo2,
 //               aptoEnvio, motivoNoApto, enviado, fechaEnvio ('YYYY-MM-DD'|null), estadoCorte, tieneResultados }
-const fecha = (valor) => (valor ? String(valor).slice(0, 10) : null)
+import { soloFecha as fecha } from '../../lib/format'
 
 export function mapArchivo(raw) {
   return {

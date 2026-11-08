@@ -4,6 +4,9 @@ import { login } from '../features/auth/authService'
 import { getEntity } from '../features/entity/entityService'
 import { getObligation, getObligationsSummary, getObligationTimeline, listObligations } from '../features/obligations/obligationsService'
 import { CATALOGOS, getCatalog } from '../features/transunion/catalogosService'
+import { mapObligacionesFieldErrors } from '../features/obligations/obligationsMapper'
+import { aDetalle, obligacionesIniciales } from '../mocks/datos/obligacionesIteracion2'
+import { exigirSesion } from '../mocks/utilidades'
 
 const comoAnalista = () => login('jperez@example.com', 'Analista123')
 const comoAdmin = () => login('rmartinez@example.com', 'Admin12345')
@@ -143,5 +146,30 @@ describe('catalogosService', () => {
     const modos = await getCatalog(CATALOGOS.modosExtincion)
     expect(modos.find((m) => m.codigo === '16')).toEqual({ codigo: '16', descripcion: 'Refinanciación', confirmado: true })
     expect((await getCatalog(CATALOGOS.tipologiasReclamo)).every((t) => !t.confirmado)).toBe(true)
+  })
+})
+
+describe('reglas de la revisión del PR #43', () => {
+  test('exigirSesion rechaza la forma vieja exigirSesion(true) en vez de dejar la ruta abierta', () => {
+    expect(() => exigirSesion(true)).toThrow(TypeError)
+  })
+
+  test('mapObligacionesFieldErrors lleva los errores de los filtros a los nombres del servicio', () => {
+    expect(mapObligacionesFieldErrors({ estado_tu: 'Estado no válido.', cuotas_mora_min: 'x' })).toMatchObject({ estado: 'Estado no válido.', cuotasMoraMin: 'x' })
+  })
+
+  test('en 04, 08, 10, 11 y 12 «Qué puede pasar» remite a la Matriz, con «por confirmar»', () => {
+    for (const estado of ['04', '08', '10', '11', '12']) {
+      const [regla, ...resto] = aDetalle({ ...obligacionesIniciales()[0], estado }).posibles_transiciones
+      expect(resto).toHaveLength(0)
+      expect(regla).toMatchObject({ rf: 'RF48', por_confirmar: true })
+      expect(regla.texto).toMatch(/Matriz de cambios de estado/)
+    }
+  })
+
+  test('las obligaciones cerradas traen la cuota que tenían antes de cerrar (RF52)', () => {
+    for (const o of obligacionesIniciales().filter((x) => ['02', '07'].includes(x.estado))) {
+      expect(aDetalle(o).valor_cuota_antes_cierre, o.numero).toBeGreaterThan(0)
+    }
   })
 })

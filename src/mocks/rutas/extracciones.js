@@ -20,7 +20,7 @@ import { db, persistir } from '../db'
 import { ahoraBogotaISO, aEntero, error, espera, exigirSesion, hoyLocalISO, idDeRuta, leerCuerpo, url } from '../utilidades'
 
 const sinCorte = () => error(404, { detail: 'Corte no encontrado.' })
-const LIMITE_MAXIMO = 100
+export const LIMITE_MAXIMO = 100
 
 // CorteResumen, con las claves en el orden del contrato. El grupo sale de la FOTO guardada en el corte.
 function aResumen(corte) {

@@ -22,7 +22,10 @@ export function enviarCorreoSimulado({ para, asunto, cuerpo }) {
 //   exigirSesion()               → los dos roles
 //   exigirSesion(SOLO_ADMIN)     → solo el Administrador
 //   exigirSesion(SOLO_ANALISTA)  → solo el Analista de Cartera (HU-B y HU-C)
-export function exigirSesion({ rol } = {}) {
+export function exigirSesion(opciones = {}) {
+  // La forma vieja `exigirSesion(true)` dejaría la ruta abierta: se rechaza en vez de fallar abierta.
+  if (typeof opciones !== 'object' || opciones === null) throw new TypeError('exigirSesion recibe { rol }: usa SOLO_ADMIN o SOLO_ANALISTA.')
+  const { rol } = opciones
   const usuario = usuarioActual()
   if (!usuario) return { respuesta: sinSesion() }
   if (rol && ![rol].flat().includes(usuario.rol)) return { respuesta: sinPermiso() }

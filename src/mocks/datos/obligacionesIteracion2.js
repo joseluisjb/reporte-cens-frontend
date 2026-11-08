@@ -8,6 +8,7 @@
 // hace el `recalc` del mockup (RF7, RF19, RF49). Los textos de «Qué puede pasar» siguen a `modalObl`
 // del mockup. Los nombres, números y valores son inventados.
 import { descripcionEstado, edadMoraDesdeDias, esEstadoDeCierre } from '../../features/transunion/catalogosTU'
+import { formatearFechaISO } from '../../lib/format'
 
 export const FECHA_ULTIMO_CICLO = '2026-09-30'
 
@@ -59,7 +60,7 @@ export const obligacionesIniciales = () => [
     pagos: [{ fecha_corte: '2026-09-30', valor: 170000, aplicado_a: 'Cuotas del 2026-08-12 y del 2026-09-12 (pago total)', nota: null }],
     eventos: eventos(
       ['2025-11-30', '01', 'Primer reporte en Vigente (01), al día'],
-      ['2026-08-31', '01', 'Una cuota sin pagar: 20 días de mora'],
+      ['2026-08-31', '01', 'Una cuota sin pagar: 19 días de mora'],
       ['2026-09-12', '02', 'Pago total: pasa a Saldada (02). Fecha de pago 12/09/2026, modo de extinción 01, tipo de pago 01'],
       ['2026-09-30', '02', 'Se reporta como Saldada en este corte, una sola vez'],
     ),
@@ -117,7 +118,7 @@ export const obligacionesIniciales = () => [
     ),
   }),
   obligacion({
-    id: 9, numero: '2241-3302', titular: 'Panadería El Trigal', concepto: 30, estado: '07', saldo: 0, cuota: 0,
+    id: 9, numero: '2241-3302', titular: 'Panadería El Trigal', concepto: 30, estado: '07', saldo: 0, cuota: 0, cuota_antes_cierre: 60000,
     valor_inicial: 1200000, ingreso: '2025-02-28',
     cierre: { fecha_corte: '2026-08-31', fecha_pago: '2026-08-20', modo_extincion: VOLUNTARIO, tipo_pago: VOLUNTARIO },
     eventos: eventos(
@@ -164,7 +165,6 @@ export const FINANCIACIONES_NUEVAS = [
 const ORDEN_ESTADOS = ['01', '03', '06', '02', '07', '04', '08', '10', '11', '12']
 
 const diasEntre = (desde, hasta) => Math.round((Date.parse(hasta) - Date.parse(desde)) / 86400000)
-const fechaCO = (iso) => iso.split('-').reverse().join('/')
 const estadoTexto = (codigo) => `${codigo} · ${descripcionEstado(codigo)}`
 
 // Mora al corte: cuotas vencidas sin pagar, de la más antigua a la más reciente (RF7, RF17, RF19, RF49).
@@ -187,7 +187,7 @@ function posiblesTransiciones(o) {
   const regla = (rf, texto, porConfirmar = false) => ({ rf, texto, por_confirmar: porConfirmar })
   if (o.eliminada) return [regla('RF50', 'Eliminada en TransUnion: no se vuelve a reportar y su número no se reutiliza')]
   if (esEstadoDeCierre(o.estado)) {
-    const corte = fechaCO(o.cierre?.fecha_corte ?? o.ingreso)
+    const corte = formatearFechaISO(o.cierre?.fecha_corte ?? o.ingreso)
     return [regla(o.estado === '02' ? 'RF13' : 'RF16', `Se reporta una sola vez, en el corte en que cerró (${corte}), y después ya no`)]
   }
   if (o.estado === '01') {
@@ -197,6 +197,10 @@ function posiblesTransiciones(o) {
       regla('RF45', `Castigo contable de CENS y con mora → ${estadoTexto('06')}`),
       regla('RF18', `Refinanciación → ${estadoTexto('02')} con modo de extinción 16`),
     ]
+  }
+  // 04, 08, 10, 11 y 12: el mockup no les da reglas propias; el cambio lo decide la Matriz (p. 40).
+  if (o.estado !== '03' && o.estado !== '06') {
+    return [regla('RF48', `Desde ${estadoTexto(o.estado)}, cada cambio de estado se valida con la Matriz de cambios de estado (p. 40)`, true)]
   }
   return [
     regla('RF15', `Pago total → ${estadoTexto('07')}`),
@@ -209,8 +213,10 @@ function posiblesTransiciones(o) {
 // Identificación ficticia ya enmascarada, como la entrega el backend.
 const identificacion = (o) => `******${String(o.id).padStart(4, '0')}`
 
-export function aResumen(o) {
-  const mora = moraAlCorte(o)
+export const aResumen = (o) => resumenConMora(o, moraAlCorte(o))
+
+// Con la mora ya calculada (aDetalle la reutiliza para no repetir el cálculo).
+function resumenConMora(o, mora) {
   return {
     obligacion_id: o.id,
     numero_obligacion: o.numero,
@@ -234,7 +240,7 @@ export function aResumen(o) {
 export function aDetalle(o) {
   const mora = moraAlCorte(o)
   return {
-    ...aResumen(o),
+    ...resumenConMora(o, mora),
     motivo_revision: o.motivo_revision,
     concepto: { codigo: o.concepto, descripcion: CONCEPTOS[o.concepto] ?? null },
     fecha_ingreso: o.ingreso,

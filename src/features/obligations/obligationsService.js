@@ -1,13 +1,11 @@
 // Obligaciones de la Iteración 2 (pantalla 9, RF10–RF19, RF45–RF50). SOLO Analista de Cartera: el
 // Administrador recibe 403. Propuesto en el contrato 0.9; hoy responden los mocks (el backend no lo tiene).
-// Los errores llegan como ApiError (`message` en español y `fieldErrors`).
+// Los errores llegan como ApiError (`message` en español y `fieldErrors`; usa `mapObligacionesFieldErrors`).
 import { api, ENDPOINTS } from '../../lib/api'
-import { mapPagina } from '../../lib/api/pagina'
+import { hayValor, mapPagina } from '../../lib/api/pagina'
 import { mapEventoObligacion, mapObligacionDetalle, mapObligacionResumen, mapResumenCartera } from './obligationsMapper'
 
 export const LIMITE_OBLIGACIONES = 20
-
-const hayValor = (v) => v !== undefined && v !== null && String(v).trim() !== ''
 
 // Una página de obligaciones → { items, total }, ordenadas por número de obligación.
 //   estado: código de la Tabla 4b · eliminadas: true = solo las eliminadas en TransUnion (RF50)

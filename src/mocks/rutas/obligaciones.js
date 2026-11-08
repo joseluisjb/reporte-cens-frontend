@@ -7,8 +7,8 @@ import { ENDPOINTS } from '../../lib/api/endpoints'
 import { aDetalle, aResumen, lineaTiempo, resumenCartera } from '../datos/obligacionesIteracion2'
 import { db } from '../db'
 import { aEntero, error, espera, exigirSesion, idDeRuta, SOLO_ANALISTA, url } from '../utilidades'
+import { LIMITE_MAXIMO } from './extracciones'
 
-const LIMITE_MAXIMO = 100
 const MSG = {
   estado: 'Estado no válido. Usa un código de la Tabla 4b.',
   eliminada: 'Usa true o false.',
@@ -20,6 +20,8 @@ const MSG = {
 const NO_ENCONTRADA = { detail: 'Obligación no encontrada.' }
 
 // Filtros y paginación de `GET /obligaciones/` → { filtros } o { errores } ({ campo: ['mensaje'] }, como DRF).
+// A diferencia de la paginación de extracción (`{ detail }`), el contrato 0.9 define este 400 como
+// ErrorCampos, también para `limite` y `desplazamiento` (anotado en docs/PENDIENTES_BACKEND.md §5).
 // Un filtro vacío (`?q=`) se ignora, igual que si no viniera.
 export function leerFiltrosObligaciones(params) {
   const valor = (nombre) => (params.get(nombre) ?? '').trim()

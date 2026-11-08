@@ -115,3 +115,13 @@ export function mapResumenCartera(raw) {
 export function mapEventoObligacion(raw) {
   return { fecha: fecha(raw.fecha), estado: estado(raw.estado_tu), edadMora: edadMora(raw.edad_mora), descripcion: raw.descripcion }
 }
+
+// Errores de los filtros de `GET /obligaciones/` → nombres que usa `listObligations`.
+export const mapObligacionesFieldErrors = (fe = {}) => ({
+  estado: fe.estado_tu,
+  eliminadas: fe.eliminada,
+  cuotasMoraMin: fe.cuotas_mora_min,
+  q: fe.q,
+  limite: fe.limite,
+  desplazamiento: fe.desplazamiento,
+})

@@ -149,10 +149,11 @@ export const reporteHandlers = [
     const formulario = await request.formData().catch(() => null)
     const adjuntos = (formulario?.getAll('archivos') ?? []).filter((f) => typeof f === 'object' && 'name' in f)
     const cargados = await Promise.all(adjuntos.map(async (f) => ({ nombre: f.name, texto: await f.text() })))
-    const delCorte = new Map(obligacionesDelCorte(archivo.fecha_corte).map((o) => [o.numero_obligacion, o.obligacion_id]))
+    // Por número en todas las obligaciones: el norep trae justo las que no entraron en el archivo.
+    const porNumero = new Map(db.obligaciones.map((o) => [o.numero, o.id]))
     let leidos
     try {
-      leidos = leerResultados(cargados, { archivo, obligacionId: (numero) => delCorte.get(numero) ?? null })
+      leidos = leerResultados(cargados, { archivo, obligacionId: (numero) => porNumero.get(numero) ?? null })
     } catch (err) {
       if (err instanceof ArchivoRechazado) return error(422, err.cuerpo)
       throw err

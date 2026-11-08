@@ -53,8 +53,10 @@ const gruposIniciales = () => [
 // del grupo al generar el corte (renombrar el grupo después no reescribe el historial). Las obligaciones
 // no se guardan: se generan al pedirlas (mocks/datos/obligaciones.js). `fecha_envio` y `observacion`
 // no salen en el resumen del corte (CorteResumen).
+// El corte del 31/08 quedó ENVIADO_CON_INCONSISTENCIAS: sus resultados del cargue traen una correctiva
+// (mocks/datos/resultadosCargue.js, ejemplo del contrato 0.9).
 const cortesIniciales = () => [
-  { id: 1, fecha_corte: '2026-08-31', fecha_ejecucion: '2026-09-01T08:05:00-05:00', grupo_id: 1, grupo_nombre: 'Energía financiada', estado: 'ENVIADO', fecha_envio: '2026-09-03', ejecutada_por: 'Juan Pérez', observacion: null },
+  { id: 1, fecha_corte: '2026-08-31', fecha_ejecucion: '2026-09-01T08:05:00-05:00', grupo_id: 1, grupo_nombre: 'Energía financiada', estado: 'ENVIADO_CON_INCONSISTENCIAS', fecha_envio: '2026-09-03', ejecutada_por: 'Juan Pérez', observacion: null },
   { id: 2, fecha_corte: '2026-09-30', fecha_ejecucion: '2026-10-01T07:40:00-05:00', grupo_id: 2, grupo_nombre: 'Solo cuota de energía', estado: 'BORRADOR', fecha_envio: null, ejecutada_por: 'Juan Pérez', observacion: null },
 ]
 

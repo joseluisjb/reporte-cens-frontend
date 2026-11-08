@@ -748,6 +748,7 @@ describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, R
   const sinResultados = () => {
     delete db.resultadosCargue[1]
     db.archivos.find((a) => a.id === 1).tiene_resultados = false
+    db.cortes.find((c) => c.id === 1).estado = 'ENVIADO'
   }
 
   test('GET /archivos/{id}/resultados/ 200 cumple ResultadosCargue; 404 sin resultados; 403 al Administrador y 401', async () => {
@@ -766,27 +767,34 @@ describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, R
     await entrar(ANALISTA)
     const r = await verifica('post', '/archivos/{id}/resultados/', 201, {
       url: '/archivos/1/resultados/',
-      datos: adjuntar(detalleCorrectivas('2026-08-31', [{ numero: '2258-7731', codigo: '707', descripcion: 'EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA' }]), estadisticos('2026-08-31')),
+      datos: adjuntar(detalleCorrectivas('2026-08-31', [{ numero: '2258-7731', codigo: '707', descripcion: 'VALOR DE MORA ES REQUERIDO' }]), estadisticos('2026-08-31')),
     })
     expect(r).toMatchObject({ estado_corte: 'ENVIADO_CON_INCONSISTENCIAS', recibidos: 10, cargados: 9, con_inconsistencias: 1, no_reportadas: 0, cargado_por: 'Juan Pérez' })
     expect(r.archivos_cargados).toEqual([
       { nombre_archivo: 'Detalle_Inco_CSR_001_123_Correctivas_20260831.txt', tipo_archivo: 'CORRECTIVAS', n_filas: 1 },
       { nombre_archivo: 'Esta_Inco_CSR_001_123_Correctivas_20260831.txt', tipo_archivo: 'ESTADISTICOS', n_filas: 1 },
     ])
-    expect(r.inconsistencias).toEqual([{ obligacion_id: 2, numero_obligacion: '2258-7731', tipo: 'CORRECTIVA', codigo: '707', descripcion: 'EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA' }])
+    expect(r.inconsistencias).toEqual([{ obligacion_id: 2, numero_obligacion: '2258-7731', tipo: 'CORRECTIVA', codigo: '707', descripcion: 'VALOR DE MORA ES REQUERIDO' }])
     expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO_CON_INCONSISTENCIAS')
     expect(db.archivos.find((a) => a.id === 1)).toMatchObject({ tiene_resultados: true, estado_corte: 'ENVIADO_CON_INCONSISTENCIAS' })
+    // Volver a cargar reemplaza los resultados anteriores (y el estado del corte).
+    const otra = await verifica('post', '/archivos/{id}/resultados/', 201, { url: '/archivos/1/resultados/', datos: adjuntar(estadisticos('2026-08-31', 2)) })
+    expect(otra).toMatchObject({ estado_corte: 'ENVIADO', inconsistencias: [], archivos_cargados: [{ tipo_archivo: 'ESTADISTICOS', n_filas: 2 }] })
+    expect((await verifica('get', '/archivos/{id}/resultados/', 200, { url: '/archivos/1/resultados/' })).inconsistencias).toEqual([])
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
   })
 
   test('POST sin correctivas deja el corte ENVIADO y el norep marca la obligación como no reportada', async () => {
     sinResultados()
     db.cortes.find((c) => c.id === 1).estado = 'ENVIADO_CON_INCONSISTENCIAS'
     await entrar(ANALISTA)
-    const r = await verifica('post', '/archivos/{id}/resultados/', 201, { url: '/archivos/1/resultados/', datos: adjuntar(noReportados('2026-08-31', ['2260-5543', '9999-0000'])) })
-    expect(r).toMatchObject({ estado_corte: 'ENVIADO', cargados: 10, con_inconsistencias: 2, no_reportadas: 2 })
+    const r = await verifica('post', '/archivos/{id}/resultados/', 201, { url: '/archivos/1/resultados/', datos: adjuntar(noReportados('2026-08-31', ['2260-5543', '2263-9004', '9999-0000'])) })
+    expect(r).toMatchObject({ estado_corte: 'ENVIADO', cargados: 10, con_inconsistencias: 3, no_reportadas: 3 })
     expect(r.inconsistencias).toEqual([
-      { obligacion_id: 4, numero_obligacion: '2260-5543', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación activa no reportada en el corte' },
-      { obligacion_id: null, numero_obligacion: '9999-0000', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación activa no reportada en el corte' },
+      { obligacion_id: 4, numero_obligacion: '2260-5543', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación no reportada' },
+      // Una obligación que no entró en el archivo también se enlaza: el norep trae justo esas.
+      { obligacion_id: 10, numero_obligacion: '2263-9004', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación no reportada' },
+      { obligacion_id: null, numero_obligacion: '9999-0000', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación no reportada' },
     ])
     expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
   })
@@ -803,6 +811,9 @@ describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, R
       detail: 'El archivo Detalle_Inco_CSR_001_123_Correctivas_20260831.txt no tiene la estructura esperada (línea 2: no trae el registro tipo 2 con el código, la descripción y el tipo de la inconsistencia).',
       code: 'estructura_invalida',
     })
+    // El número de línea cuenta las líneas vacías.
+    const conLineaVacia = new File(['LINEA|TIPO ID\r\n\r\n000000000001|01'], 'Detalle_Inco_CSR_001_123_Correctivas_20260831.txt')
+    expect((await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(conLineaVacia) })).detail).toMatch(/\(línea 3: no trae el registro tipo 2/)
     const conOtroNombre = new File(['A|B'], 'resultados.txt')
     expect((await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(conOtroNombre) })).code).toBe('estructura_invalida')
     expect(db.resultadosCargue[1]).toBeUndefined()

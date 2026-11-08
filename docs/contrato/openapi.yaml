@@ -2530,8 +2530,8 @@ paths:
                 con_inconsistencias: 2
                 no_reportadas: 1
                 inconsistencias:
-                  - { obligacion_id: 2, numero_obligacion: 2258-7731, tipo: CORRECTIVA, codigo: '707', descripcion: 'Edad de mora mayor a 00 sin valor de mora' }
-                  - { obligacion_id: 4, numero_obligacion: 2260-5543, tipo: NO_REPORTADA, codigo: R, descripcion: 'Obligación activa no reportada en el corte' }
+                  - { obligacion_id: 2, numero_obligacion: 2258-7731, tipo: CORRECTIVA, codigo: '707', descripcion: 'VALOR DE MORA ES REQUERIDO' }
+                  - { obligacion_id: 4, numero_obligacion: 2260-5543, tipo: NO_REPORTADA, codigo: R, descripcion: 'Obligación no reportada' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -2601,7 +2601,7 @@ paths:
                     con_inconsistencias: 1
                     no_reportadas: 0
                     inconsistencias:
-                      - { obligacion_id: 2, numero_obligacion: 2258-7731, tipo: CORRECTIVA, codigo: '707', descripcion: 'Edad de mora mayor a 00 sin valor de mora' }
+                      - { obligacion_id: 2, numero_obligacion: 2258-7731, tipo: CORRECTIVA, codigo: '707', descripcion: 'VALOR DE MORA ES REQUERIDO' }
                 sin_correctivas:
                   summary: Sin correctivas, el corte queda ENVIADO
                   value:

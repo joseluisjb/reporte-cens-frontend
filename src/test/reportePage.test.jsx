@@ -248,6 +248,7 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
   const sinResultados = () => {
     delete db.resultadosCargue[1]
     db.archivos.find((a) => a.id === 1).tiene_resultados = false
+    db.cortes.find((c) => c.id === 1).estado = 'ENVIADO'
   }
   const cargar = async (...archivos) => {
     await userEvent.click(boton('Cargar los resultados del archivo SSR00112320260831'))
@@ -261,6 +262,8 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     await abrir()
     const tabla = screen.getByRole('table', { name: 'Archivos generados' })
     expect(within(tabla).getByRole('button', { name: 'Ver los resultados del archivo SSR00112320260831' })).toBeInTheDocument()
+    // Con resultados también se puede volver a cargar (los archivos de TransUnion que lleguen después).
+    expect(within(tabla).getByRole('button', { name: 'Cargar los resultados del archivo SSR00112320260831' })).toBeInTheDocument()
     expect(within(tabla).getByText('SSRXXXXXX20260930').closest('tr')).toHaveTextContent('Requiere los datos de la entidad')
     expect(within(tabla).queryByRole('button', { name: /Registrar el envío/ })).not.toBeInTheDocument()
   })
@@ -270,7 +273,14 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     await abrir()
     await validarYGenerar()
     await screen.findByText('Archivo generado: SSR00112320260930.')
+    // La versión anterior (no apta) del mismo corte ya no se envía: no pide los datos de la entidad.
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Archivos generados' })).getAllByRole('row')).toHaveLength(4))
+    expect(screen.getByText('SSRXXXXXX20260930').closest('tr')).not.toHaveTextContent('Requiere los datos de la entidad')
     await userEvent.click(await screen.findByRole('button', { name: 'Registrar el envío del archivo SSR00112320260930' }))
+    // Es irreversible: pide la fecha (hoy, por defecto) y la confirmación.
+    const dialogo = await screen.findByRole('dialog', { name: 'Registrar envío a TransUnion' })
+    expect(within(dialogo).getByText('30/09/2026')).toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar envío' }))
     expect(await screen.findByText('Envío registrado. Cuando TransUnion responda, carga aquí sus archivos de resultados.')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Cargar los resultados del archivo SSR00112320260930' })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · ENVIADO'))
@@ -280,14 +290,14 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
   test('las correctivas se asocian a la obligación y el corte queda ENVIADO_CON_INCONSISTENCIAS', async () => {
     sinResultados()
     await abrir()
-    await cargar(detalleCorrectivas('2026-08-31', [{ numero: '2258-7731', codigo: '707', descripcion: 'EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA' }]))
+    await cargar(detalleCorrectivas('2026-08-31', [{ numero: '2258-7731', codigo: '707', descripcion: 'VALOR DE MORA ES REQUERIDO' }]))
     expect(await screen.findByText('Resultados cargados: 9 registros cargados, 1 inconsistencia.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
     expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos9Cargados1Con inconsistencias0No reportadas (R)')
     const fila = within(vista).getByRole('link', { name: '2258-7731' }).closest('tr')
     expect(within(vista).getByRole('link', { name: '2258-7731' })).toHaveAttribute('href', '/obligaciones?obligacion=2')
-    expect(fila).toHaveTextContent('Correctiva707 · EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA')
+    expect(fila).toHaveTextContent('Correctiva707 · VALOR DE MORA ES REQUERIDO')
     expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO_CON_INCONSISTENCIAS')
     expect(await screen.findByRole('button', { name: 'Ver los resultados del archivo SSR00112320260831' })).toBeInTheDocument()
   })
@@ -299,7 +309,7 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     await cargar(estadisticos('2026-08-31'), noReportados('2026-08-31', ['2260-5543']))
     const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
     expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos10Cargados1Con inconsistencias1No reportadas (R)')
-    expect(within(vista).getByRole('link', { name: '2260-5543' }).closest('tr')).toHaveTextContent('No reportadaR · Obligación activa no reportada en el corte')
+    expect(within(vista).getByRole('link', { name: '2260-5543' }).closest('tr')).toHaveTextContent('No reportadaR · Obligación no reportada')
     expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
   })
 
@@ -323,6 +333,27 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     await userEvent.click(within(modal).getByRole('button', { name: 'Cargar resultados' }))
     expect(within(modal).getByRole('alert')).toHaveTextContent('Selecciona al menos un archivo de resultados.')
     expect(within(modal).getByLabelText('Archivos de resultado')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  test('mientras se cargan los resultados no se puede cancelar', async () => {
+    sinResultados()
+    let soltar
+    const pendiente = new Promise((r) => (soltar = r))
+    let llego = false
+    server.use(
+      http.post(`${API_URL}/archivos/1/resultados/`, async () => {
+        llego = true
+        await pendiente
+      }),
+    )
+    await abrir()
+    const modal = await cargar(estadisticos('2026-08-31'))
+    await waitFor(() => expect(llego).toBe(true))
+    expect(within(modal).getByRole('button', { name: 'Cancelar' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('dialog', { name: 'Cargar resultados de TransUnion' })).toBeInTheDocument()
+    soltar()
+    expect(await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })).toBeInTheDocument()
   })
 
   test('ver resultados muestra el cargue guardado y, si falla, el error con «Reintentar»', async () => {

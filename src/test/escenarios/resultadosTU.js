@@ -5,8 +5,9 @@ const ENTIDAD = '001_123'
 const sinGuiones = (fecha) => fecha.replaceAll('-', '')
 const archivo = (nombre, lineas) => new File([lineas.join('\r\n') + '\r\n'], nombre, { type: 'text/plain' })
 
-// Registro tipo 2 tal como lo envió la entidad: el número de obligación va en las posiciones 2 a 21.
-const registro2 = (numero) => `2${numero.padStart(20)}${'0'.repeat(30)}`
+// Registro tipo 2 tal como lo envió la entidad (Manual, Tabla 2, p. 46): tipo de registro en la posición 1 y
+// el número de la obligación en las posiciones 89 a 108, alineado a la derecha. El resto va en blanco.
+const registro2 = (numero) => `2${' '.repeat(87)}${numero.padStart(20)}`.padEnd(930)
 
 const TITULOS_DETALLE = 'LINEA|TIPO ID|NUMERO ID|ESTADO|NOMBRE|EDAD MORA|REGISTRO TIPO 2|CODIGO 1|DESCRIPCION 1|TIPO 1'
 const lineaDetalle = (n, { numero, codigo, descripcion, tipo }) => `${String(n).padStart(12, '0')}|01|000000000001234|01|  |01|${registro2(numero)}|${codigo}|${descripcion}|${tipo}`

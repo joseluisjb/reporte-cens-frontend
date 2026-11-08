@@ -11,7 +11,8 @@ import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaISOLarga, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { getEntity } from '../entity/entityService'
-import { getLatestCut, registerSubmission, validateCut } from '../extraction/extractionService'
+import { getLatestCut, validateCut } from '../extraction/extractionService'
+import SubmissionModal from '../extraction/SubmissionModal'
 import CargueResultsView from './CargueResultsView'
 import FilesTable from './FilesTable'
 import GeneratedFileCard from './GeneratedFileCard'
@@ -46,7 +47,7 @@ export default function ReportPage() {
   const [errorArchivos, setErrorArchivos] = useState('')
   const [intentoArchivos, setIntentoArchivos] = useState(0)
   const [descargando, setDescargando] = useState(() => new Set()) // ids de los archivos que se están descargando
-  const [registrandoId, setRegistrandoId] = useState(null)
+  const [archivoAEnviar, setArchivoAEnviar] = useState(null) // archivo del diálogo «Registrar envío»
   const [archivoACargar, setArchivoACargar] = useState(null) // archivo del modal «Cargar resultados»
   const [vista, setVista] = useState(null) // resultados a la vista: { archivo, resultados } | { archivo, error } | { archivo } (cargando)
 
@@ -139,33 +140,30 @@ export default function ReportPage() {
     [toast],
   )
 
-  // Solo el archivo más reciente de un corte VALIDADO se puede enviar (la lista llega del más reciente al más antiguo).
-  const enviables = useMemo(() => {
-    const vistos = new Set()
+  // El archivo más reciente de cada corte (la lista llega del más reciente al más antiguo).
+  const ultimos = useMemo(() => {
+    const cortes = new Set()
     const ids = new Set()
     for (const a of archivos ?? []) {
-      if (!vistos.has(a.corteId) && a.estadoCorte === 'VALIDADO') ids.add(a.id)
-      vistos.add(a.corteId)
+      if (!cortes.has(a.corteId)) ids.add(a.id)
+      cortes.add(a.corteId)
     }
     return ids
   }, [archivos])
-
-  const registrarEnvio = useCallback(
-    async (archivo) => {
-      setRegistrandoId(archivo.id)
-      try {
-        await registerSubmission(archivo.corteId)
-        toast.success('Envío registrado. Cuando TransUnion responda, carga aquí sus archivos de resultados.')
-        setIntentoArchivos((n) => n + 1)
-        setIntento((n) => n + 1)
-      } catch (err) {
-        toast.error(`No se pudo registrar el envío. ${mensajeDeError(err)}`)
-      } finally {
-        setRegistrandoId(null)
-      }
-    },
-    [toast],
+  // Solo se envía el más reciente del corte de la página, y con ese corte VALIDADO (lo dice el corte, no la
+  // copia de su estado que trae cada archivo).
+  const enviables = useMemo(
+    () => new Set((archivos ?? []).filter((a) => ultimos.has(a.id) && corte?.esValidado && a.corteId === corte.id).map((a) => a.id)),
+    [archivos, ultimos, corte],
   )
+
+  // Registrar el envío es irreversible: pide la fecha y la confirmación con el mismo diálogo de la Extracción.
+  const enviado = () => {
+    setArchivoAEnviar(null)
+    toast.success('Envío registrado. Cuando TransUnion responda, carga aquí sus archivos de resultados.')
+    setIntentoArchivos((n) => n + 1)
+    setIntento((n) => n + 1)
+  }
 
   const verResultados = useCallback((archivo) => {
     setVista({ archivo })
@@ -254,14 +252,17 @@ export default function ReportPage() {
         }}
         onDescargar={descargar}
         descargando={descargando}
+        ultimos={ultimos}
         enviables={enviables}
-        registrandoId={registrandoId}
-        onRegistrarEnvio={registrarEnvio}
+        onRegistrarEnvio={setArchivoAEnviar}
         onCargarResultados={setArchivoACargar}
         onVerResultados={verResultados}
       />
       {vista && <Resultados vista={vista} onReintentar={() => verResultados(vista.archivo)} />}
       <UploadResultsModal archivo={archivoACargar} onCerrar={() => setArchivoACargar(null)} onCargados={cargados} />
+      {archivoAEnviar && (
+        <SubmissionModal corte={{ id: archivoAEnviar.corteId, fechaCorte: archivoAEnviar.fechaCorte }} onClose={() => setArchivoAEnviar(null)} onEnviado={enviado} />
+      )}
     </>
   )
 }

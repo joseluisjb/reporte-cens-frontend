@@ -29,6 +29,8 @@ afterEach(() => vi.useRealTimers())
 
 describe('listar y consultar cortes', () => {
   test('la lista va del más reciente al más antiguo por fecha de ejecución y mapea el corte', async () => {
+    // Escenario de la Iteración 1: el corte del 31/08 enviado sin resultados del cargue (RF54).
+    db.cortes.find((c) => c.id === 1).estado = 'ENVIADO'
     await entrarAnalista()
     const cortes = await listCuts()
     expect(ids(cortes)).toEqual([2, 1])

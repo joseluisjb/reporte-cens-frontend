@@ -26,7 +26,8 @@ const PATRONES = [
 const TIPO_INCONSISTENCIA = { CORRECTIVAS: 'CORRECTIVA', ALERTAS: 'INFORMATIVA', ESPECIALES: 'INFORMATIVA', DETALLE_953: 'INFORMATIVA' }
 const CAMPOS_IDENTIFICACION = 6 // número de línea, tipo y número de identificación, estado, nombre y edad de mora
 const GRUPOS_MAXIMOS = 5 // hasta cinco inconsistencias por línea
-const NO_REPORTADA = { codigo: 'R', descripcion: 'Obligación activa no reportada en el corte' }
+// R es la convención de TransUnion para las no reportadas (p. 41); el texto sale de la p. 43.
+const NO_REPORTADA = { codigo: 'R', descripcion: 'Obligación no reportada' }
 
 export class ArchivoRechazado extends Error {
   constructor(detail, code) {
@@ -50,24 +51,30 @@ function reconocer(nombre) {
 }
 
 // Filas con datos: el archivo va delimitado por pipes y la primera línea trae los títulos de los campos.
+// `numero` es la línea en el archivo (contando las vacías), para que el motivo de un 422 apunte a la real.
 function filasDe(nombre, texto) {
-  const lineas = texto.split(/\r?\n/).filter((l) => l.trim() !== '')
+  const lineas = texto
+    .split(/\r?\n/)
+    .map((linea, i) => ({ numero: i + 1, linea }))
+    .filter(({ linea }) => linea.trim() !== '')
   if (!lineas.length) throw sinEstructura(nombre, 'está vacío')
-  const sinPipes = lineas.findIndex((l) => !l.includes('|'))
-  if (sinPipes !== -1) throw sinEstructura(nombre, `línea ${sinPipes + 1}: no está delimitada por |`)
-  return lineas.slice(1).map((linea, i) => ({ numero: i + 2, campos: linea.split('|') }))
+  const sinPipes = lineas.find(({ linea }) => !linea.includes('|'))
+  if (sinPipes) throw sinEstructura(nombre, `línea ${sinPipes.numero}: no está delimitada por |`)
+  return lineas.slice(1).map(({ numero, linea }) => ({ numero, campos: linea.split('|') }))
 }
 
 // Detalle de inconsistencias: después de los campos de identificación viene el registro tipo 2 que envió la
-// entidad (empieza por 2 y trae el número de obligación en las posiciones 2 a 21), seguido de grupos de
-// código, descripción y tipo.
+// entidad, seguido de grupos de código, descripción y tipo. En el registro tipo 2 (Manual, Tabla 2, p. 46)
+// el tipo de registro es la posición 1 y el número de la obligación, el campo 7: posiciones 89 a 108.
+const INICIO_NUMERO_OBLIGACION = 88
+const FIN_NUMERO_OBLIGACION = 108
 function inconsistenciasDelDetalle(nombre, filas, tipo) {
   return filas.flatMap(({ numero, campos }) => {
-    const r2 = campos.findIndex((c, i) => i >= CAMPOS_IDENTIFICACION && /^2.{20}/.test(c))
+    const r2 = campos.findIndex((c, i) => i >= CAMPOS_IDENTIFICACION && c.startsWith('2') && c.length >= FIN_NUMERO_OBLIGACION)
     if (r2 === -1 || campos.length < r2 + 4) {
       throw sinEstructura(nombre, `línea ${numero}: no trae el registro tipo 2 con el código, la descripción y el tipo de la inconsistencia`)
     }
-    const numeroObligacion = campos[r2].slice(1, 21).trim()
+    const numeroObligacion = campos[r2].slice(INICIO_NUMERO_OBLIGACION, FIN_NUMERO_OBLIGACION).trim()
     const grupos = []
     for (let g = 0; g < GRUPOS_MAXIMOS; g++) {
       const codigo = campos[r2 + 1 + g * 3]?.trim()
@@ -122,7 +129,7 @@ export function conteos(archivo, inconsistencias) {
 // `GET /archivos/{id}/resultados/` del contrato 0.9 (con los nombres del Manual).
 export function resultadosIniciales() {
   const inconsistencias = [
-    { obligacion_id: 2, numero_obligacion: '2258-7731', tipo: 'CORRECTIVA', codigo: '707', descripcion: 'Edad de mora mayor a 00 sin valor de mora' },
+    { obligacion_id: 2, numero_obligacion: '2258-7731', tipo: 'CORRECTIVA', codigo: '707', descripcion: 'VALOR DE MORA ES REQUERIDO' },
     { obligacion_id: 4, numero_obligacion: '2260-5543', tipo: 'NO_REPORTADA', ...NO_REPORTADA },
   ]
   return {

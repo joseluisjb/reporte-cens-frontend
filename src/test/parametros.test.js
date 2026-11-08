@@ -344,7 +344,7 @@ describe('persistencia de la base simulada', () => {
     expect(db.grupos.map((g) => g.id)).not.toContain(1)
     expect(db.siguienteGrupoId).toBe(5)
     expect(db.cortes.map((c) => [c.id, c.grupo_id, c.estado])).toEqual([
-      [1, 1, 'ENVIADO'],
+      [1, 1, 'ENVIADO_CON_INCONSISTENCIAS'],
       [2, 2, 'BORRADOR'],
     ])
     expect(db.siguienteCorteId).toBe(3)

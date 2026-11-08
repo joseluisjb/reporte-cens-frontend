@@ -47,12 +47,12 @@ function Formulario({ archivo, onCerrar, onCargados }) {
   return (
     <Modal
       open
-      onClose={onCerrar}
+      onClose={enviando ? () => {} : onCerrar} // mientras se cargan no se cierra: el resultado se aplicaría igual
       title="Cargar resultados de TransUnion"
       subtitle={`${archivo.nombre} · corte ${formatearFechaISO(archivo.fechaCorte)}`}
       footer={
         <>
-          <Button variant="ghost" onClick={onCerrar}>
+          <Button variant="ghost" onClick={onCerrar} disabled={enviando}>
             Cancelar
           </Button>
           <Button type="submit" form="form-resultados" loading={enviando}>

@@ -1,20 +1,24 @@
-// Reporte a TransUnion (pantalla 12, HU-C · parte 1), Analista y Administrador. Mockup v3: vReporte.
-// Cubre RF20, RF21, RF22, RF51, RF53 y el aviso de RF57: trabaja sobre el último corte (el que dejó la
+// Reporte a TransUnion (pantalla 12, HU-C), solo Analista. Mockup v3: vReporte y vResCargue.
+// Cubre RF20, RF21, RF22, RF51, RF53, RF54 y el aviso de RF57: trabaja sobre el último corte (el que dejó la
 // extracción), muestra las «Validaciones antes de generar», deja validar el corte (BORRADOR → VALIDADO),
 // genera el archivo plano con los 6 pasos como guía mientras la petición está pendiente, y lista y
-// descarga los archivos generados. El envío y los resultados del cargue (RF54) van en la parte 2.
-import { useCallback, useEffect, useId, useState } from 'react'
+// descarga los archivos generados. Desde la lista se registra el envío, se cargan los archivos de
+// respuesta de TransUnion y se ven sus resultados (RF54).
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Card, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, TextLink, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
-import { formatearFechaISOLarga } from '../../lib/format'
+import { formatearFechaISOLarga, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { getEntity } from '../entity/entityService'
 import { getLatestCut, validateCut } from '../extraction/extractionService'
+import SubmissionModal from '../extraction/SubmissionModal'
+import CargueResultsView from './CargueResultsView'
 import FilesTable from './FilesTable'
 import GeneratedFileCard from './GeneratedFileCard'
 import { mapErroresCorrectivos } from './reportMapper'
-import { downloadFile, generateFile, getValidations, listFiles } from './reportService'
+import { downloadFile, generateFile, getUploadResults, getValidations, listFiles } from './reportService'
+import UploadResultsModal from './UploadResultsModal'
 import ValidationChecklist from './ValidationChecklist'
 
 const PASOS = [
@@ -43,6 +47,9 @@ export default function ReportPage() {
   const [errorArchivos, setErrorArchivos] = useState('')
   const [intentoArchivos, setIntentoArchivos] = useState(0)
   const [descargando, setDescargando] = useState(() => new Set()) // ids de los archivos que se están descargando
+  const [archivoAEnviar, setArchivoAEnviar] = useState(null) // archivo del diálogo «Registrar envío»
+  const [archivoACargar, setArchivoACargar] = useState(null) // archivo del modal «Cargar resultados»
+  const [vista, setVista] = useState(null) // resultados a la vista: { archivo, resultados } | { archivo, error } | { archivo } (cargando)
 
   // Corte, validaciones y entidad. Las validaciones se vuelven a pedir después de validar o generar.
   useEffect(() => {
@@ -133,6 +140,51 @@ export default function ReportPage() {
     [toast],
   )
 
+  // El archivo más reciente de cada corte (la lista llega del más reciente al más antiguo).
+  const ultimos = useMemo(() => {
+    const cortes = new Set()
+    const ids = new Set()
+    for (const a of archivos ?? []) {
+      if (!cortes.has(a.corteId)) ids.add(a.id)
+      cortes.add(a.corteId)
+    }
+    return ids
+  }, [archivos])
+  // Solo se envía el más reciente del corte de la página, y con ese corte VALIDADO (lo dice el corte, no la
+  // copia de su estado que trae cada archivo).
+  const enviables = useMemo(
+    () => new Set((archivos ?? []).filter((a) => ultimos.has(a.id) && corte?.esValidado && a.corteId === corte.id).map((a) => a.id)),
+    [archivos, ultimos, corte],
+  )
+
+  // Registrar el envío es irreversible: pide la fecha y la confirmación con el mismo diálogo de la Extracción.
+  const enviado = () => {
+    setArchivoAEnviar(null)
+    toast.success('Envío registrado. Cuando TransUnion responda, carga aquí sus archivos de resultados.')
+    setIntentoArchivos((n) => n + 1)
+    setIntento((n) => n + 1)
+  }
+
+  const verResultados = useCallback((archivo) => {
+    setVista({ archivo })
+    getUploadResults(archivo.id).then(
+      (resultados) => setVista((v) => (v?.archivo.id === archivo.id ? { archivo, resultados } : v)),
+      (err) => setVista((v) => (v?.archivo.id === archivo.id ? { archivo, error: mensajeDeError(err) } : v)),
+    )
+  }, [])
+
+  const cargados = (resultados) => {
+    const archivo = archivoACargar
+    setArchivoACargar(null)
+    setVista({ archivo, resultados })
+    setIntentoArchivos((n) => n + 1)
+    setIntento((n) => n + 1)
+    toast.success(`Resultados cargados: ${resultados.cargados} registros cargados, ${plural(resultados.inconsistencias.length, 'inconsistencia', 'inconsistencias')}.`)
+  }
+
+  // La tarjeta del archivo recién generado sigue a la lista (por ejemplo, cuando se registra su envío).
+  const generadoActual = (generado && archivos?.find((a) => a.id === generado.id)) ?? generado
+
   return (
     <>
       <PageHeader title="Reporte a TransUnion" />
@@ -187,7 +239,7 @@ export default function ReportPage() {
           {errorAccion && <ErrorAccion error={errorAccion} />}
           <Validaciones validaciones={validaciones} />
           {(accion === 'generar' || generado) && <Progreso enCurso={accion === 'generar'} />}
-          {generado && <GeneratedFileCard archivo={generado} onDescargar={descargar} descargando={descargando.has(generado.id)} />}
+          {generadoActual && <GeneratedFileCard archivo={generadoActual} onDescargar={descargar} descargando={descargando.has(generadoActual.id)} />}
         </>
       )}
 
@@ -200,7 +252,17 @@ export default function ReportPage() {
         }}
         onDescargar={descargar}
         descargando={descargando}
+        ultimos={ultimos}
+        enviables={enviables}
+        onRegistrarEnvio={setArchivoAEnviar}
+        onCargarResultados={setArchivoACargar}
+        onVerResultados={verResultados}
       />
+      {vista && <Resultados vista={vista} onReintentar={() => verResultados(vista.archivo)} />}
+      <UploadResultsModal archivo={archivoACargar} onCerrar={() => setArchivoACargar(null)} onCargados={cargados} />
+      {archivoAEnviar && (
+        <SubmissionModal corte={{ id: archivoAEnviar.corteId, fechaCorte: archivoAEnviar.fechaCorte }} onClose={() => setArchivoAEnviar(null)} onEnviado={enviado} />
+      )}
     </>
   )
 }
@@ -316,7 +378,7 @@ function Progreso({ enCurso }) {
   )
 }
 
-function Archivos({ archivos, error, onReintentar, onDescargar, descargando }) {
+function Archivos({ archivos, error, onReintentar, ...acciones }) {
   const id = useId()
   return (
     <section aria-labelledby={id}>
@@ -342,10 +404,42 @@ function Archivos({ archivos, error, onReintentar, onDescargar, descargando }) {
           {archivos.length === 0 ? (
             <EmptyState>Aún no se ha generado ningún archivo.</EmptyState>
           ) : (
-            <FilesTable archivos={archivos} onDescargar={onDescargar} descargando={descargando} />
+            <FilesTable archivos={archivos} {...acciones} />
           )}
         </Card>
       )}
     </section>
+  )
+}
+
+// Resultados del cargue del archivo elegido: carga, error con «Reintentar» o la vista (mockup: vResCargue).
+// Al aparecer, la página se desplaza hasta ellos, como en el mockup.
+function Resultados({ vista, onReintentar }) {
+  const ref = useRef(null)
+  const listos = Boolean(vista.resultados)
+  useEffect(() => {
+    if (listos) ref.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  }, [listos, vista.archivo.id])
+  if (vista.error) {
+    return (
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Alert>No se pudieron cargar los resultados de {vista.archivo.nombre}. {vista.error}</Alert>
+        <Button variant="outline" size="sm" onClick={onReintentar}>
+          Reintentar
+        </Button>
+      </div>
+    )
+  }
+  if (!listos) {
+    return (
+      <div role="status" aria-label="Cargando los resultados del cargue" className="flex justify-center p-8">
+        <Spinner className="size-6" />
+      </div>
+    )
+  }
+  return (
+    <div ref={ref}>
+      <CargueResultsView resultados={vista.resultados} />
+    </div>
   )
 }

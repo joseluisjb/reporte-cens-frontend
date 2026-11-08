@@ -13,6 +13,7 @@ import { forzarErrorCorrectivo, validarCorte } from '../mocks/datos/validaciones
 import { db } from '../mocks/db'
 import { leerPaginacion } from '../mocks/rutas/extracciones'
 import { hoyLocalISO } from '../mocks/utilidades'
+import { conArchivoApto } from './escenarios/envio'
 
 const entrarAdmin = () => login('rmartinez@example.com', 'Admin12345')
 const entrarAnalista = () => login('jperez@example.com', 'Analista123')
@@ -28,6 +29,8 @@ afterEach(() => vi.useRealTimers())
 
 describe('listar y consultar cortes', () => {
   test('la lista va del más reciente al más antiguo por fecha de ejecución y mapea el corte', async () => {
+    // Escenario de la Iteración 1: el corte del 31/08 enviado sin resultados del cargue (RF54).
+    db.cortes.find((c) => c.id === 1).estado = 'ENVIADO'
     await entrarAnalista()
     const cortes = await listCuts()
     expect(ids(cortes)).toEqual([2, 1])
@@ -221,6 +224,7 @@ describe('eliminar un corte', () => {
 describe('ciclo del corte: BORRADOR, VALIDADO y ENVIADO', () => {
   test('ciclo completo', async () => {
     await entrarAnalista()
+    conArchivoApto(2)
 
     // No se puede enviar un BORRADOR.
     await expect(registerSubmission(2)).rejects.toMatchObject({ status: 409, message: 'El corte no está en estado VALIDADO.' })
@@ -269,6 +273,7 @@ describe('ciclo del corte: BORRADOR, VALIDADO y ENVIADO', () => {
   test('registrar el envío sin fecha usa la de hoy', async () => {
     await entrarAdmin()
     await validateCut(2)
+    conArchivoApto(2)
     const enviado = await registerSubmission(2)
     expect(enviado.estado).toBe('ENVIADO')
     expect(corteDb(2).fecha_envio).toBe(hoyLocalISO())
@@ -290,6 +295,7 @@ describe('ciclo del corte: BORRADOR, VALIDADO y ENVIADO', () => {
     expect((await generateCut({ fechaCorte: '2026-09-30' })).ejecutadaPor).toBe('Rosa Martínez')
     expect((await validateCut(2)).corte.estado).toBe('VALIDADO')
     await entrarAnalista()
+    conArchivoApto(2)
     expect((await registerSubmission(2)).estado).toBe('ENVIADO')
     expect((await generateCut({ fechaCorte: '2026-10-05' })).ejecutadaPor).toBe('Juan Pérez')
   })

@@ -48,8 +48,11 @@ export function obligacionesDelCorte(fechaCorte) {
 // Las obligaciones que ya existían en la fecha del corte (las que no entran cuentan como excluidas).
 export const obligacionesExistentes = (fechaCorte) => db.obligaciones.filter((o) => o.ingreso <= fechaCorte)
 
-// Fecha del último corte ENVIADO ('' si no hay ninguno).
-export const ultimoCorteEnviado = () => db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+// Estados de un corte ya enviado a TransUnion (contrato 0.9: con resultados del cargue puede quedar con inconsistencias).
+export const ESTADOS_ENVIADOS = ['ENVIADO', 'ENVIADO_CON_INCONSISTENCIAS']
+
+// Fecha del último corte enviado ('' si no hay ninguno).
+export const ultimoCorteEnviado = () => db.cortes.filter((c) => ESTADOS_ENVIADOS.includes(c.estado)).reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
 
 // ValidacionesCorte del contrato 0.9 para un corte de `db.cortes`.
 export function validacionesDelCorte(corte, { entidadConMarcador }) {
@@ -210,19 +213,88 @@ export function camposLargos(incluidas) {
     }))
 }
 
-// ── Contenido del archivo plano (ilustrativo) ──
-// Registro 1 (29), un registro 2 por obligación con sus primeros campos y relleno hasta la longitud del
-// parámetro (930, por confirmar) y registro 9 (33). Valores en miles (RF51): un valor mayor que cero que
-// redondea a 0 se reporta como 1 (propuesta P-TU-02). Fin de línea CRLF.
+// ── Contenido del archivo plano (Manual Sector Real v34, pp. 44-52) ──
+// Registro 1 (Tabla 1, 29 caracteres), un registro 2 por obligación (Tabla 2) y registro 9 (Tabla 5, 33).
+// Fin de línea CRLF. Reglas de la p. 44: los numéricos van alineados a la derecha con ceros a la izquierda;
+// los alfanuméricos, a la izquierda con espacios a la derecha, salvo el número de obligación, que va a la
+// derecha con espacios a la izquierda; las fechas, AAAAMMDD; un dato que no se reporta va en espacios.
+// Valores en miles (RF51): un valor mayor que cero que redondea a 0 se reporta como 1 (propuesta P-TU-02;
+// el redondeo está por confirmar con TransUnion).
 const miles = (pesos) => (pesos > 0 ? Math.max(1, Math.round(pesos / 1000)) : 0)
 const ceros = (n, largo) => String(n).padStart(largo, '0')
+const sinGuiones = (fecha) => fecha.replaceAll('-', '')
+
+// Tabla 22 (p. 75): 11 = Sector real, cartera servicios (SSR). Tabla 23: 01 = reporte total.
+const CODIGO_PAQUETE = '11'
+const TIPO_REPORTE_TOTAL = '01'
+
+// Campos del registro tipo 2 que el mock puede llenar: [posición inicial, longitud] (Tabla 2, pp. 45-51).
+// Los demás quedan en espacios. El mock no tiene el tipo ni el número de identificación sin enmascarar
+// (campos 2 y 3, obligatorios): el backend los toma de la base de datos. Tampoco llena «obligación
+// reestructurada» (campo 44, Tabla 32), la periodicidad, las cuotas pagadas y pactadas, la fecha inicial
+// ni los datos de contacto, que no guarda.
+const R2 = {
+  tipoRegistro: [1, 1], // Tabla 21: 2 = detalles
+  nombreTitular: [19, 60],
+  numeroObligacion: [89, 20],
+  codigoSucursal: [109, 6],
+  calidad: [115, 1], // Tabla 3: P = principal (el mock solo guarda al titular)
+  estado: [120, 2], // Tabla 4b
+  edadMora: [122, 2], // Tabla 9
+  aniosMora: [124, 2],
+  fechaCorte: [126, 8],
+  fechaExigibilidad: [150, 8],
+  fechaPago: [166, 8],
+  modoExtincion: [174, 2], // Tabla 10
+  tipoPago: [176, 2], // Tabla 31
+  cuotasMora: [189, 3],
+  valorInicial: [192, 12], // «Valor o cupo», en miles
+  valorMora: [204, 12],
+  valorSaldo: [216, 12],
+  valorCuota: [228, 12],
+  naturalezaReestructuracion: [292, 2], // Tabla 11
+  numeroReestructuraciones: [294, 3],
+}
+
+function registro2(o, { fechaCorte, sucursal, longitud }) {
+  const linea = Array.from({ length: longitud }, () => ' ')
+  const poner = ([posicion, largo], valor) => {
+    if (valor.length !== largo) throw new Error(`Campo de ${largo} caracteres con «${valor}»`)
+    for (let i = 0; i < largo; i++) linea[posicion - 1 + i] = valor[i]
+  }
+  const { cierre, reestructuracion } = o.registro
+  poner(R2.tipoRegistro, '2')
+  poner(R2.nombreTitular, o.registro.titular.padEnd(60))
+  poner(R2.numeroObligacion, o.numero_obligacion.padStart(20))
+  poner(R2.codigoSucursal, sucursal)
+  poner(R2.calidad, 'P')
+  poner(R2.estado, o.estado_tu)
+  poner(R2.edadMora, o.edad_mora)
+  if (o.anios_mora != null) poner(R2.aniosMora, ceros(o.anios_mora, 2))
+  poner(R2.fechaCorte, sinGuiones(fechaCorte))
+  if (o.fecha_exigibilidad) poner(R2.fechaExigibilidad, sinGuiones(o.fecha_exigibilidad))
+  if (o.cerrada && cierre) {
+    if (cierre.fecha_pago) poner(R2.fechaPago, sinGuiones(cierre.fecha_pago))
+    if (cierre.modo_extincion) poner(R2.modoExtincion, cierre.modo_extincion.codigo)
+    if (cierre.tipo_pago) poner(R2.tipoPago, cierre.tipo_pago.codigo)
+  }
+  poner(R2.cuotasMora, ceros(o.cuotas_mora, 3))
+  poner(R2.valorInicial, ceros(miles(o.valor_inicial), 12))
+  poner(R2.valorMora, ceros(miles(o.valor_mora), 12))
+  poner(R2.valorSaldo, ceros(miles(o.valor_saldo), 12))
+  poner(R2.valorCuota, ceros(miles(o.valor_cuota), 12))
+  if (reestructuracion) {
+    poner(R2.naturalezaReestructuracion, reestructuracion.naturaleza.codigo)
+    poner(R2.numeroReestructuraciones, ceros(reestructuracion.numero_reestructuraciones, 3))
+  }
+  return linea.join('')
+}
 
 export function contenidoArchivo({ fechaCorte, tipoEntidad, codigoEntidad, sucursal, longitud, incluidas }) {
-  const r1 = `111${tipoEntidad}${codigoEntidad}${' '.repeat(10)}01${fechaCorte.replaceAll('-', '')}`
-  const r2 = incluidas.map((o) => {
-    const inicio = `2${o.numero_obligacion.padStart(20)}${sucursal}${o.estado_tu}${o.edad_mora}${ceros(miles(o.valor_mora), 11)}${ceros(miles(o.valor_saldo), 11)}${ceros(o.cuotas_mora, 3)}`
-    return inicio.padEnd(longitud)
-  })
+  // Tabla 1: tipo de registro, código de paquete, tipo y código de entidad, reservado (10), tipo de reporte y fecha de corte.
+  const r1 = `1${CODIGO_PAQUETE}${tipoEntidad}${codigoEntidad}${' '.repeat(10)}${TIPO_REPORTE_TOTAL}${sinGuiones(fechaCorte)}`
+  const r2 = incluidas.map((o) => registro2(o, { fechaCorte, sucursal, longitud }))
+  // Tabla 5: tipo de registro y número de registros total (con el 1 y el 9), tipo 2, tipo 3 y tipo 4.
   const r9 = `9${ceros(incluidas.length + 2, 8)}${ceros(incluidas.length, 8)}${ceros(0, 8)}${ceros(0, 8)}`
   return [r1, ...r2, r9].join('\r\n') + '\r\n'
 }

@@ -35,7 +35,8 @@ const editar = (numero, cambios) => Object.assign(db.obligaciones.find((o) => o.
 describe('pantalla 9 · lista', () => {
   test('KPIs por estado, cuotas en mora por obligación y la nota de cierre (RF13, RF16, RF19)', async () => {
     await abrir()
-    const kpis = screen.getByRole('group', { name: 'Filtrar por estado' })
+    // El resumen llega en otra petición que la tabla: se espera a que aparezca.
+    const kpis = await screen.findByRole('group', { name: 'Filtrar por estado' })
     expect(within(kpis).getAllByRole('button').map((b) => b.textContent)).toEqual([
       '12Todas',
       '701 · Vigente',

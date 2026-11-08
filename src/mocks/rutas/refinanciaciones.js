@@ -13,6 +13,7 @@ import { ENDPOINTS } from '../../lib/api/endpoints'
 import { CATALOGOS } from '../datos/catalogos'
 import { matrizEstados } from '../datos/matrizEstados'
 import { aResumen, cuotas, estadoTexto, eventos, identificacion, NO_VOLUNTARIO, obligacion, REFINANCIACION } from '../datos/obligacionesIteracion2'
+import { ultimoCorteEnviado } from '../datos/reporte'
 import { db, persistir } from '../db'
 import { aEntero, ahoraBogotaISO, error, espera, exigirSesion, hoyLocalISO, leerCuerpo, SOLO_ANALISTA, url } from '../utilidades'
 import { corteVigente } from './ciclos'
@@ -67,7 +68,7 @@ export const refinanciacionesHandlers = [
     if (!original) return error(404, { detail: 'Obligación no encontrada.' })
     // La fecha no puede ser anterior al ingreso de la obligación ni a un corte ya enviado.
     const fechaPedida = cuerpo.fecha.trim()
-    const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+    const ultimaEnviada = ultimoCorteEnviado()
     if (fechaPedida < original.ingreso) return error(400, { fecha: [MSG_REFI.antesDelIngreso(original.ingreso)] })
     if (ultimaEnviada && fechaPedida <= ultimaEnviada) return error(400, { fecha: [MSG_REFI.corteEnviado(ultimaEnviada)] })
     if (original.eliminada) {

@@ -43,6 +43,7 @@ export const ENDPOINTS = {
   generarArchivo: (id) => `/extracciones/${id}/archivo/`, // propuesto (contrato 0.9) · los dos roles
   archivos: '/archivos/', // propuesto (contrato 0.9) · los dos roles
   archivoDescarga: (id) => `/archivos/${id}/descarga/`, // propuesto (contrato 0.9) · los dos roles (text/plain)
+  resultadosArchivo: (id) => `/archivos/${id}/resultados/`, // propuesto (contrato 0.9) · solo Analista (GET ver, POST multipart cargar)
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

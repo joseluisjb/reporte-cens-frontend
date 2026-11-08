@@ -17,7 +17,7 @@ import { enmascararIdentificacion } from '../../lib/format'
 import { generarObligaciones, totalesCorte } from '../datos/obligaciones'
 import { erroresCorrectivos, ultimoCorteEnviado } from '../datos/reporte'
 import { validarCorte } from '../datos/validaciones'
-import { validacionesDe } from './reporte'
+import { cambiarEstadoCorte, ultimoArchivoDelCorte, validacionesDe } from './reporte'
 import { db, persistir } from '../db'
 import { ahoraBogotaISO, aEntero, error, espera, exigirSesion, hoyLocalISO, idDeRuta, leerCuerpo, url } from '../utilidades'
 
@@ -205,8 +205,13 @@ export const extraccionesHandlers = [
     const fechaEnvio = typeof cuerpo.fecha_envio === 'string' && cuerpo.fecha_envio.trim() ? cuerpo.fecha_envio.trim() : hoyLocalISO()
     if (fechaEnvio > hoyLocalISO()) return error(400, { detail: 'La fecha de envío no puede ser futura.' })
     if (corte.estado !== 'VALIDADO') return error(409, { detail: 'El corte no está en estado VALIDADO.' })
-    corte.estado = 'ENVIADO'
+    // Contrato 0.9 (RF20, RF54, RF57): el corte necesita un archivo generado y el último debe ser apto para envío.
+    const archivo = ultimoArchivoDelCorte(corte.id)
+    if (!archivo) return error(409, { detail: 'Primero genera el archivo plano del corte.', code: 'sin_archivo' })
+    if (!archivo.apto_envio) return error(409, { detail: 'El archivo no es apto para envío: faltan los datos de la entidad ante TransUnion.', code: 'archivo_no_apto' })
+    cambiarEstadoCorte(corte, 'ENVIADO')
     corte.fecha_envio = fechaEnvio
+    Object.assign(archivo, { enviado: true, fecha_envio: fechaEnvio })
     persistir()
     return HttpResponse.json(aResumen(corte))
   }),

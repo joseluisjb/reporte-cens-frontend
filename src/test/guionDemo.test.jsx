@@ -6,6 +6,7 @@ import { cleanup, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ultimoCorreo } from '../mocks/db'
 import { renderApp } from './renderApp'
+import { conArchivoApto } from './escenarios/envio'
 
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
 const menuPrincipal = () => screen.getByRole('navigation', { name: 'Navegación principal' })
@@ -159,9 +160,10 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   await userEvent.click(boton('Iniciar extracción'))
   expect(await screen.findByText(/Corte de cartera generado correctamente/i)).toBeInTheDocument()
 
-  // 12:30 validar y 13:30 registrar el envío
+  // 12:30 validar y 13:30 registrar el envío (contrato 0.9: con un archivo apto del corte)
   await userEvent.click(await screen.findByRole('button', { name: 'Validar corte' }))
   expect(await screen.findByText('VALIDADO')).toBeInTheDocument()
+  conArchivoApto(2)
   await userEvent.click(boton('Registrar envío a TransUnion'))
   const envio = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
   await userEvent.click(envio.getByRole('button', { name: 'Confirmar envío' }))

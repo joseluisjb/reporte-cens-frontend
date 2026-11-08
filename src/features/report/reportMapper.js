@@ -3,6 +3,9 @@
 //   Archivo → { id, corteId, fechaCorte ('YYYY-MM-DD'), nombre, tipoReporte, fechaGeneracion (Date),
 //               generadoPor, nRegistros, totalRegistros, nExcluidas, saldoTotal, longitudRegistroTipo2,
 //               aptoEnvio, motivoNoApto, enviado, fechaEnvio ('YYYY-MM-DD'|null), estadoCorte, tieneResultados }
+//   ResultadosCargue → { archivoId, corteId, fechaCorte, fechaCarga (Date), cargadoPor, estadoCorte,
+//               archivosCargados: [{ nombre, tipo, nFilas }], recibidos, cargados, conInconsistencias,
+//               noReportadas, inconsistencias: [{ id, numeroObligacion, tipo, codigo, descripcion }] }
 import { soloFecha as fecha } from '../../lib/format'
 
 export function mapArchivo(raw) {
@@ -55,3 +58,22 @@ const mapObligacionReferida = (o) => ({ id: o.obligacion_id ?? null, numeroOblig
 // Los errores sin obligación traen `id` y `numeroObligacion` en null.
 export const mapErroresCorrectivos = (errores = []) =>
   errores.map((e) => ({ regla: e.regla, mensaje: e.mensaje, id: e.obligacion_id ?? null, numeroObligacion: e.numero_obligacion ?? null, campo: e.campo ?? null }))
+
+// `tipo` de la inconsistencia: 'CORRECTIVA' | 'INFORMATIVA' | 'NO_REPORTADA'. `id` es null si el número no
+// corresponde a una obligación del corte.
+export function mapResultadosCargue(raw) {
+  return {
+    archivoId: raw.archivo_id,
+    corteId: raw.corte_id,
+    fechaCorte: fecha(raw.fecha_corte),
+    fechaCarga: raw.fecha_carga ? new Date(raw.fecha_carga) : null,
+    cargadoPor: raw.cargado_por ?? null,
+    estadoCorte: raw.estado_corte,
+    archivosCargados: raw.archivos_cargados.map((a) => ({ nombre: a.nombre_archivo, tipo: a.tipo_archivo, nFilas: a.n_filas })),
+    recibidos: raw.recibidos,
+    cargados: raw.cargados,
+    conInconsistencias: raw.con_inconsistencias,
+    noReportadas: raw.no_reportadas,
+    inconsistencias: raw.inconsistencias.map((i) => ({ id: i.obligacion_id ?? null, numeroObligacion: i.numero_obligacion, tipo: i.tipo, codigo: i.codigo, descripcion: i.descripcion })),
+  }
+}

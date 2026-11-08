@@ -606,12 +606,14 @@ Object.assign(S, {
     '11':{usado:true,  conf:false, nota:'Solo si el cliente está admitido en el proceso de ley'},
     '12':{usado:true,  conf:false, nota:'Solo si el cliente está admitido en el proceso de ley'}
   },
+  /* prio = PRIORIDAD de NV_HOMOLOGA_ESTADO (script 12 de la BD): si los créditos de una obligación
+     tienen estados distintos, gana el de menor número. Es de solo lectura en esta pantalla. */
   homol:[
-    {sac:'A', acc:'ESTADO', tu:'01', conf:false, user:null, ts:null},
-    {sac:'B', acc:null,     tu:null, conf:false, user:null, ts:null},
-    {sac:'C', acc:'ESTADO', tu:'03', conf:false, user:null, ts:null},
-    {sac:'D', acc:null,     tu:null, conf:false, user:null, ts:null},
-    {sac:'F', acc:'CIERRE', tu:null, conf:false, user:null, ts:null}
+    {sac:'A', prio:1, acc:'ESTADO', tu:'01', conf:false, user:null, ts:null},
+    {sac:'C', prio:2, acc:'ESTADO', tu:'03', conf:false, user:null, ts:null},
+    {sac:'D', prio:3, acc:null,     tu:null, conf:false, user:null, ts:null},
+    {sac:'B', prio:4, acc:null,     tu:null, conf:false, user:null, ts:null},
+    {sac:'F', prio:5, acc:'CIERRE', tu:null, conf:false, user:null, ts:null}
   ],
   cuts:['2026-09-30'],
   obls:[
@@ -1521,7 +1523,7 @@ function vHomologacion(){
     estTxt(c) + (S.estUso[c].usado ? '' : ' (no se usa)') + '</option>').join('');
   const filas = S.homol.map(h => {
     if(S.ui.homEdit === h.sac){
-      return '<tr class="hm-edit"><td class="mono"><b>' + h.sac + '</b></td><td class="sub">Por confirmar con CENS</td>' +
+      return '<tr class="hm-edit"><td class="mono"><b>' + h.sac + '</b></td><td class="mono">' + h.prio + '</td><td class="sub">Por confirmar con CENS</td>' +
         '<td colspan="3"><div class="hm-ed">' +
           '<label class="sr" for="hm-acc">Cómo se reporta el estado ' + h.sac + '</label>' +
           '<select class="inp sel" id="hm-acc">' +
@@ -1539,7 +1541,7 @@ function vHomologacion(){
     const actualizado = h.user
       ? '<span class="mono">' + fmtDT(h.ts) + '</span><div class="sub">' + esc(h.user) + '</div>'
       : '<span class="sub">Carga inicial (script 12)</span>';
-    return '<tr' + (S.flashRow === 'hm-' + h.sac ? ' class="flash"' : '') + '><td class="mono"><b>' + h.sac + '</b></td><td class="sub">Por confirmar con CENS</td>' +
+    return '<tr' + (S.flashRow === 'hm-' + h.sac ? ' class="flash"' : '') + '><td class="mono"><b>' + h.sac + '</b></td><td class="mono">' + h.prio + '</td><td class="sub">Por confirmar con CENS</td>' +
       '<td>' + homTxt(h) + '</td>' +
       '<td>' + (h.conf ? '<span class="bd bd-ok">Confirmado</span>' : pc()) + '</td>' +
       '<td class="nw">' + actualizado + '</td><td>' + editar + '</td></tr>';
@@ -1551,8 +1553,9 @@ function vHomologacion(){
   return layout(
     '<h1 class="h1">Homologación de Estados</h1>' + aviso +
     '<section aria-labelledby="hm-t"><div class="sec-h"><h2 class="h2" id="hm-t">Estados del sistema comercial (SAC)</h2>' +
-      '<p class="mut">Cada estado del crédito en el SAC se reporta como un estado de TransUnion o como un cierre. Solo se pueden elegir los estados que CENS usa.</p></div>' +
-      '<div class="card tw"><table class="tbl"><thead><tr><th>Estado del SAC</th><th>Descripción</th><th>Se reporta como</th><th>Confirmado</th><th>Última actualización</th><th><span class="sr">Acciones</span></th></tr></thead>' +
+      '<p class="mut">Cada estado del crédito en el SAC se reporta como un estado de TransUnion o como un cierre. Solo se pueden elegir los estados que CENS usa.</p>' +
+      '<p class="mut">Si los créditos de una obligación tienen estados distintos, la obligación toma el de menor prioridad; si alguno está sin homologar, se bloquea en la validación del corte (RF53). La prioridad viene de la carga inicial y aquí no se edita. ' + pc() + '</p></div>' +
+      '<div class="card tw"><table class="tbl"><thead><tr><th>Estado del SAC</th><th>Prioridad</th><th>Descripción</th><th>Se reporta como</th><th>Confirmado</th><th>Última actualización</th><th><span class="sr">Acciones</span></th></tr></thead>' +
       '<tbody>' + filas + '</tbody></table></div></section>' +
     '<section aria-labelledby="hm-e" style="margin-top:24px"><div class="sec-h"><h2 class="h2" id="hm-e">Estados de TransUnion (Tabla 4b · Sector Real Servicios)</h2>' +
       '<p class="mut">Los 10 estados del Manual, para consulta: los define TransUnion y su uso lo aprueba CENS.</p></div>' +

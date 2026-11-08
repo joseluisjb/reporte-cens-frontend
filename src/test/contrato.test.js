@@ -2,6 +2,8 @@
 // `docs/contrato/openapi.yaml`. Si agregas o cambias un mock, agrega aquí su caso.
 // Se llama a la API por el cliente real (`api`), con `validateStatus` abierto para recibir también
 // el cuerpo de los errores tal cual.
+import { readFileSync } from 'node:fs'
+import { parse } from 'yaml'
 import { api } from '../lib/api'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
@@ -48,6 +50,28 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     // 0.6: `descripcion` vacía en conceptos y nula dentro de los grupos (columna nullable en Oracle)
     expect(() => expectCumpleContrato('get', '/conceptos/', 200, [{ codigo: 30, descripcion: '', activo: true, observacion: null }])).not.toThrow()
     expect(() => expectCumpleContrato('get', '/grupos-conceptos/{id}/', 200, { id: 1, nombre: 'G', activo: true, conceptos: [{ codigo: 30, descripcion: null }], creado: '2026-10-10' })).not.toThrow()
+  })
+
+  test('0.9: una referencia que puede ser null (nullable + allOf) acepta null y sigue validando el objeto', () => {
+    const panel = {
+      fecha_ultimo_ciclo: null, total_obligaciones: 0, distribucion: [], ultimo_archivo: null,
+      en_reclamo: 0, novedades_pendientes: 0, con_dos_o_mas_cuotas: 0, entidad_con_marcador: true,
+    }
+    expect(() => expectCumpleContrato('get', '/panel/resumen/', 200, panel)).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/panel/resumen/', 200, { ...panel, ultimo_archivo: { id: 1 } })).toThrow(/no cumple el contrato/)
+    // los tipos «o nulo» de la 0.9 aceptan null y rechazan códigos que no existen
+    const transicion = { obligacion_id: 1, numero_obligacion: '2265-2208', nombre_titular: 'A', estado_anterior: null, estado_nuevo: '01', edad_anterior: null, edad_nueva: '00', primer_reporte: true, requiere_revision: false, reglas: [] }
+    const ciclo = { corte_id: 3, fecha_corte: '2026-10-31', fecha_ejecucion: '2026-11-03T09:15:00-05:00', ejecutada_por: null, primer_reporte: 1, cambios_estado: 0, cierres: 0, rechazados: 0, con_pagos: 0, a_dudoso: 0, a_castigada: 0, normalizadas: 0, transiciones: [transicion], rechazos: [] }
+    expect(() => expectCumpleContrato('get', '/ciclos/{corte_id}/', 200, ciclo)).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/ciclos/{corte_id}/', 200, { ...ciclo, transiciones: [{ ...transicion, estado_anterior: '05' }] })).toThrow(/no cumple el contrato/)
+  })
+
+  test('0.9: los tipos «o nulo» repiten exactamente el enum o los campos de su tipo base', () => {
+    const { schemas } = parse(readFileSync('docs/contrato/openapi.yaml', 'utf-8')).components
+    expect(schemas.EstadoObligacionONulo.enum).toEqual([...schemas.EstadoObligacion.enum, null])
+    expect(schemas.CodigoEdadMoraONulo.enum).toEqual([...schemas.CodigoEdadMora.enum, null])
+    expect(Object.keys(schemas.CodigoDescripcionONulo.properties)).toEqual(Object.keys(schemas.CodigoDescripcion.properties))
+    expect(Object.keys(schemas.ItemCatalogoONulo.properties)).toEqual(Object.keys(schemas.ItemCatalogo.properties))
   })
 
   test('auditoría: RegistroAuditoria acepta las acciones del sistema (0.6) y rechaza un rol desconocido', () => {

@@ -15,11 +15,25 @@ import { parse } from 'yaml'
 
 const doc = parse(readFileSync(resolve(process.cwd(), 'docs/contrato/openapi.yaml'), 'utf-8'))
 
+// OpenAPI 3.0 escribe «una referencia o null» como `{ type, nullable: true, allOf: [{ $ref }] }`.
+// Ajv acepta el null por el `type`, pero después lo valida contra el `allOf` y lo rechaza. Para
+// validar, ese patrón se reescribe como `anyOf: [esquema sin nullable, { type: 'null' }]`.
+function nullableConAllOf(nodo) {
+  if (Array.isArray(nodo)) return nodo.map(nullableConAllOf)
+  if (!nodo || typeof nodo !== 'object') return nodo
+  const copia = Object.fromEntries(Object.entries(nodo).map(([k, v]) => [k, nullableConAllOf(v)]))
+  if (copia.nullable === true && Array.isArray(copia.allOf)) {
+    const { nullable, ...resto } = copia // eslint-disable-line no-unused-vars
+    return { anyOf: [resto, { type: 'null' }] }
+  }
+  return copia
+}
+
 // strict:false por las palabras propias de OpenAPI (`example`, `x-roles`, `nullable` suelto...).
 const ajv = new Ajv({ strict: false, allErrors: true })
 addFormats(ajv)
 ajv.addFormat('password', true) // OpenAPI lo usa como pista de interfaz; no hay nada que validar
-ajv.addSchema({ ...doc, $id: 'contrato' })
+ajv.addSchema({ ...nullableConAllOf(doc), $id: 'contrato' })
 
 const escapar = (clave) => clave.replaceAll('~', '~0').replaceAll('/', '~1') // RFC 6901
 const desescapar = (clave) => clave.replaceAll('~1', '/').replaceAll('~0', '~')

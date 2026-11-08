@@ -369,6 +369,11 @@ a.mini:hover{background:#F8FAFC}
 .mx .mN{color:#B91C1C;background:#FEF2F2}
 .pc-tag{display:inline-block;font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;border-radius:6px;padding:1px 6px;margin-left:6px}
 .ent-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.hm-ed{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hm-ed .inp{width:auto;min-width:170px;padding-top:8px;padding-bottom:8px}
+.hm-ck{display:inline-flex;gap:6px;align-items:center;font-size:13px}
+tr.hm-edit td{background:#F0FDF4}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (max-width:760px){.ent-g{grid-template-columns:1fr}}
 .vt{width:100%;border-collapse:collapse;font-size:13px}
 .vt td,.vt th{padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:left}
@@ -580,10 +585,31 @@ const NATURALEZAS = ['01 · Ley 550','02 · Concordato','03 · Ley 617','04 · A
 const TIPOS_NOV = ['Inclusión','Actualización','Corrección','Eliminación'];
 const OBL_RE = /^[A-Za-z0-9()*,\-.\/\\_¯·]{1,20}$/;   // máx. 20 caracteres y solo los especiales permitidos
 
-Object.assign(S.ui, {oEst:'', oQ:'', detNum:null, rCut:'2026-09-30', cCut:'2026-10-31', nvTab:'todas', resFile:null});
+Object.assign(S.ui, {homEdit:null, oEst:'', oQ:'', detNum:null, rCut:'2026-09-30', cCut:'2026-10-31', nvTab:'todas', resFile:null});
 Object.assign(S, {
   chg:{}, flashRow:null, cy:null, cyRes:null, rp:null, rpRes:null,
   ent:{tipo:'XXX', cod:'XXX', suc:'XXXXXX'},
+  /* RF48 · Uso de los 10 estados de la Tabla 4b en CENS y homologación de los estados del SAC.
+     A → 01, C → 03 y F → cierre son propuestas (C-53); B y D siguen sin homologar (C-11, C-54). */
+  estUso:{
+    '01':{usado:true,  conf:true,  nota:''},
+    '02':{usado:true,  conf:true,  nota:'Cierre: se reporta una sola vez'},
+    '03':{usado:true,  conf:false, nota:'Crédito caducado con mora (RF14)'},
+    '04':{usado:false, conf:false, nota:'Propuesta: desde 04 no se puede volver a Vigente ni cerrar'},
+    '06':{usado:true,  conf:true,  nota:'Castigo contable de CENS con mora (RF45)'},
+    '07':{usado:true,  conf:true,  nota:'Cierre: se reporta una sola vez'},
+    '08':{usado:false, conf:true,  nota:'No se usa (Acta 3)'},
+    '10':{usado:true,  conf:false, nota:'Solo si el cliente está admitido en el proceso de ley'},
+    '11':{usado:true,  conf:false, nota:'Solo si el cliente está admitido en el proceso de ley'},
+    '12':{usado:true,  conf:false, nota:'Solo si el cliente está admitido en el proceso de ley'}
+  },
+  homol:[
+    {sac:'A', acc:'ESTADO', tu:'01', conf:false, user:null, ts:null},
+    {sac:'B', acc:null,     tu:null, conf:false, user:null, ts:null},
+    {sac:'C', acc:'ESTADO', tu:'03', conf:false, user:null, ts:null},
+    {sac:'D', acc:null,     tu:null, conf:false, user:null, ts:null},
+    {sac:'F', acc:'CIERRE', tu:null, conf:false, user:null, ts:null}
+  ],
   cuts:['2026-09-30'],
   obls:[
     mkO({num:'2257-4156', nombre:'Carlos Andrés Rueda', concepto:'30', est:'01', saldo:1276016, cuota:98000, dia:7, ingreso:'2026-03-31',
@@ -826,6 +852,7 @@ function layout(inner){
         navItem('usuarios', 'Gestión de Usuarios', 'user', true) +
         navItem('auditoria', 'Auditoría', 'shield', true) +
         navItem('entidad', 'Datos de la Entidad', 'wallet', true) +
+        navItem('homologacion', 'Homologación de Estados', 'layers', true) +
       '</nav>' +
       '<button type="button" class="out" data-act="logout">' + ic('logout', 18) + '<span>Cerrar sesión</span></button>' +
     '</aside>' +
@@ -1466,6 +1493,81 @@ function vEntidad(){
 }
 
 /* =====================================================================
+   Vista — Homologación de estados (Administrador · RF48) · pantalla 16, nueva
+   ===================================================================== */
+const estTxt = c => c + ' · ' + EST[c].n;
+function homTxt(h){
+  if(h.acc === 'CIERRE') return '<span class="bd bd-info">Cierre</span><div class="sub">Saldada (02) o Cartera Recuperada (07), según el estado anterior (RF12, RF15)</div>';
+  if(h.acc === 'ESTADO') return estBd(h.tu);
+  return '<span class="bd bd-bad">Sin homologar</span>';
+}
+function vHomologacion(){
+  if(!isAdmin()) return layout(vRestringido('Homologación de Estados'));
+  const pc = t => '<span class="pc-tag">' + (t || 'por confirmar') + '</span>';
+  const codigos = MX_ORDER.slice().sort();
+  const sin = S.homol.filter(h => !h.acc);
+  const est = codigos.map(c => {
+    const u = S.estUso[c];
+    return '<tr><td class="mono">' + c + '</td>' +
+      '<td>' + estBd(c) + (EST[c].closed ? ' <span class="lk" title="Cierre definitivo">' + ic('lock', 14, 2.2) + '</span>' : '') + '</td>' +
+      '<td>' + (u.usado ? '<span class="bd bd-ok">Sí</span>' : '<span class="bd bd-off">No</span>') + (u.conf ? '' : pc()) + '</td>' +
+      '<td class="sub">' + esc(u.nota) + '</td></tr>';
+  }).join('');
+  const opciones = sel => codigos.map(c => '<option value="' + c + '"' + (c === sel ? ' selected' : '') + (S.estUso[c].usado ? '' : ' disabled') + '>' +
+    estTxt(c) + (S.estUso[c].usado ? '' : ' (no se usa)') + '</option>').join('');
+  const filas = S.homol.map(h => {
+    if(S.ui.homEdit === h.sac){
+      return '<tr class="hm-edit"><td class="mono"><b>' + h.sac + '</b></td><td class="sub">Por confirmar con CENS</td>' +
+        '<td colspan="3"><div class="hm-ed">' +
+          '<label class="sr" for="hm-acc">Cómo se reporta el estado ' + h.sac + '</label>' +
+          '<select class="inp sel" id="hm-acc">' +
+            '<option value="ESTADO"' + (h.acc !== 'CIERRE' ? ' selected' : '') + '>Estado de TransUnion</option>' +
+            '<option value="CIERRE"' + (h.acc === 'CIERRE' ? ' selected' : '') + '>Cierre (RF12 o RF15)</option></select>' +
+          '<label class="sr" for="hm-tu">Estado de TransUnion para ' + h.sac + '</label>' +
+          '<select class="inp sel" id="hm-tu" aria-describedby="hm-err"' + (h.acc === 'CIERRE' ? ' disabled' : '') + '><option value="">Selecciona…</option>' + opciones(h.tu) + '</select>' +
+          '<label class="hm-ck"><input type="checkbox" id="hm-conf"' + (h.conf ? ' checked' : '') + '> Confirmado por CENS</label>' +
+        '</div><div class="err" id="hm-err" hidden role="alert"></div></td>' +
+        '<td class="nw"><button type="button" class="btn btn-p btn-sm" data-act="hom-save" data-sac="' + h.sac + '">Guardar</button> ' +
+          '<button type="button" class="btn btn-g btn-sm" data-act="hom-cancel">Cancelar</button></td></tr>';
+    }
+    const editar = '<button type="button" class="btn btn-o btn-sm" data-act="hom-edit" data-sac="' + h.sac + '" aria-label="Editar la homologación del estado ' + h.sac + '"' +
+      (S.ui.homEdit ? ' disabled' : '') + '>' + ic('edit', 14) + 'Editar</button>';
+    const actualizado = h.user
+      ? '<span class="mono">' + fmtDT(h.ts) + '</span><div class="sub">' + esc(h.user) + '</div>'
+      : '<span class="sub">Carga inicial (script 12)</span>';
+    return '<tr' + (S.flashRow === 'hm-' + h.sac ? ' class="flash"' : '') + '><td class="mono"><b>' + h.sac + '</b></td><td class="sub">Por confirmar con CENS</td>' +
+      '<td>' + homTxt(h) + '</td>' +
+      '<td>' + (h.conf ? '<span class="bd bd-ok">Confirmado</span>' : pc()) + '</td>' +
+      '<td class="nw">' + actualizado + '</td><td>' + editar + '</td></tr>';
+  }).join('');
+  const aviso = sin.length
+    ? noteBox('warn', 'warn', '<b>' + plural(sin.length, 'estado del SAC sin homologar', 'estados del SAC sin homologar') + ' (' + sin.map(h => h.sac).join(', ') + ')</b>: ' +
+        'las obligaciones con ' + (sin.length === 1 ? 'ese estado' : 'esos estados') + ' se bloquean en la validación del corte (RF53) hasta que se homologuen. ' + pc('pendiente de CENS'))
+    : noteBox('', 'checkCircle', 'Todos los estados del SAC están homologados.');
+  return layout(
+    '<h1 class="h1">Homologación de Estados</h1>' + aviso +
+    '<section aria-labelledby="hm-t"><div class="sec-h"><h2 class="h2" id="hm-t">Estados del sistema comercial (SAC)</h2>' +
+      '<p class="mut">Cada estado del crédito en el SAC se reporta como un estado de TransUnion o como un cierre. Solo se pueden elegir los estados que CENS usa.</p></div>' +
+      '<div class="card tw"><table class="tbl"><thead><tr><th>Estado del SAC</th><th>Descripción</th><th>Se reporta como</th><th>Confirmado</th><th>Última actualización</th><th><span class="sr">Acciones</span></th></tr></thead>' +
+      '<tbody>' + filas + '</tbody></table></div></section>' +
+    '<section aria-labelledby="hm-e" style="margin-top:24px"><div class="sec-h"><h2 class="h2" id="hm-e">Estados de TransUnion (Tabla 4b · Sector Real Servicios)</h2>' +
+      '<p class="mut">Los 10 estados del Manual, para consulta: los define TransUnion y su uso lo aprueba CENS.</p></div>' +
+      '<div class="card tw"><table class="tbl compact"><thead><tr><th>Código</th><th>Estado</th><th>¿Se usa en CENS?</th><th>Nota</th></tr></thead><tbody>' + est + '</tbody></table></div></section>' +
+    '<p class="mut">Cada cambio queda en la bitácora (módulo Parametrización) y se aplica desde la próxima actualización mensual.</p>'
+  );
+}
+function homSave(sac){
+  const h = S.homol.find(x => x.sac === sac);
+  const acc = $('#hm-acc').value, tu = $('#hm-tu').value, conf = $('#hm-conf').checked;
+  if(acc === 'ESTADO' && !tu){ showErr($('#hm-err'), 'Selecciona el estado de TransUnion.'); $('#hm-tu').setAttribute('aria-invalid', 'true'); $('#hm-tu').focus(); return; }
+  if(acc === 'ESTADO' && !S.estUso[tu].usado){ showErr($('#hm-err'), 'El estado ' + estTxt(tu) + ' no se usa en CENS: elige un estado en uso.'); $('#hm-tu').focus(); return; }
+  Object.assign(h, {acc:acc, tu:acc === 'ESTADO' ? tu : null, conf:conf, user:cur().nombre, ts:new Date()});
+  S.ui.homEdit = null; S.flashRow = 'hm-' + sac;
+  logAudit('Homologación de estado actualizada', 'Parametrización', 'Estado ' + sac + ' del SAC → ' + (acc === 'CIERRE' ? 'cierre' : tu) + (conf ? ' (confirmado)' : ''));
+  render(); toast('Homologación guardada: el estado ' + sac + ' se reporta como ' + (acc === 'CIERRE' ? 'cierre' : estTxt(tu)) + '.');
+}
+
+/* =====================================================================
    Enrutador
    ===================================================================== */
 const ROUTES = {
@@ -1483,7 +1585,8 @@ const ROUTES = {
   'reporte':         {n:'12. Reporte a TransUnion',                    rf:'RF20 a RF22, RF51 a RF54',    rol:'analista', view:vReporte},
   'reclamos':        {n:'13. Reclamos Habeas Data',                    rf:'RF23',                        rol:'analista', view:vReclamos},
   'novedades':       {n:'14. Novedades Urgentes',                      rf:'RF24, RF50, RF55',            rol:'analista', view:vNovedades},
-  'entidad':         {n:'15. Datos de la Entidad ante TransUnion',     rf:'RF57',                        view:vEntidad}
+  'entidad':         {n:'15. Datos de la Entidad ante TransUnion',     rf:'RF57',                        view:vEntidad},
+  'homologacion':    {n:'16. Homologación de Estados',                 rf:'RF48',                        view:vHomologacion}
 };
 function parseRoute(){
   const h = location.hash.replace(/^#\/?/, '');
@@ -2272,6 +2375,9 @@ const ACTIONS = {
   'refi-new':      function(){ modalRefi(); },
   'refi-from':     function(el){ modalRefi(el.getAttribute('data-num')); },
   'ent-reset':     function(){ entReset(); },
+  'hom-edit':      function(el){ S.ui.homEdit = el.getAttribute('data-sac'); render(); const s = $('#hm-acc'); if(s) s.focus(); },
+  'hom-cancel':    function(){ S.ui.homEdit = null; render(); },
+  'hom-save':      function(el){ homSave(el.getAttribute('data-sac')); },
   'marcar-env':    function(el){ marcarEnvio(el.getAttribute('data-id')); },
   'cargar-res':    function(el){ cargarRes(el.getAttribute('data-id')); },
   'ver-res':       function(el){ S.ui.resFile = el.getAttribute('data-id'); render(); const r = $('#rs-t'); if(r) r.scrollIntoView({block:'start', behavior:'smooth'}); },
@@ -2316,6 +2422,7 @@ document.addEventListener('submit', function(e){
 document.addEventListener('change', function(e){
   const t = e.target;
   if(t.id === 'x-group'){ S.ui.xGroup = t.value; const h = $('#x-group-help'); if(h) h.innerHTML = groupHelp(S.groups.find(g => g.id === t.value)); if(t.value){ hideErr($('#x-group-err')); t.removeAttribute('aria-invalid'); } }
+  else if(t.id === 'hm-acc'){ const tu = $('#hm-tu'); tu.disabled = t.value === 'CIERRE'; if(tu.disabled) tu.value = ''; hideErr($('#hm-err')); }
   else if(t.id === 'x-cut'){ S.ui.xCut = t.value; if(t.value){ hideErr($('#x-cut-err')); t.removeAttribute('aria-invalid'); } }
   else if(t.id === 'g-all'){ $$('input[name=gc]:not([disabled])').forEach(i => { i.checked = t.checked; }); updatePick(); }
   else if(t.name === 'gc'){ updatePick(); }

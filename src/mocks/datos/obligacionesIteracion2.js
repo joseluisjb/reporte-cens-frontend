@@ -22,8 +22,8 @@ const CONCEPTOS = {
 }
 
 export const VOLUNTARIO = { codigo: '01', descripcion: 'Voluntario' }
-const NO_VOLUNTARIO = { codigo: '02', descripcion: 'No voluntario' }
-const REFINANCIACION = { codigo: '16', descripcion: 'Refinanciación' }
+export const NO_VOLUNTARIO = { codigo: '02', descripcion: 'No voluntario' }
+export const REFINANCIACION = { codigo: '16', descripcion: 'Refinanciación' }
 
 // [fecha de vencimiento, valor pendiente]
 export const cuotas = (...lista) => lista.map(([fecha, valor]) => ({ fecha, valor }))
@@ -165,7 +165,7 @@ export const FINANCIACIONES_NUEVAS = [
 const ORDEN_ESTADOS = ['01', '03', '06', '02', '07', '04', '08', '10', '11', '12']
 
 const diasEntre = (desde, hasta) => Math.round((Date.parse(hasta) - Date.parse(desde)) / 86400000)
-const estadoTexto = (codigo) => `${codigo} · ${descripcionEstado(codigo)}`
+export const estadoTexto = (codigo) => `${codigo} · ${descripcionEstado(codigo)}`
 
 // Mora al corte: cuotas vencidas sin pagar, de la más antigua a la más reciente (RF7, RF17, RF19, RF49).
 function moraAlCorte(o, corte = FECHA_ULTIMO_CICLO) {
@@ -211,7 +211,8 @@ function posiblesTransiciones(o) {
 }
 
 // Identificación ficticia ya enmascarada, como la entrega el backend.
-const identificacion = (o) => `******${String(o.id).padStart(4, '0')}`
+// Una obligación nacida de una refinanciación guarda la del titular original (`numero_identificacion`).
+export const identificacion = (o) => o.numero_identificacion ?? `******${String(o.id).padStart(4, '0')}`
 
 // `corte`: fecha del último ciclo ejecutado (la mora y los días se calculan a esa fecha).
 export const aResumen = (o, corte = FECHA_ULTIMO_CICLO) => resumenConMora(o, moraAlCorte(o, corte))

@@ -130,6 +130,17 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('refinanciaciones (pantalla 11), con la lista y el registro con errores', async () => {
+    await renderConSesion('/refinanciaciones', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('table', { name: 'Refinanciaciones registradas' })
+    await expectAccesible()
+    await userEvent.click(boton('Registrar refinanciación'))
+    const dialogo = await screen.findByRole('dialog', { name: 'Registrar refinanciación' })
+    await within(dialogo).findByLabelText('Obligación original')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar refinanciación' }))
+    await expectAccesible()
+  })
+
   test('parametrización de conceptos con datos', async () => {
     await renderConSesion('/parametrizacion')
     await screen.findByText('CUOTA FINANCIACION ENERGIA')

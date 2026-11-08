@@ -7,6 +7,7 @@
   --color-bosque-d: #0a7a3a; /* fondo con texto blanco (botón primario, menú lateral) y texto verde sobre claro: 5,44:1 */
   --color-bosque-dd: #08622e; /* hover del botón primario */
   --color-citrico: #9fcf67;
+  --color-sobre-citrico: #064e24; /* texto sobre citrico (etiquetas ADMIN y ANALISTA del menú): 5,46:1 */
   --color-gris: #a1a1a5;
   --color-gris-d: #7d7d81; /* borde de campos y controles (mínimo 3:1 sobre blanco y sobre el fondo) */
   --color-ink: #1e293b;

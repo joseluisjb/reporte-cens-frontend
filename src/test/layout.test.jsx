@@ -30,7 +30,7 @@ describe('menú lateral por rol', () => {
       const enlace = nav.getByRole('link', { name: nombre })
       expect(enlace).toHaveTextContent('ANALISTA')
       expect(enlace).toHaveAccessibleName(expect.stringContaining('(solo para el rol Analista de Cartera)'))
-      expect(enlace).toHaveAttribute('title', 'Solo para el rol Analista de Cartera')
+      expect(enlace).not.toHaveAttribute('title')
     }
     expect(nav.getByRole('link', { name: /inicio/i })).not.toHaveTextContent(/ADMIN|ANALISTA/)
     expect(nav.getByRole('link', { name: /extracción de cartera/i })).not.toHaveTextContent(/ADMIN|ANALISTA/)

@@ -3,11 +3,11 @@ import rayo from '../../assets/brand/rayo-blanco.png'
 import { Icon } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
 import { ROLES } from '../../features/auth/roles'
-import { NAV_ITEMS, SECCIONES, SOLO_ADMIN, puedeAbrir } from '../navigation'
+import { NAV_ITEMS, SECCIONES, esSoloDe, puedeAbrir, textoRoles } from '../navigation'
 
 const ITEM =
   'flex w-full items-center gap-2.5 px-5 py-3 text-left text-sm font-medium text-white hover:bg-black/10 focus-visible:outline-white'
-const ETIQUETA = 'ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-citrico px-1.5 py-0.5 text-[10px] font-bold text-[#064e24]'
+const ETIQUETA = 'ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-citrico px-1.5 py-0.5 text-[10px] font-bold text-sobre-citrico'
 
 // Inicio (sin sección) y luego un grupo por sección, en el orden de la maqueta v3.
 const GRUPOS = [
@@ -19,7 +19,7 @@ const idSeccion = (titulo) => `menu-${titulo.toLowerCase().replaceAll(' ', '-')}
 
 // Etiqueta del ítem: ADMIN siempre en las del Administrador; ANALISTA solo cuando está bloqueada.
 function Etiqueta({ item, bloqueado }) {
-  const esDeAdmin = item.roles === SOLO_ADMIN
+  const esDeAdmin = esSoloDe(item, ROLES.ADMIN)
   if (!esDeAdmin && !bloqueado) return null
   return (
     <span className={ETIQUETA}>
@@ -31,18 +31,16 @@ function Etiqueta({ item, bloqueado }) {
 
 function ItemMenu({ item, rol, onNavigate }) {
   const bloqueado = !puedeAbrir(item, rol)
-  const rolRequerido = item.roles?.[0] === ROLES.ADMIN ? ROLES.ADMIN : ROLES.ANALISTA
   return (
     <li>
       <NavLink
         to={item.path}
         onClick={onNavigate}
-        title={bloqueado ? `Solo para el rol ${rolRequerido}` : undefined}
         className={({ isActive }) => cx(ITEM, isActive && 'bg-black/20 font-semibold')}
       >
         <Icon name={item.icon} />
         <span>{item.label}</span>
-        {bloqueado && <span className="sr-only"> (solo para el rol {rolRequerido})</span>}
+        {bloqueado && <span className="sr-only"> (solo para el rol {textoRoles(item.roles)})</span>}
         <Etiqueta item={item} bloqueado={bloqueado} />
       </NavLink>
     </li>

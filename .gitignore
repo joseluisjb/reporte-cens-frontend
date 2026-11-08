@@ -27,3 +27,6 @@ datos-prueba
 *.njsproj
 *.sln
 *.sw?
+
+# Transcripciones de reuniones con CENS (información reservada; no se suben)
+docs/REUNIONES/

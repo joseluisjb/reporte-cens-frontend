@@ -230,7 +230,7 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 
 ---
 
-## 5. Iteración 2: endpoints propuestos en el contrato 0.9 (todavía no existen en el backend)
+## 5. Iteración 2: endpoints propuestos en el contrato 0.9 y 0.9.1 (todavía no existen en el backend)
 
 El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **propuesta**. Mientras el backend no publique estos endpoints, el frontend los usa con datos simulados (MSW), armados con los ejemplos del contrato. A medida que cada pantalla los usa, los marca como «propuesto (contrato 0.9)» en `src/lib/api/endpoints.js`. Cada PR de pantalla agrega aquí sus criterios de aceptación para el backend (los «Listo cuando» de la ficha).
 
@@ -241,7 +241,7 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
 | Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista |
 | Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador |
 | Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador |
-| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) |
+| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) | Dilan y José Luis | Analista y Administrador (como `validar`) |
 | Resultados del cargue | `GET` y `POST /archivos/{id}/resultados/`, con el estado nuevo `ENVIADO_CON_INCONSISTENCIAS` | RF54 | José Luis | Analista |
 | Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista |
 | Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista |

@@ -40,6 +40,17 @@ describe('EstadoBadge', () => {
     render(<EstadoBadge codigo={null} />)
     expect(screen.getByText('Sin estado')).toBeInTheDocument()
   })
+
+  test('un código fuera de la Tabla 4b sale solo y en gris; una descripción vacía usa el catálogo', () => {
+    render(
+      <>
+        <EstadoBadge codigo="05" />
+        <EstadoBadge codigo="01" descripcion="" />
+      </>,
+    )
+    expect(screen.getByText('05')).toHaveClass('bg-slate-100')
+    expect(screen.getByText('01 · Vigente')).toBeInTheDocument()
+  })
 })
 
 describe('EdadMoraBadge', () => {
@@ -49,10 +60,20 @@ describe('EdadMoraBadge', () => {
     expect(screen.getByText('47 días de mora')).toBeInTheDocument()
   })
 
-  test('sin días no muestra la segunda línea', () => {
-    const { container } = render(<EdadMoraBadge codigo="00" />)
+  test('sin días o con 0 días no muestra la segunda línea', () => {
+    const { container } = render(
+      <>
+        <EdadMoraBadge codigo="00" />
+        <EdadMoraBadge codigo="00" dias={0} />
+      </>,
+    )
     expect(container).toHaveTextContent('00 - Normal')
     expect(container).not.toHaveTextContent('de mora')
+  })
+
+  test('un código fuera de la Tabla 9 sale solo', () => {
+    const { container } = render(<EdadMoraBadge codigo="15" />)
+    expect(container).toHaveTextContent(/^15$/)
   })
 })
 
@@ -66,12 +87,18 @@ describe('CuotasMoraBadge (RF19)', () => {
     render(<CuotasMoraBadge cuotas={cuotas} />)
     expect(screen.getByText(texto)).toHaveClass(fondo)
   })
+
+  test.each([[null], [undefined], [-1], [1.5]])('sin dato válido (%s) muestra «—», no «Al día»', (cuotas) => {
+    render(<CuotasMoraBadge cuotas={cuotas} />)
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('Al día')).not.toBeInTheDocument()
+  })
 })
 
 describe('CandadoCerrada', () => {
-  test('anuncia «Obligación cerrada» al lector de pantalla', () => {
+  test('anuncia la regla completa al lector de pantalla', () => {
     render(<CandadoCerrada />)
-    expect(screen.getByText('Obligación cerrada')).toHaveClass('sr-only')
+    expect(screen.getByText('Obligación cerrada: se reporta una sola vez')).toHaveClass('sr-only')
   })
 
   test('02 y 07 son estados de cierre; los demás no', () => {
@@ -126,6 +153,11 @@ describe('Badge y Alert con los tonos nuevos', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Error')
     expect(screen.getByRole('status')).toHaveTextContent('Aviso')
   })
+
+  test('un tono desconocido se ve y se anuncia como aviso', () => {
+    render(<Alert tone="warn">Se excluyen los conceptos inactivos.</Alert>)
+    expect(screen.getByRole('status')).toHaveClass('bg-amber-50')
+  })
 })
 
 test('formatearDias', () => {
@@ -133,4 +165,5 @@ test('formatearDias', () => {
   expect(formatearDias(47)).toBe('47 días')
   expect(formatearDias(0)).toBe('0 días')
   expect(formatearDias(null)).toBe('—')
+  expect(formatearDias(1500)).toBe('1.500 días')
 })

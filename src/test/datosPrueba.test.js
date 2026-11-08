@@ -1,7 +1,7 @@
 // Script de datos de prueba (scripts/datos-prueba.mjs): cobertura de tramos, coherencia con la Tabla 9 de
 // TransUnion (la misma de la app, catalogosTU) y con el contrato, determinismo y que todo sea ficticio.
 import { aCsv, aleatorio, generarDatosPrueba, generarObligaciones, generarUsuarios, TRAMOS } from '../../scripts/datos-prueba.mjs'
-import { edadMoraDesdeDias, TABLA_9 } from '../features/extraction/catalogosTU'
+import { edadMoraDesdeDias, TABLA_9 } from '../features/transunion/catalogosTU'
 import { expectCumpleContrato } from './contrato'
 
 const obligaciones = generarObligaciones({ cantidad: 60, semilla: 1 })

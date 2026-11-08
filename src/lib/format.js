@@ -41,6 +41,9 @@ export function formatearFechaISOLarga(iso) {
 // plural(1, 'obligación', 'obligaciones') → '1 obligación'
 export const plural = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`
 
+// 47 → '47 días'; 1 → '1 día'. Sin valor devuelve "—".
+export const formatearDias = (dias) => (dias == null ? '—' : plural(dias, 'día', 'días'))
+
 // '1000000001' → '******0001'. Dato personal (Habeas Data): solo se ven los últimos 4 dígitos.
 // Con 4 caracteres o menos se oculta todo; sin valor devuelve "—".
 export function enmascararIdentificacion(numero) {

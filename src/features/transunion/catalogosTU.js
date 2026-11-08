@@ -40,6 +40,10 @@ export const ESTADOS_OBLIGACION = {
   '12': 'Ley 1564 de 2012',
 }
 
+// Estados de cierre: se reportan una sola vez y después la obligación ya no cambia (RF13, RF16).
+export const ESTADOS_DE_CIERRE = ['02', '07']
+export const esEstadoDeCierre = (codigo) => ESTADOS_DE_CIERRE.includes(codigo)
+
 // Tabla 2.
 export const TIPOS_IDENTIFICACION = {
   '01': 'Cédula de ciudadanía',

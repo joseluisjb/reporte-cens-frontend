@@ -11,6 +11,7 @@
 //   avargas@example.com   / Cartera123      → usuario desactivado
 import { CODIGOS_ROL } from '../features/auth/roles'
 import { archivosIniciales } from './datos/archivos'
+import { cicloInicial } from './datos/ciclos'
 import { obligacionesIniciales } from './datos/obligacionesIteracion2'
 
 const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
@@ -59,7 +60,7 @@ const cortesIniciales = () => [
 const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'ciclos']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -73,6 +74,8 @@ const inicial = () => ({
   obligaciones: obligacionesIniciales(),
   entidad: entidadInicial(),
   archivos: archivosIniciales(),
+  // Actualizaciones mensuales ejecutadas (pantalla 10): al inicio, la del corte 2026-09-30.
+  ciclos: [cicloInicial()],
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

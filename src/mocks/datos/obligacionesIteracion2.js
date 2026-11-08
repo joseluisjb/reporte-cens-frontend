@@ -21,14 +21,14 @@ const CONCEPTOS = {
   3839: 'Cuota financiación energía recargable',
 }
 
-const VOLUNTARIO = { codigo: '01', descripcion: 'Voluntario' }
+export const VOLUNTARIO = { codigo: '01', descripcion: 'Voluntario' }
 const NO_VOLUNTARIO = { codigo: '02', descripcion: 'No voluntario' }
 const REFINANCIACION = { codigo: '16', descripcion: 'Refinanciación' }
 
 // [fecha de vencimiento, valor pendiente]
-const cuotas = (...lista) => lista.map(([fecha, valor]) => ({ fecha, valor }))
+export const cuotas = (...lista) => lista.map(([fecha, valor]) => ({ fecha, valor }))
 // [fecha, estado, texto, edad]
-const eventos = (...lista) => lista.map(([fecha, estado, texto, edad = '00']) => ({ fecha, estado, texto, edad }))
+export const eventos = (...lista) => lista.map(([fecha, estado, texto, edad = '00']) => ({ fecha, estado, texto, edad }))
 
 const base = {
   cuota_antes_cierre: null, vencidas: [], atrasos_permitidos: 4, caducado: false, primer_reporte: false,
@@ -36,7 +36,7 @@ const base = {
   pago_mora: null, reestructuracion: null, refinanciada_en: null, movimiento_posterior_cierre: false,
   pagos: [], advertencias: [],
 }
-const obligacion = (datos) => ({ ...base, ...datos })
+export const obligacion = (datos) => ({ ...base, ...datos })
 
 export const obligacionesIniciales = () => [
   obligacion({
@@ -213,7 +213,8 @@ function posiblesTransiciones(o) {
 // Identificación ficticia ya enmascarada, como la entrega el backend.
 const identificacion = (o) => `******${String(o.id).padStart(4, '0')}`
 
-export const aResumen = (o) => resumenConMora(o, moraAlCorte(o))
+// `corte`: fecha del último ciclo ejecutado (la mora y los días se calculan a esa fecha).
+export const aResumen = (o, corte = FECHA_ULTIMO_CICLO) => resumenConMora(o, moraAlCorte(o, corte))
 
 // Con la mora ya calculada (aDetalle la reutiliza para no repetir el cálculo).
 function resumenConMora(o, mora) {
@@ -237,8 +238,8 @@ function resumenConMora(o, mora) {
   }
 }
 
-export function aDetalle(o) {
-  const mora = moraAlCorte(o)
+export function aDetalle(o, corte = FECHA_ULTIMO_CICLO) {
+  const mora = moraAlCorte(o, corte)
   return {
     ...resumenConMora(o, mora),
     motivo_revision: o.motivo_revision,
@@ -256,7 +257,7 @@ export function aDetalle(o) {
     reestructuracion: o.reestructuracion,
     refinanciada_en: o.refinanciada_en,
     movimiento_posterior_cierre: o.movimiento_posterior_cierre,
-    cuotas_vencidas: mora.pendientes.map((c) => ({ fecha_vencimiento: c.fecha, valor_pendiente: c.valor, dias: diasEntre(c.fecha, FECHA_ULTIMO_CICLO) })),
+    cuotas_vencidas: mora.pendientes.map((c) => ({ fecha_vencimiento: c.fecha, valor_pendiente: c.valor, dias: diasEntre(c.fecha, corte) })),
     pagos: o.pagos,
     posibles_transiciones: posiblesTransiciones(o),
     advertencias: o.advertencias,
@@ -268,12 +269,12 @@ export const lineaTiempo = (o) =>
   [...o.eventos].reverse().map((e) => ({ fecha: e.fecha, estado_tu: e.estado, edad_mora: e.edad, descripcion: e.texto }))
 
 // Tarjetas de la pantalla 9 y del panel (RF19). `por_cuotas_mora` cuenta solo las abiertas y suma `abiertas`.
-export function resumenCartera(obligaciones) {
+export function resumenCartera(obligaciones, corte = FECHA_ULTIMO_CICLO) {
   const vivas = obligaciones.filter((o) => !o.eliminada)
-  const abiertas = vivas.filter((o) => !esEstadoDeCierre(o.estado)).map(aResumen)
+  const abiertas = vivas.filter((o) => !esEstadoDeCierre(o.estado)).map((o) => aResumen(o, corte))
   const contar = (filtro) => abiertas.filter(filtro).length
   return {
-    fecha_ultimo_ciclo: FECHA_ULTIMO_CICLO,
+    fecha_ultimo_ciclo: corte,
     total: vivas.length,
     abiertas: abiertas.length,
     por_estado: ORDEN_ESTADOS.map((estado_tu) => ({ estado_tu, cantidad: vivas.filter((o) => o.estado === estado_tu).length })).filter((c) => c.cantidad > 0),
@@ -284,6 +285,7 @@ export function resumenCartera(obligaciones) {
       dos_a_tres: contar((o) => o.cuotas_mora >= 2 && o.cuotas_mora <= 3),
       cuatro_o_mas: contar((o) => o.cuotas_mora >= 4),
     },
-    financiaciones_nuevas: FINANCIACIONES_NUEVAS,
+    // Las que ya entraron con un ciclo dejan de ser nuevas.
+    financiaciones_nuevas: FINANCIACIONES_NUEVAS.filter((f) => !obligaciones.some((o) => o.numero === f.numero_obligacion)),
   }
 }

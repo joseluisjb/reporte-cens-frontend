@@ -6,6 +6,7 @@ import { ESTADOS_OBLIGACION } from '../../features/transunion/catalogosTU'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { aDetalle, aResumen, lineaTiempo, resumenCartera } from '../datos/obligacionesIteracion2'
 import { db } from '../db'
+import { corteVigente } from './ciclos'
 import { aEntero, error, espera, exigirSesion, idDeRuta, SOLO_ANALISTA, url } from '../utilidades'
 import { LIMITE_MAXIMO } from './extracciones'
 
@@ -81,7 +82,7 @@ export const obligacionesHandlers = [
     const { filtros, errores } = leerFiltrosObligaciones(new URL(request.url).searchParams)
     if (errores) return error(400, errores)
     const filas = db.obligaciones
-      .map(aResumen)
+      .map((o) => aResumen(o, corteVigente()))
       .filter((fila) => cumple(fila, filtros))
       .sort((a, b) => a.numero_obligacion.localeCompare(b.numero_obligacion))
     const { limite, desplazamiento } = filtros
@@ -92,7 +93,7 @@ export const obligacionesHandlers = [
   http.get(url(ENDPOINTS.obligacionesResumen), async () => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
-    return respuesta ?? HttpResponse.json(resumenCartera(db.obligaciones))
+    return respuesta ?? HttpResponse.json(resumenCartera(db.obligaciones, corteVigente()))
   }),
 
   http.get(url(ENDPOINTS.obligacion(':id')), async ({ params }) => {
@@ -100,7 +101,7 @@ export const obligacionesHandlers = [
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
     const obligacion = buscar(params.id)
-    return obligacion ? HttpResponse.json(aDetalle(obligacion)) : error(404, NO_ENCONTRADA)
+    return obligacion ? HttpResponse.json(aDetalle(obligacion, corteVigente())) : error(404, NO_ENCONTRADA)
   }),
 
   http.get(url(ENDPOINTS.obligacionLineaTiempo(':id')), async ({ params }) => {

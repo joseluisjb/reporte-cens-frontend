@@ -7,7 +7,9 @@ import { parse } from 'yaml'
 import { api } from '../lib/api'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
+import { server } from '../mocks/server'
 import { expectCumpleContrato, expectPeticionCumpleContrato } from './contrato'
+import { cicloConRechazosYRevisiones, corteDeOctubreEnBorrador } from './escenarios/ciclo'
 
 const ADMIN = ['rmartinez@example.com', 'Admin12345'] // id 2
 const ANALISTA = ['jperez@example.com', 'Analista123']
@@ -505,5 +507,74 @@ describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligacion
         prefijo_archivo: 'SSRXXXXXX', actualizado_por: null, fecha_actualizacion: null,
       })
     }
+  })
+})
+
+describe('conformidad de los mocks de la actualización mensual (contrato 0.9): ciclos y matriz', () => {
+  test('GET /matriz-estados/ 200 cumple MatrizEstados con las 400 transiciones; 403 al Administrador y 401', async () => {
+    await verifica('get', '/matriz-estados/', 401)
+    await entrar(ADMIN)
+    await verifica('get', '/matriz-estados/', 403)
+    await entrar(ANALISTA)
+    const matriz = await verifica('get', '/matriz-estados/', 200)
+    expect(matriz.transiciones).toHaveLength(400)
+    const permitida = (desde, dm, hacia, hm) =>
+      matriz.transiciones.find((t) => t.desde === desde && t.desde_con_mora === dm && t.hacia === hacia && t.hacia_con_mora === hm).permitida
+    expect(permitida('01', false, '02', false)).toBe(true)
+    expect(permitida('02', false, '01', false)).toBe(false) // Saldada no tiene salidas
+    expect(permitida('03', true, '07', false)).toBe(true)
+    expect(permitida('01', false, '06', false)).toBe(false)
+  })
+
+  test('GET /ciclos/ 200 cumple la lista de CicloResumen y GET /ciclos/{id}/ el CicloDetalle; 404 sin ciclo', async () => {
+    await verifica('get', '/ciclos/', 401)
+    await entrar(ADMIN)
+    await verifica('get', '/ciclos/', 403)
+    await entrar(ANALISTA)
+    expect(await verifica('get', '/ciclos/', 200)).toEqual([
+      { corte_id: 2, fecha_corte: '2026-09-30', fecha_ejecucion: '2026-09-30T10:02:00-05:00', ejecutada_por: 'Juan Pérez', primer_reporte: 2, cambios_estado: 2, cierres: 2, rechazados: 0 },
+    ])
+    expect((await verifica('get', '/ciclos/{corte_id}/', 200, { url: '/ciclos/2/' })).transiciones).toHaveLength(6)
+    expect(await verifica('get', '/ciclos/{corte_id}/', 404, { url: '/ciclos/1/' })).toEqual({ detail: 'Ese corte no tiene una actualización mensual ejecutada.' })
+  })
+
+  test('POST /ciclos/ 201 aplica la foto del 2026-10-31 sobre el BORRADOR y actualiza las obligaciones', async () => {
+    corteDeOctubreEnBorrador()
+    await entrar(ANALISTA)
+    expect(() => expectPeticionCumpleContrato('post', '/ciclos/', { fecha_corte: '2026-10-31' })).not.toThrow()
+    const ciclo = await verifica('post', '/ciclos/', 201, { datos: { fecha_corte: '2026-10-31' } })
+    expect(ciclo).toMatchObject({ corte_id: 3, fecha_corte: '2026-10-31', ejecutada_por: 'Juan Pérez', primer_reporte: 3, cambios_estado: 3, cierres: 1, rechazados: 0, con_pagos: 5 })
+    expect(ciclo.transiciones).toHaveLength(10)
+    // Las obligaciones quedan al corte nuevo: 15, la del Hotel en Castigada y 2261-8820 cerrada.
+    const resumen = await verifica('get', '/obligaciones/resumen/', 200)
+    expect(resumen).toMatchObject({ fecha_ultimo_ciclo: '2026-10-31', total: 15, financiaciones_nuevas: [] })
+    const hotel = (await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?q=hotel' })).resultados[0]
+    expect(hotel).toMatchObject({ estado_tu: '06', dias_mora: 187, edad_mora: '06' })
+    expect((await verifica('get', '/ciclos/', 200)).map((c) => c.fecha_corte)).toEqual(['2026-10-31', '2026-09-30'])
+    // Volver a ejecutarlo sobre el mismo BORRADOR reemplaza el resultado (no duplica).
+    await verifica('post', '/ciclos/', 201, { datos: { fecha_corte: '2026-10-31' } })
+    expect(await verifica('get', '/ciclos/', 200)).toHaveLength(2)
+    expect((await verifica('get', '/obligaciones/resumen/', 200)).total).toBe(15)
+  })
+
+  test('POST /ciclos/ 400 por fecha (falta, no es fin de mes, no es posterior al último enviado) y 409 sin BORRADOR', async () => {
+    await entrar(ANALISTA)
+    expect(await verifica('post', '/ciclos/', 400, { datos: {} })).toEqual({ fecha_corte: ['Selecciona una fecha de corte.'] })
+    expect(await verifica('post', '/ciclos/', 400, { datos: { fecha_corte: '2026-10-15' } })).toEqual({
+      fecha_corte: ['El corte es el último día del mes. Para ese mes sería el 31/10/2026.'],
+    })
+    expect(await verifica('post', '/ciclos/', 400, { datos: { fecha_corte: '2026-08-31' } })).toEqual({
+      fecha_corte: ['La fecha de corte debe ser posterior al último corte enviado (31/08/2026).'],
+    })
+    expect(await verifica('post', '/ciclos/', 409, { datos: { fecha_corte: '2026-10-31' } })).toEqual({ detail: 'Primero genera la extracción de ese corte.' })
+    await entrar(ADMIN)
+    await verifica('post', '/ciclos/', 403, { datos: { fecha_corte: '2026-09-30' } })
+  })
+
+  test('el escenario con rechazos 713 y 881 y revisiones cumple CicloDetalle', async () => {
+    server.use(...cicloConRechazosYRevisiones())
+    await entrar(ANALISTA)
+    const ciclo = await verifica('post', '/ciclos/', 201, { datos: { fecha_corte: '2026-10-31' } })
+    expect(ciclo.rechazos.map((r) => r.codigo)).toEqual(['881', '713'])
   })
 })

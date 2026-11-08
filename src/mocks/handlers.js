@@ -4,6 +4,7 @@
 import { auditoriaHandlers } from './rutas/auditoria'
 import { authHandlers } from './rutas/auth'
 import { catalogosHandlers } from './rutas/catalogos'
+import { ciclosHandlers } from './rutas/ciclos'
 import { conceptosHandlers } from './rutas/conceptos'
 import { entidadHandlers } from './rutas/entidad'
 import { extraccionesHandlers } from './rutas/extracciones'
@@ -26,4 +27,5 @@ export const handlers = [
   ...catalogosHandlers,
   ...entidadHandlers,
   ...panelHandlers,
+  ...ciclosHandlers,
 ]

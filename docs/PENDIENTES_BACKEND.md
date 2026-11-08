@@ -227,3 +227,29 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 | Z | "Último estado" de un deudor puede venir de un `BORRADOR`: decidir si solo cuenta lo `ENVIADO` | José Luis |
 | AA (el resto) | Un corte `ANULADO` de la misma fecha bloquea la generación; `observacion` del reporte no se puede escribir | José Luis |
 | AE | El detalle del log lleva el correo del usuario creado o editado. Aceptable porque solo lo ve el Administrador; falta confirmarlo | Dilan y Santiago |
+
+---
+
+## 5. Iteración 2: endpoints propuestos en el contrato 0.9 (todavía no existen en el backend)
+
+El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **propuesta**. Mientras el backend no publique estos endpoints, el frontend los usa con datos simulados (MSW), armados con los ejemplos del contrato. A medida que cada pantalla los usa, los marca como «propuesto (contrato 0.9)» en `src/lib/api/endpoints.js`. Cada PR de pantalla agrega aquí sus criterios de aceptación para el backend (los «Listo cuando» de la ficha).
+
+| Módulo | Endpoints | RF | Backend | Rol (permiso) |
+|---|---|---|---|---|
+| Obligaciones | `GET /obligaciones/`, `/obligaciones/resumen/`, `/obligaciones/{id}/`, `/obligaciones/{id}/linea-tiempo/` | RF10–RF19, RF45–RF50, RF52 | José Luis | Analista (`EsAnalista`, nuevo) |
+| Ciclo mensual | `GET /matriz-estados/`, `GET` y `POST /ciclos/`, `GET /ciclos/{corte_id}/` | RF10–RF17, RF19, RF45–RF49 | José Luis | Analista |
+| Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista |
+| Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador |
+| Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador |
+| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) |
+| Resultados del cargue | `GET` y `POST /archivos/{id}/resultados/`, con el estado nuevo `ENVIADO_CON_INCONSISTENCIAS` | RF54 | José Luis | Analista |
+| Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista |
+| Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista |
+| Entidad | `GET /entidad/` (ambos roles) y `PUT /entidad/` | RF57 | Santiago | Administrador para escribir |
+| Panel | `GET /panel/resumen/` | RF6, RF19, RF23, RF24, RF57 | José Luis | Analista |
+
+**Por definir con el backend:**
+
+- **Rechazos del ciclo (713 y 881).** Hoy se resuelven así: se corrige el dato en el SAC, se regenera la extracción y se repite el ciclo. Falta definir la exclusión de una obligación con justificación (RF10, flujo alterno); no tiene endpoint en la 0.9.
+- **`ENVIADO_CON_INCONSISTENCIAS` cuenta como enviado.** Vale para el historial de reportes, para la regla A9 y para saber cuál es el último corte enviado.
+- **Plazo de los reclamos.** Son 15 días hábiles, sin contar fines de semana ni festivos de Colombia. La regla exacta de conteo está por confirmar con jurídica.

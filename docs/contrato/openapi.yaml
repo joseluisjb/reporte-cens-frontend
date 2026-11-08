@@ -54,7 +54,9 @@ info:
     (fila 27 del README): nombres en snake_case completos (como las columnas de la base); el ciclo
     mensual (`POST /ciclos/`) trabaja sobre el corte en `BORRADOR` que crea la extracción, con el orden
     extracción → ciclo → validar → archivo → envío; `validar` y `registrar-envio` siguen para los dos
-    roles y solo cambian su respuesta; los endpoints nuevos son del **Analista de Cartera**, salvo RF48
+    roles y solo cambian su respuesta (por eso las validaciones, la generación, la lista y la descarga del
+    archivo también son de los dos roles; la pantalla 12 es del Analista); los demás endpoints nuevos son
+    del **Analista de Cartera**, salvo RF48
     y RF57 (Administrador) y las lecturas de `/entidad/` y `/catalogos/`, que son de los dos roles.
     `EstadoCorte` suma `ENVIADO_CON_INCONSISTENCIAS` (RF54). Los reclamos (pantalla 13) y las
     novedades (pantalla 14) son una propuesta para que Omar y Angel la revisen. Lo que depende de CENS
@@ -156,7 +158,7 @@ tags:
   - name: Estados y homologación
     description: RF48 · Santiago · propuesta (0.9) · solo Administrador
   - name: Reporte a TransUnion
-    description: RF20–RF22, RF51, RF53, RF54 · Dilan y José Luis · propuesta (0.9) · solo Analista de Cartera
+    description: RF20–RF22, RF51, RF53, RF54 · Dilan y José Luis · propuesta (0.9) · validaciones, archivo y descarga para los dos roles (como validar y registrar-envio); resultados del cargue solo Analista de Cartera
   - name: Reclamos
     description: RF23 · Clara (API) y Omar (pantalla) · propuesta (0.9) · solo Analista de Cartera
   - name: Novedades
@@ -788,7 +790,8 @@ paths:
 
         **Contrato 0.4 (manual de TransUnion, inconsistencia 074):** la fecha de corte
         debe ser **posterior** a la del último corte enviado (`ENVIADO`); si es igual o anterior,
-        responde `409`. Implementado en el backend (`DISCREPANCIAS.md`, A9).
+        responde `409`. Implementado en el backend (`DISCREPANCIAS.md`, A9). Desde la 0.9, «enviado»
+        incluye `ENVIADO_CON_INCONSISTENCIAS` (RF54).
 
         **Si hay un `BORRADOR` equivocado** de otra fecha, se elimina con
         `DELETE /extracciones/{id}/` y se vuelve a generar.
@@ -1184,7 +1187,8 @@ paths:
       tags: [Historial]
       summary: Historial de reportes enviados a TransUnion (RF6)
       description: |
-        Los cortes en estado `ENVIADO`, del envío más reciente al más antiguo. Los filtros `desde`
+        Los cortes en estado `ENVIADO` (y, desde la 0.9, `ENVIADO_CON_INCONSISTENCIAS`: también se
+        enviaron), del envío más reciente al más antiguo. Los filtros `desde`
         y `hasta` se aplican sobre `fecha_envio` y son inclusivos. Arreglo plano, sin paginación.
         Puede ser `[]` mientras no se haya registrado ningún envío. *Implementado en el backend.*
       operationId: historialReportes
@@ -1229,8 +1233,8 @@ paths:
       summary: Detalle de un reporte enviado (RF6)
       description: |
         Las filas que se enviaron en ese corte, ordenadas por `OBLIGACION_ID` y paginadas con
-        `limite` y `desplazamiento`. Solo para cortes en `ENVIADO`; en cualquier otro estado
-        responde `404`. Muestra parte de los 22 campos de CENS (ver decisión 13 del README).
+        `limite` y `desplazamiento`. Solo para cortes enviados (`ENVIADO` o, desde la 0.9,
+        `ENVIADO_CON_INCONSISTENCIAS`); en cualquier otro estado responde `404`. Muestra parte de los 22 campos de CENS (ver decisión 13 del README).
         *Implementado en el backend.*
 
         **Dato personal:** `numero_identificacion` llega enmascarado (`NumeroIdentificacion`).
@@ -1288,7 +1292,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
-          description: El reporte no existe o el corte no está en `ENVIADO`.
+          description: El reporte no existe o el corte no se ha enviado.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
@@ -1853,8 +1857,15 @@ paths:
         pago de la mora (RF22, RF47) y edad (RF11). Un cambio rechazado conserva el estado anterior
         y aparece en `rechazos`.
 
-        `fecha_corte` debe ser el último día del mes y posterior a la del último ciclo (`400` por
-        campo). *Propuesta.*
+        `fecha_corte` debe ser el último día del mes y posterior a la del último corte **enviado**
+        (`400` por campo). Mientras el corte siga en `BORRADOR` se puede volver a ejecutar con la misma
+        fecha (por ejemplo, después de corregir el dato en el SAC y regenerar la extracción).
+
+        **Rechazos (713 y 881).** Un rechazo no se resuelve en NexoVolt: se corrige el dato en el origen
+        (SAC), se regenera la extracción y se vuelve a ejecutar el ciclo (RF10, flujo alterno). Mientras
+        tanto, `GET /extracciones/{id}/validaciones/` lo muestra como `correctiva` con la obligación y
+        `validar` no deja pasar el corte. La exclusión de una obligación con justificación (RF10) queda
+        **por definir** con José Luis; no tiene endpoint en la 0.9. *Propuesta.*
       operationId: ciclosCreate
       x-roles: [Analista de Cartera]
       requestBody:
@@ -1924,8 +1935,8 @@ paths:
                   summary: No es el último día del mes
                   value: { fecha_corte: ['El corte es el último día del mes. Para ese mes sería el 31/10/2026.'] }
                 anterior:
-                  summary: No es posterior al último ciclo
-                  value: { fecha_corte: ['La fecha de corte debe ser posterior a la última actualización (30/09/2026).'] }
+                  summary: No es posterior al último corte enviado
+                  value: { fecha_corte: ['La fecha de corte debe ser posterior al último corte enviado (30/09/2026).'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
@@ -2261,7 +2272,7 @@ paths:
         y pasa el corte a `VALIDADO`. `puede_generar` es `false` mientras haya alguna correctiva.
         *Propuesta.*
       operationId: extraccionesValidaciones
-      x-roles: [Analista de Cartera]
+      x-roles: [Analista de Cartera, Administrador]
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -2337,7 +2348,7 @@ paths:
         entidad lleva marcador (RF57), el archivo **se genera** pero sale con `apto_envio: false`.
         Generar otra vez el archivo de un corte crea una versión nueva. *Propuesta.*
       operationId: extraccionesArchivo
-      x-roles: [Analista de Cartera]
+      x-roles: [Analista de Cartera, Administrador]
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -2393,9 +2404,12 @@ paths:
     get:
       tags: [Reporte a TransUnion]
       summary: Listar los archivos generados (RF20, RF54)
-      description: Más reciente primero. Arreglo plano (uno o pocos por mes). *Propuesta.*
+      description: |
+        Más reciente primero. Arreglo plano (uno o pocos por mes). En el ejemplo, el archivo del
+        31/08/2026 se generó con datos de entidad **de prueba** (`001`, `123`), como en el caso de prueba
+        de RF57; los de CENS siguen con marcador hasta que TransUnion los asigne. *Propuesta.*
       operationId: archivosList
-      x-roles: [Analista de Cartera]
+      x-roles: [Analista de Cartera, Administrador]
       parameters:
         - name: corte_id
           in: query
@@ -2410,10 +2424,28 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Archivo' }
               example:
+                - id: 2
+                  corte_id: 2
+                  fecha_corte: '2026-09-30'
+                  nombre: SSRXXXXXX20260930
+                  tipo_reporte: '01'
+                  fecha_generacion: '2026-10-01T09:20:00-05:00'
+                  generado_por: Juan Pérez
+                  n_registros: 11
+                  total_registros: 13
+                  n_excluidas: 1
+                  saldo_total: 21863586
+                  longitud_registro_tipo2: 930
+                  apto_envio: false
+                  motivo_no_apto: 'La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.'
+                  enviado: false
+                  fecha_envio: null
+                  estado_corte: VALIDADO
+                  tiene_resultados: false
                 - id: 1
                   corte_id: 1
                   fecha_corte: '2026-08-31'
-                  nombre: SSRXXXXXX20260831
+                  nombre: SSR00112320260831
                   tipo_reporte: '01'
                   fecha_generacion: '2026-09-01T09:20:00-05:00'
                   generado_por: Carlos Sánchez
@@ -2422,12 +2454,12 @@ paths:
                   n_excluidas: 0
                   saldo_total: 19844130
                   longitud_registro_tipo2: 930
-                  apto_envio: false
-                  motivo_no_apto: 'La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.'
-                  enviado: false
-                  fecha_envio: null
-                  estado_corte: VALIDADO
-                  tiene_resultados: false
+                  apto_envio: true
+                  motivo_no_apto: null
+                  enviado: true
+                  fecha_envio: '2026-09-02'
+                  estado_corte: ENVIADO_CON_INCONSISTENCIAS
+                  tiene_resultados: true
         '400':
           description: Filtro inválido.
           content:
@@ -2445,7 +2477,7 @@ paths:
         El contenido tal cual se carga en STRANSFER: texto de longitud fija en Windows-1252, con
         `Content-Disposition: attachment; filename="SSR….txt"`. *Propuesta.*
       operationId: archivosDescarga
-      x-roles: [Analista de Cartera]
+      x-roles: [Analista de Cartera, Administrador]
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -2491,8 +2523,8 @@ paths:
                 cargado_por: Carlos Sánchez
                 estado_corte: ENVIADO_CON_INCONSISTENCIAS
                 archivos_cargados:
-                  - { nombre_archivo: correctivas_SSRXXXXXX20260831.txt, tipo_archivo: CORRECTIVAS, n_filas: 1 }
-                  - { nombre_archivo: norep_SSRXXXXXX20260831.txt, tipo_archivo: NOREP, n_filas: 1 }
+                  - { nombre_archivo: correctivas_SSR00112320260831.txt, tipo_archivo: CORRECTIVAS, n_filas: 1 }
+                  - { nombre_archivo: norep_SSR00112320260831.txt, tipo_archivo: NOREP, n_filas: 1 }
                 recibidos: 9
                 cargados: 8
                 con_inconsistencias: 2
@@ -2541,20 +2573,40 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ResultadosCargue' }
-              example:
-                archivo_id: 1
-                corte_id: 1
-                fecha_corte: '2026-08-31'
-                fecha_carga: '2026-09-05T14:00:00-05:00'
-                cargado_por: Carlos Sánchez
-                estado_corte: ENVIADO
-                archivos_cargados:
-                  - { nombre_archivo: estadisticos_SSRXXXXXX20260831.txt, tipo_archivo: ESTADISTICOS, n_filas: 9 }
-                recibidos: 9
-                cargados: 9
-                con_inconsistencias: 0
-                no_reportadas: 0
-                inconsistencias: []
+              examples:
+                con_correctivas:
+                  summary: Con correctivas, el corte pasa a ENVIADO_CON_INCONSISTENCIAS
+                  value:
+                    archivo_id: 1
+                    corte_id: 1
+                    fecha_corte: '2026-08-31'
+                    fecha_carga: '2026-09-05T14:00:00-05:00'
+                    cargado_por: Carlos Sánchez
+                    estado_corte: ENVIADO_CON_INCONSISTENCIAS
+                    archivos_cargados:
+                      - { nombre_archivo: correctivas_SSR00112320260831.txt, tipo_archivo: CORRECTIVAS, n_filas: 1 }
+                    recibidos: 9
+                    cargados: 8
+                    con_inconsistencias: 1
+                    no_reportadas: 0
+                    inconsistencias:
+                      - { obligacion_id: 2, numero_obligacion: 2258-7731, tipo: CORRECTIVA, codigo: '707', descripcion: 'Edad de mora mayor a 00 sin valor de mora' }
+                sin_correctivas:
+                  summary: Sin correctivas, el corte queda ENVIADO
+                  value:
+                    archivo_id: 1
+                    corte_id: 1
+                    fecha_corte: '2026-08-31'
+                    fecha_carga: '2026-09-05T14:00:00-05:00'
+                    cargado_por: Carlos Sánchez
+                    estado_corte: ENVIADO
+                    archivos_cargados:
+                      - { nombre_archivo: estadisticos_SSR00112320260831.txt, tipo_archivo: ESTADISTICOS, n_filas: 9 }
+                    recibidos: 9
+                    cargados: 9
+                    con_inconsistencias: 0
+                    no_reportadas: 0
+                    inconsistencias: []
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -2603,10 +2655,11 @@ paths:
                   observacion: El titular indica un pago realizado el 15/09.
                   estado: EN_RECLAMO
                   radicado_en_tu: false
-                  fecha_limite_respuesta: '2026-10-13'
+                  fecha_limite_respuesta: '2026-10-14'
                   vencido: false
                   resultado: null
                   fecha_cierre: null
+                  observacion_cierre: null
                   registrado_por: Juan Pérez
                   fecha_registro: '2026-09-22T09:15:00-05:00'
         '400':
@@ -2645,10 +2698,11 @@ paths:
                 observacion: El titular indica un pago realizado el 15/09.
                 estado: EN_RECLAMO
                 radicado_en_tu: false
-                fecha_limite_respuesta: '2026-10-13'
+                fecha_limite_respuesta: '2026-10-14'
                 vencido: false
                 resultado: null
                 fecha_cierre: null
+                observacion_cierre: null
                 registrado_por: Juan Pérez
                 fecha_registro: '2026-09-22T09:15:00-05:00'
         '400':
@@ -2680,7 +2734,7 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ReclamoCerrarRequest' }
-            example: { resultado: Procedente, fecha_cierre: '2026-09-20', observacion: Se corrigió el titular de la obligación. }
+            example: { resultado: Procedente, fecha_cierre: '2026-09-17', observacion_cierre: Se corrigió el titular de la obligación. }
       responses:
         '200':
           description: Reclamo cerrado.
@@ -2694,13 +2748,14 @@ paths:
                 nombre_titular: Panadería El Trigal
                 tipologia: { codigo: '03', descripcion: Titular no reconoce la obligación, confirmado: false }
                 fecha_radicacion: '2026-08-30'
-                observacion: Se corrigió el titular de la obligación.
+                observacion: El titular no reconoce la obligación.
                 estado: CERRADO
                 radicado_en_tu: true
-                fecha_limite_respuesta: '2026-09-21'
+                fecha_limite_respuesta: '2026-09-18'
                 vencido: false
                 resultado: Procedente
-                fecha_cierre: '2026-09-20'
+                fecha_cierre: '2026-09-17'
+                observacion_cierre: Se corrigió el titular de la obligación.
                 registrado_por: Juan Pérez
                 fecha_registro: '2026-08-30T10:00:00-05:00'
         '400':
@@ -3305,17 +3360,17 @@ paths:
                   - { estado_tu: '02', cantidad: 2 }
                   - { estado_tu: '07', cantidad: 1 }
                 ultimo_archivo:
-                  id: 1
-                  corte_id: 1
-                  fecha_corte: '2026-08-31'
-                  nombre: SSRXXXXXX20260831
+                  id: 2
+                  corte_id: 2
+                  fecha_corte: '2026-09-30'
+                  nombre: SSRXXXXXX20260930
                   tipo_reporte: '01'
-                  fecha_generacion: '2026-09-01T09:20:00-05:00'
-                  generado_por: Carlos Sánchez
-                  n_registros: 9
-                  total_registros: 11
-                  n_excluidas: 0
-                  saldo_total: 19844130
+                  fecha_generacion: '2026-10-01T09:20:00-05:00'
+                  generado_por: Juan Pérez
+                  n_registros: 11
+                  total_registros: 13
+                  n_excluidas: 1
+                  saldo_total: 21863586
                   longitud_registro_tipo2: 930
                   apto_envio: false
                   motivo_no_apto: 'La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.'
@@ -3425,7 +3480,7 @@ components:
           examples:
             otro_corte:
               summary: Archivo de otro corte
-              value: { detail: 'El archivo correctivas_SSRXXXXXX20260731.txt es del corte 31/07/2026, no del 31/08/2026.', code: archivo_de_otro_corte }
+              value: { detail: 'El archivo correctivas_SSR00112320260731.txt es del corte 31/07/2026, no del 31/08/2026.', code: archivo_de_otro_corte }
             estructura:
               summary: Estructura distinta a la esperada
               value: { detail: 'El archivo estadisticos.txt no tiene la estructura esperada (línea 3: se esperaban 6 campos separados por |).', code: estructura_invalida }
@@ -3650,7 +3705,8 @@ components:
         listados lo excluyen. Solo puede haber un corte en `BORRADOR` a la vez.
 
         **0.9 (propuesta, RF54):** al cargar los resultados de TransUnion (`POST /archivos/{id}/resultados/`),
-        un corte `ENVIADO` pasa a `ENVIADO_CON_INCONSISTENCIAS` si el cargue trae correctivas.
+        un corte `ENVIADO` pasa a `ENVIADO_CON_INCONSISTENCIAS` si el cargue trae correctivas. Para todo
+        lo demás (historial de reportes, regla A9, último corte enviado) cuenta como **enviado**.
     CorteResumen:
       type: object
       required: [id, fecha_corte, fecha_ejecucion, grupo, obligaciones, saldo_consolidado, estado, ejecutada_por]
@@ -3850,7 +3906,7 @@ components:
     ReporteEnviado:
       type: object
       required: [id, fecha_corte, fecha_envio, total_registros, saldo_consolidado, grupo, observacion]
-      description: Un corte en estado `ENVIADO`. El `id` es el del corte.
+      description: Un corte enviado (`ENVIADO` o, desde la 0.9, `ENVIADO_CON_INCONSISTENCIAS`). El `id` es el del corte.
       properties:
         id: { type: integer, example: 1 }
         fecha_corte: { type: string, format: date, example: '2026-09-30' }
@@ -3971,12 +4027,12 @@ components:
       type: string
       nullable: true
       enum: ['01', '02', '03', '04', '06', '07', '08', '10', '11', '12', null]
-      description: Como `EstadoObligacion`, o `null` (por ejemplo, el estado anterior en un primer reporte).
+      description: Como `EstadoObligacion`, o `null` (por ejemplo, el estado anterior en un primer reporte). Repite su enum porque Redocly no acepta `null` dentro de un `allOf`; una prueba de `contrato.test.js` vigila que sigan iguales.
     CodigoEdadMoraONulo:
       type: string
       nullable: true
       enum: ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', null]
-      description: Como `CodigoEdadMora`, o `null`.
+      description: Como `CodigoEdadMora`, o `null`. Repite su enum (ver `EstadoObligacionONulo`).
     CodigoDescripcionONulo:
       type: object
       nullable: true
@@ -4227,7 +4283,7 @@ components:
         primer_reporte: { type: integer, minimum: 0 }
         cambios_estado: { type: integer, minimum: 0 }
         cierres: { type: integer, minimum: 0, description: Obligaciones que pasaron a 02 o 07. }
-        rechazados: { type: integer, minimum: 0, description: Cambios rechazados (713 u 881); bloquean la validación del corte hasta revisarlos. }
+        rechazados: { type: integer, minimum: 0, description: 'Cambios rechazados (713 u 881). Bloquean la validación del corte hasta que se corrija el dato en el SAC y se vuelva a ejecutar el ciclo.' }
     Transicion:
       type: object
       required: [obligacion_id, numero_obligacion, nombre_titular, estado_anterior, estado_nuevo, edad_anterior, edad_nueva, primer_reporte, requiere_revision, reglas]
@@ -4431,7 +4487,7 @@ components:
     # ── Reclamos (pantalla 13, propuesta para Omar) ──
     Reclamo:
       type: object
-      required: [id, obligacion_id, numero_obligacion, nombre_titular, tipologia, fecha_radicacion, observacion, estado, radicado_en_tu, fecha_limite_respuesta, vencido, resultado, fecha_cierre, registrado_por, fecha_registro]
+      required: [id, obligacion_id, numero_obligacion, nombre_titular, tipologia, fecha_radicacion, observacion, estado, radicado_en_tu, fecha_limite_respuesta, vencido, resultado, fecha_cierre, observacion_cierre, registrado_por, fecha_registro]
       properties:
         id: { type: integer }
         obligacion_id: { type: integer }
@@ -4439,13 +4495,14 @@ components:
         nombre_titular: { type: string }
         tipologia: { $ref: '#/components/schemas/ItemCatalogo' }
         fecha_radicacion: { type: string, format: date }
-        observacion: { type: string, maxLength: 500, nullable: true }
+        observacion: { type: string, maxLength: 500, nullable: true, description: Lo que dice el titular al radicar. No cambia al cerrar. }
         estado: { type: string, enum: [EN_RECLAMO, CERRADO] }
         radicado_en_tu: { type: boolean, description: Si TransUnion ya devolvió el archivo de radicación (RF54). }
-        fecha_limite_respuesta: { type: string, format: date, description: 15 días hábiles desde la radicación (prorrogables 8). }
-        vencido: { type: boolean }
+        fecha_limite_respuesta: { type: string, format: date, description: '15 días hábiles desde la radicación (prorrogables 8), sin contar fines de semana ni festivos de Colombia. La regla exacta de conteo (desde qué día se cuenta) está por confirmar con jurídica.' }
+        vencido: { type: boolean, description: "`true` si sigue `EN_RECLAMO` después de la fecha límite." }
         resultado: { type: string, maxLength: 30, nullable: true }
         fecha_cierre: { type: string, format: date, nullable: true }
+        observacion_cierre: { type: string, maxLength: 500, nullable: true, description: 'La respuesta al titular, registrada al cerrar.' }
         registrado_por: { type: string, nullable: true }
         fecha_registro: { type: string, format: date-time }
     ReclamoCreateRequest:
@@ -4462,7 +4519,7 @@ components:
       properties:
         resultado: { type: string, maxLength: 30 }
         fecha_cierre: { type: string, format: date }
-        observacion: { type: string, maxLength: 500, nullable: true }
+        observacion_cierre: { type: string, maxLength: 500, nullable: true }
 
     # ── Novedades, eliminaciones y rectificaciones (pantalla 14, propuesta para Angel) ──
     TipoNovedad:

@@ -2,6 +2,8 @@
 // `docs/contrato/openapi.yaml`. Si agregas o cambias un mock, agrega aquí su caso.
 // Se llama a la API por el cliente real (`api`), con `validateStatus` abierto para recibir también
 // el cuerpo de los errores tal cual.
+import { readFileSync } from 'node:fs'
+import { parse } from 'yaml'
 import { api } from '../lib/api'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
@@ -62,6 +64,14 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     const ciclo = { corte_id: 3, fecha_corte: '2026-10-31', fecha_ejecucion: '2026-11-03T09:15:00-05:00', ejecutada_por: null, primer_reporte: 1, cambios_estado: 0, cierres: 0, rechazados: 0, con_pagos: 0, a_dudoso: 0, a_castigada: 0, normalizadas: 0, transiciones: [transicion], rechazos: [] }
     expect(() => expectCumpleContrato('get', '/ciclos/{corte_id}/', 200, ciclo)).not.toThrow()
     expect(() => expectCumpleContrato('get', '/ciclos/{corte_id}/', 200, { ...ciclo, transiciones: [{ ...transicion, estado_anterior: '05' }] })).toThrow(/no cumple el contrato/)
+  })
+
+  test('0.9: los tipos «o nulo» repiten exactamente el enum o los campos de su tipo base', () => {
+    const { schemas } = parse(readFileSync('docs/contrato/openapi.yaml', 'utf-8')).components
+    expect(schemas.EstadoObligacionONulo.enum).toEqual([...schemas.EstadoObligacion.enum, null])
+    expect(schemas.CodigoEdadMoraONulo.enum).toEqual([...schemas.CodigoEdadMora.enum, null])
+    expect(Object.keys(schemas.CodigoDescripcionONulo.properties)).toEqual(Object.keys(schemas.CodigoDescripcion.properties))
+    expect(Object.keys(schemas.ItemCatalogoONulo.properties)).toEqual(Object.keys(schemas.ItemCatalogo.properties))
   })
 
   test('auditoría: RegistroAuditoria acepta las acciones del sistema (0.6) y rechaza un rol desconocido', () => {

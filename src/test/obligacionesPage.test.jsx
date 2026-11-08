@@ -145,6 +145,40 @@ describe('pantalla 9 · lista', () => {
     expect(screen.getByText('Mostrando 21–27 de 27 obligaciones · Página 2 de 2')).toBeInTheDocument()
   })
 
+  test('abre la página que viene en la URL (?desde=20)', async () => {
+    const base = db.obligaciones[0]
+    for (let i = 0; i < 15; i++) db.obligaciones.push({ ...base, id: 100 + i, numero: `2299-${String(i).padStart(4, '0')}` })
+    await abrir('/obligaciones?desde=20')
+    expect(numerosEnTabla()).toHaveLength(7)
+    expect(screen.getByText('Mostrando 21–27 de 27 obligaciones · Página 2 de 2')).toBeInTheDocument()
+  })
+
+  test('si falla el filtro nuevo, no deja a la vista las filas del filtro anterior', async () => {
+    server.use(
+      http.get(`${API_URL}/obligaciones/`, ({ request }) =>
+        new URL(request.url).searchParams.get('estado_tu') === '03' ? HttpResponse.json({ detail: 'Servicio no disponible.' }, { status: 503 }) : undefined,
+      ),
+    )
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: /03 · Dudoso recaudo/ }))
+    expect(await screen.findByText(/^No se pudieron cargar las obligaciones\./)).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Obligaciones y estados' })).not.toBeInTheDocument()
+    expect(screen.queryByText('12 obligaciones')).not.toBeInTheDocument()
+  })
+
+  test('sin conexión muestra el mensaje de red, no uno genérico', async () => {
+    server.use(http.get(`${API_URL}/obligaciones/`, () => HttpResponse.error()))
+    await renderConSesion('/obligaciones', ...ANALISTA)
+    expect(await screen.findByText(/^No se pudieron cargar las obligaciones\./)).not.toHaveTextContent('Intenta de nuevo en unos minutos.')
+  })
+
+  test('si falla el resumen, un filtro de estado de la URL se puede quitar', async () => {
+    server.use(http.get(`${API_URL}/obligaciones/resumen/`, () => HttpResponse.json({ detail: 'x' }, { status: 503 })))
+    await renderConSesion('/obligaciones?estado=03', ...ANALISTA)
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver todas las obligaciones' }))
+    await waitFor(() => expect(numerosEnTabla()).toHaveLength(12))
+  })
+
   test('sin obligaciones muestra el estado vacío', async () => {
     db.obligaciones = []
     await renderConSesion('/obligaciones', ...ANALISTA)
@@ -283,6 +317,7 @@ describe('pantalla 9 · detalle', () => {
     expect(dato(panel, 'Obligación reestructurada')).toHaveTextContent('01 · Sí (1)Naturaleza 07 · Otrapor confirmar · viene de 2255-7788')
     await userEvent.click(within(panel).getByRole('button', { name: 'Ver el detalle de la obligación 2255-7788' }))
     const anterior = await screen.findByRole('dialog', { name: 'Obligación 2255-7788' })
+    expect(anterior).toContainElement(document.activeElement) // el foco no se sale del panel
     expect(dato(anterior, 'Cierre')).toHaveTextContent('Modo 16 · Refinanciación · Tipo de pago 02 · No voluntario')
     expect(dato(anterior, 'Refinanciada en (RF18)')).toHaveTextContent('2271-5502')
   })

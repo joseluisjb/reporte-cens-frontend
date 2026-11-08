@@ -69,3 +69,7 @@ export function toApiError(error) {
   else message = detail || MENSAJES_POR_ESTADO[status] || MENSAJES_POR_ESTADO[400]
   return new ApiError(message, { status, fieldErrors, code, datos: esObjetoPlano(data) ? data : null })
 }
+
+// Texto para «No se pudo cargar … {mensaje}». Un ApiError ya trae su mensaje en español (también el
+// de sin conexión, que llega con status 0); cualquier otro error, uno genérico.
+export const mensajeDeError = (err) => (err instanceof ApiError && err.message ? err.message : 'Intenta de nuevo en unos minutos.')

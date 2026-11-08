@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Badge, Button, buttonClasses, Card, Icon, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
+import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../../lib/format'
 import { getPanelSummary } from './panelService'
 
@@ -21,8 +22,7 @@ export default function PanelAnalista() {
     let cancelado = false
     getPanelSummary()
       .then((r) => !cancelado && setResumen(r))
-      // Solo se muestra el mensaje de un ApiError (ya en español); cualquier otro error, uno genérico.
-      .catch((err) => !cancelado && setError({ detalle: err?.status && err.message ? err.message : 'Intenta de nuevo en unos minutos.' }))
+      .catch((err) => !cancelado && setError({ detalle: mensajeDeError(err) }))
     return () => {
       cancelado = true
     }

@@ -2,9 +2,10 @@
 // `?obligacion=<id>` y muestra, en el orden del mockup: los datos (RF49, RF52), qué puede pasar con
 // ella (RF12–RF18, RF45–RF47, como `ReglaAplicada`), las cuotas vencidas, los pagos extraídos del SAC
 // (RF17) y la línea de tiempo de estados. Aquí no se registran pagos: vienen de la extracción.
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Badge, Button, Modal, PorConfirmar, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
+import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearDias, formatearFechaISO } from '../../lib/format'
 import { esEstadoDeCierre, TABLA_9 } from '../transunion/catalogosTU'
 import CandadoCerrada from '../transunion/CandadoCerrada'
@@ -14,13 +15,22 @@ import RfTag from '../transunion/RfTag'
 import { getObligation, getObligationTimeline } from './obligationsService'
 import PrimerReporte from './PrimerReporte'
 
-// Solo se muestra el mensaje de un ApiError (ya en español); cualquier otro error, uno genérico.
-const mensajeDeError = (err) => (err?.status && err.message ? err.message : 'Intenta de nuevo en unos minutos.')
 const codigoYDescripcion = (item) => (item ? [item.codigo, item.descripcion].filter(Boolean).join(' · ') : '—')
 
+const SIN_CARGA = { id: null, detalle: null, eventos: null, error: null }
+
 export default function ObligationDetailPanel({ obligacionId, onCerrar, onAbrir }) {
-  const [carga, setCarga] = useState({ id: null, detalle: null, eventos: null, error: null })
+  const [carga, setCarga] = useState(SIN_CARGA)
   const [intento, setIntento] = useState(0)
+  const [idMostrado, setIdMostrado] = useState(obligacionId)
+  const contenidoRef = useRef(null)
+
+  // Al abrir (o reabrir) una obligación se descarta lo cargado antes: siempre se ve la carga y nunca un
+  // detalle o un error viejo mientras llega el nuevo.
+  if (obligacionId !== idMostrado) {
+    setIdMostrado(obligacionId)
+    setCarga(SIN_CARGA)
+  }
 
   useEffect(() => {
     if (obligacionId == null) return undefined
@@ -35,11 +45,20 @@ export default function ObligationDetailPanel({ obligacionId, onCerrar, onAbrir 
   }, [obligacionId, intento])
 
   const reintentar = useCallback(() => {
-    setCarga({ id: null, detalle: null, eventos: null, error: null })
+    setCarga(SIN_CARGA)
     setIntento((n) => n + 1)
   }, [])
 
-  // Lo cargado es de otra obligación (se abrió otra desde un enlace): se muestra la carga.
+  // Al seguir el enlace a otra obligación, el botón enfocado desaparece con el contenido: el foco pasa
+  // al contenedor del panel para no salir del diálogo.
+  const abrirOtra = useCallback(
+    (id) => {
+      onAbrir(id)
+      contenidoRef.current?.focus()
+    },
+    [onAbrir],
+  )
+
   const vigente = carga.id === obligacionId
   const o = vigente ? carga.detalle : null
   return (
@@ -56,20 +75,22 @@ export default function ObligationDetailPanel({ obligacionId, onCerrar, onAbrir 
         </Button>
       }
     >
-      {vigente && carga.error && (
-        <div className="flex flex-wrap items-center gap-3">
-          <Alert>No se pudo cargar la obligación. {carga.error}</Alert>
-          <Button variant="outline" size="sm" onClick={reintentar}>
-            Reintentar
-          </Button>
-        </div>
-      )}
-      {!o && !(vigente && carga.error) && (
-        <div role="status" aria-label="Cargando el detalle de la obligación" className="flex justify-center p-12">
-          <Spinner className="size-6" />
-        </div>
-      )}
-      {o && <Detalle o={o} eventos={carga.eventos} onAbrir={onAbrir} />}
+      <div ref={contenidoRef} tabIndex={-1} className="outline-none">
+        {vigente && carga.error && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Alert>No se pudo cargar la obligación. {carga.error}</Alert>
+            <Button variant="outline" size="sm" onClick={reintentar}>
+              Reintentar
+            </Button>
+          </div>
+        )}
+        {!o && !(vigente && carga.error) && (
+          <div role="status" aria-label="Cargando el detalle de la obligación" className="flex justify-center p-12">
+            <Spinner className="size-6" />
+          </div>
+        )}
+        {o && <Detalle o={o} eventos={carga.eventos} onAbrir={abrirOtra} />}
+      </div>
     </Modal>
   )
 }

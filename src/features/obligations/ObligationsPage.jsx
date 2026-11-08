@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Alert, Badge, Button, buttonClasses, Card, EmptyState, Icon, PageHeader, Pagination, SearchBox, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
+import { mensajeDeError } from '../../lib/api'
 import { formatearFechaISO, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { descripcionEstado } from '../transunion/catalogosTU'
@@ -16,14 +17,12 @@ import { getObligationsSummary, LIMITE_OBLIGACIONES, listObligations } from './o
 import { aConsulta, FILTRO_ELIMINADAS, LARGO_MAXIMO_BUSQUEDA, leerFiltros } from './obligationsValidation'
 
 const ESPERA_BUSQUEDA_MS = 300
-// Solo se muestra el mensaje de un ApiError (ya en español); cualquier otro error, uno genérico.
-const mensajeDeError = (err) => (err?.status && err.message ? err.message : 'Intenta de nuevo en unos minutos.')
 
 export default function ObligationsPage() {
   usePageTitle('Obligaciones y Estados')
   const [params, setParams] = useSearchParams()
   const filtros = useMemo(() => leerFiltros(params), [params])
-  const { estado, cuotasMoraMin, q, obligacionId } = filtros
+  const { estado, cuotasMoraMin, q, desplazamiento, obligacionId } = filtros
 
   // Cambia parámetros de la URL sin perder los demás. `null` o '' quita el parámetro.
   const cambiarParams = useCallback(
@@ -39,10 +38,13 @@ export default function ObligationsPage() {
     [setParams],
   )
   const verDetalle = useCallback((id) => cambiarParams({ obligacion: id }), [cambiarParams])
-  const cerrarDetalle = useCallback(() => cambiarParams({ obligacion: null }), [cambiarParams])
-  const filtrarEstado = useCallback((valor) => cambiarParams({ estado: valor }), [cambiarParams])
-  const buscar = useCallback((texto) => cambiarParams({ q: texto }, { reemplazar: true }), [cambiarParams])
-  const quitarCuotas = useCallback(() => cambiarParams({ cuotas_mora_min: null }), [cambiarParams])
+  // Cerrar reemplaza la entrada: así «Atrás» no vuelve a abrir el panel recién cerrado.
+  const cerrarDetalle = useCallback(() => cambiarParams({ obligacion: null }, { reemplazar: true }), [cambiarParams])
+  // Cambiar un filtro vuelve a la primera página (quita `desde`).
+  const filtrarEstado = useCallback((valor) => cambiarParams({ estado: valor, desde: null }), [cambiarParams])
+  const buscar = useCallback((texto) => cambiarParams({ q: texto, desde: null }, { reemplazar: true }), [cambiarParams])
+  const quitarCuotas = useCallback(() => cambiarParams({ cuotas_mora_min: null, desde: null }), [cambiarParams])
+  const irAPagina = useCallback((nuevo) => cambiarParams({ desde: nuevo || null }), [cambiarParams])
 
   return (
     <>
@@ -57,7 +59,9 @@ export default function ObligationsPage() {
         estado={estado}
         cuotasMoraMin={cuotasMoraMin}
         q={q}
+        desplazamiento={desplazamiento}
         onBuscar={buscar}
+        onIrAPagina={irAPagina}
         onQuitarCuotas={quitarCuotas}
         onVerDetalle={verDetalle}
       />
@@ -91,6 +95,12 @@ function ResumenCartera({ estado, onFiltrarEstado }) {
     return (
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Alert>No se pudo cargar el resumen de la cartera. {error}</Alert>
+        {/* Sin los KPI, el filtro de estado que vino en la URL se quita desde aquí. */}
+        {estado && (
+          <Button variant="ghost" size="sm" onClick={() => onFiltrarEstado('')}>
+            Ver todas las obligaciones
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -188,13 +198,11 @@ function CuotasEnMora({ resumen }) {
   )
 }
 
-// Búsqueda, tabla y paginación. La consulta sale de los filtros de la URL; la paginación es local y
-// vuelve a 0 cuando cambia un filtro.
-function ListaObligaciones({ estado, cuotasMoraMin, q, onBuscar, onQuitarCuotas, onVerDetalle }) {
-  const resumenId = useId()
+// Búsqueda, tabla y paginación. Los filtros y la página salen de la URL: cada combinación es una
+// consulta, y mientras no llega su respuesta se muestra la carga (nunca filas de otro filtro).
+function ListaObligaciones({ estado, cuotasMoraMin, q, desplazamiento, onBuscar, onIrAPagina, onQuitarCuotas, onVerDetalle }) {
   const [texto, setTexto] = useState(q)
-  const [pagina, setPagina] = useState(null) // { items, total, clave, consulta } | null (primera carga)
-  const [desplazamiento, setDesplazamiento] = useState(0)
+  const [pagina, setPagina] = useState(null) // { items, total, clave, consulta, desplazamiento } | null
   const [fallo, setFallo] = useState(null) // { consulta, mensaje } | null
   const [intento, setIntento] = useState(0)
   const ultimoQ = useRef(q)
@@ -219,27 +227,25 @@ function ListaObligaciones({ estado, cuotasMoraMin, q, onBuscar, onQuitarCuotas,
 
   const clave = `${estado}|${cuotasMoraMin ?? ''}|${q}`
   const sinFiltros = !estado && cuotasMoraMin == null && !q
-  const desplazamientoVigente = pagina?.clave === clave ? desplazamiento : 0
   // Cada consulta (filtros, página e intento) tiene su clave: está cargando mientras no haya llegado
   // ni la página ni el error de esa consulta. Una respuesta de una consulta anterior se descarta.
-  const consulta = `${clave}#${desplazamientoVigente}#${intento}`
+  const consulta = `${clave}#${desplazamiento}#${intento}`
   const error = fallo?.consulta === consulta ? fallo.mensaje : ''
   const cargando = pagina?.consulta !== consulta && !error
+  // Solo se muestran filas del mismo filtro; al cambiar de página se siguen viendo las anteriores
+  // (con aria-busy) hasta que llega la nueva.
+  const vista = pagina?.clave === clave ? pagina : null
 
   useEffect(() => {
     let cancelado = false
-    listObligations({ ...aConsulta({ estado, cuotasMoraMin, q }), limite: LIMITE_OBLIGACIONES, desplazamiento: desplazamientoVigente }).then(
-      (r) => {
-        if (cancelado) return
-        setPagina({ ...r, clave, consulta })
-        setDesplazamiento(desplazamientoVigente)
-      },
+    listObligations({ ...aConsulta({ estado, cuotasMoraMin, q }), limite: LIMITE_OBLIGACIONES, desplazamiento }).then(
+      (r) => !cancelado && setPagina({ ...r, clave, consulta, desplazamiento }),
       (err) => !cancelado && setFallo({ consulta, mensaje: mensajeDeError(err) }),
     )
     return () => {
       cancelado = true
     }
-  }, [estado, cuotasMoraMin, q, clave, consulta, desplazamientoVigente])
+  }, [estado, cuotasMoraMin, q, desplazamiento, clave, consulta])
 
   return (
     <>
@@ -264,9 +270,9 @@ function ListaObligaciones({ estado, cuotasMoraMin, q, onBuscar, onQuitarCuotas,
             </button>
           </span>
         )}
-        {pagina && (
+        {vista && (
           <p className="text-[13px] text-muted">
-            <span role="status">{plural(pagina.total, 'obligación', 'obligaciones')}</span>
+            <span role="status">{plural(vista.total, 'obligación', 'obligaciones')}</span>
             {estado && estado !== FILTRO_ELIMINADAS && ` en ${estado} · ${descripcionEstado(estado)}`}
             {estado === FILTRO_ELIMINADAS && ' eliminadas en TransUnion'} · Haz clic en el número para ver el detalle
           </p>
@@ -281,26 +287,23 @@ function ListaObligaciones({ estado, cuotasMoraMin, q, onBuscar, onQuitarCuotas,
           </Button>
         </div>
       )}
-      {!pagina && !error && (
+      {!vista && !error && (
         <div role="status" aria-label="Cargando obligaciones" className="flex justify-center p-12">
           <Spinner className="size-6" />
         </div>
       )}
-      {pagina && (
-        <Card className="overflow-hidden" aria-busy={cargando || undefined} aria-describedby={resumenId}>
-          {pagina.items.length === 0 ? (
+      {vista && (
+        <Card className="overflow-hidden" aria-busy={cargando || undefined}>
+          {vista.items.length === 0 ? (
             <EmptyState>{sinFiltros ? 'Aún no hay obligaciones: se cargan con la primera actualización mensual.' : 'No hay obligaciones que coincidan con el filtro.'}</EmptyState>
           ) : (
-            <ObligationsTable obligaciones={pagina.items} onVerDetalle={onVerDetalle} />
+            <ObligationsTable obligaciones={vista.items} onVerDetalle={onVerDetalle} />
           )}
-          <p id={resumenId} className="sr-only">
-            {pagina.total} obligaciones en total
-          </p>
           <Pagination
-            total={pagina.total}
+            total={vista.total}
             limit={LIMITE_OBLIGACIONES}
-            offset={desplazamientoVigente}
-            onChange={setDesplazamiento}
+            offset={vista.desplazamiento}
+            onChange={onIrAPagina}
             loading={cargando}
             noun="obligaciones"
             nounSingular="obligación"

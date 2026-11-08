@@ -284,3 +284,12 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
   El contrato cambió solo en los ejemplos de RF54 (nombres del Manual en vez de `correctivas_SSR…`): **hay que copiar `openapi.yaml` al backend**.
 
 - **Archivo plano (RF20, Manual pp. 44-52).** El mock arma el registro tipo 2 con las posiciones de la Tabla 2: número de obligación en 89-108 (a la derecha), sucursal en 109-114, calidad P, estado, edad y años de mora, fecha de corte, exigibilidad, fecha de pago, modo de extinción y tipo de pago del cierre, cuotas en mora, y valor inicial, mora, saldo y cuota en miles con 12 dígitos; lo demás va en espacios. El backend debe llenar además los campos que el mock no guarda, empezando por el tipo y el número de identificación (obligatorios). Los campos de la Tabla 2 suman 929 caracteres y el Manual declara 930 (**por confirmar**).
+
+- **Homologación de estados (pantalla 16, RF48, contrato 0.9.1).** `GET /estados/`, `GET /homologacion-estados/` y `PUT /homologacion-estados/{estado_sac}/` son solo del Administrador (el Analista recibe 403). Lo que el frontend espera y lo que hay que resolver en la base (`01_nexovolt_bd.sql`):
+  - **F se guarda como `ESTADO_TU '02'` y la tabla no tiene columna de acción** (`NV_HOMOLOGA_ESTADO`, carga 3.5). El contrato la expone como `accion: CIERRE` con `estado_tu: null`: al cerrar, el estado sale de `NV_ESTADO_TU.CIERRE_AL_PAGAR` según el estado anterior (01 → 02; 03 y 06 → 07; RF12, RF15). Hace falta una columna `ACCION` (`ESTADO`/`CIERRE`) o una regla equivalente;
+  - `PUT` responde **400 si `accion: ESTADO` apunta a 02 o 07** («Saldada (02) y Castigada recuperada (07) se asignan con «Cierre», según el estado anterior.»), si el estado no se usa en CENS (04 y 08) y si `CIERRE` trae estado;
+  - **`NV_ESTADO_TU` no tiene columna `USADO`**, aunque el contrato dice que `usado` sale de ahí: hace falta agregarla (01, 02, 03, 06, 07, 10, 11 y 12 se usan; 04 y 08 no, según la ficha RF48);
+  - `prioridad` sale de `NV_HOMOLOGA_ESTADO.PRIORIDAD` (A 1, C 2, D 3, B 4, F 5) y no se cambia por la API; `descripcion`, de `DESCRIPCION_SAC`;
+  - el nombre del estado 12 en la Tabla 4b es «Ley 1564 de 2012 Insolvencia PNNC» (Manual, p. 64), como ya lo tiene la base.
+
+  El contrato subió a **0.9.1** (`prioridad` y el 400 de los estados de cierre): **hay que copiar `openapi.yaml` al backend**.

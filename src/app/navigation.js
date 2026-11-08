@@ -30,7 +30,7 @@ export const NAV_ITEMS = [
   { path: '/usuarios', label: 'Gestión de Usuarios', icon: 'user', roles: SOLO_ADMIN, section: 'Administración', Page: lazy(() => import('../features/users/UsersPage')) },
   { path: '/auditoria', label: 'Auditoría', icon: 'shield', roles: SOLO_ADMIN, section: 'Administración', Page: lazy(() => import('../features/audit/AuditPage')) },
   { path: '/entidad', label: 'Datos de la Entidad', icon: 'wallet', roles: SOLO_ADMIN, section: 'Administración', Page: lazy(() => import('../features/entity/EntityPage')) },
-  { path: '/homologacion-estados', label: 'Homologación de Estados', icon: 'layers', roles: SOLO_ADMIN, section: 'Administración', Page: EnConstruccion.HomologacionEstados },
+  { path: '/homologacion-estados', label: 'Homologación de Estados', icon: 'layers', roles: SOLO_ADMIN, section: 'Administración', Page: lazy(() => import('../features/state-mapping/StateMappingPage')) },
 ]
 
 export const RUTA_INICIAL = '/panel'

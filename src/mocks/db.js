@@ -12,6 +12,7 @@
 import { CODIGOS_ROL } from '../features/auth/roles'
 import { archivosIniciales } from './datos/archivos'
 import { cicloInicial } from './datos/ciclos'
+import { homologacionesIniciales } from './datos/homologacion'
 import { obligacionesIniciales } from './datos/obligacionesIteracion2'
 import { refinanciacionesIniciales } from './datos/refinanciaciones'
 import { resultadosIniciales } from './datos/resultadosCargue'
@@ -64,7 +65,7 @@ const cortesIniciales = () => [
 const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'contenidosArchivo', 'resultadosCargue', 'ciclos', 'refinanciaciones']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'contenidosArchivo', 'resultadosCargue', 'homologacionEstados', 'ciclos', 'refinanciaciones']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -82,6 +83,8 @@ const inicial = () => ({
   contenidosArchivo: {},
   // Resultados del cargue de TransUnion por id de archivo (RF54): al inicio, los del archivo del 31/08.
   resultadosCargue: resultadosIniciales(),
+  // Homologación de los estados del SAC (RF48): la carga inicial del script de la base.
+  homologacionEstados: homologacionesIniciales(),
   // Actualizaciones mensuales ejecutadas (pantalla 10): al inicio, la del corte 2026-09-30.
   ciclos: [cicloInicial()],
   refinanciaciones: refinanciacionesIniciales(),

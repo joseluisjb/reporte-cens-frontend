@@ -3,7 +3,7 @@
 // (mocks/rutas/homologacion.js), para que no se separen.
 //  - «Estado de TransUnion»: un estado de la Tabla 4b que CENS usa y que no sea de cierre.
 //  - «Cierre»: sin estado; según el estado anterior da Saldada (02) o Castigada recuperada (07) (RF12, RF15).
-import { ESTADOS_OBLIGACION, esEstadoDeCierre } from '../transunion/catalogosTU'
+import { descripcionEstado, esEstadoDeCierre } from '../transunion/catalogosTU'
 
 export const ACCIONES = Object.freeze({ ESTADO: 'ESTADO', CIERRE: 'CIERRE' })
 
@@ -11,7 +11,7 @@ export const MSG_HOMOLOGACION = {
   accion: 'Elige cómo se reporta el estado: como estado de TransUnion o como cierre.',
   estadoTu: 'Selecciona el estado de TransUnion.', // mockup v3 (homSave)
   noExiste: 'Ese estado no está en la Tabla 4b de TransUnion.',
-  noUsado: (codigo) => `El estado ${codigo} · ${ESTADOS_OBLIGACION[codigo]} no se usa en CENS: elige un estado en uso.`, // contrato 0.9
+  noUsado: (codigo) => `El estado ${codigo} · ${descripcionEstado(codigo)} no se usa en CENS: elige un estado en uso.`, // contrato 0.9
   cierreConEstado: 'Un estado que cierra el crédito no lleva estado de TransUnion.', // contrato 0.9
   estadoDeCierre: 'Saldada (02) y Castigada recuperada (07) se asignan con «Cierre», según el estado anterior.', // contrato 0.9.1
 }

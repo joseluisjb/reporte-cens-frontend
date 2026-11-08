@@ -3,9 +3,9 @@
 // TransUnion y si CENS lo confirmó; la prioridad no se cambia. Mismas reglas que la pantalla
 // (features/state-mapping/stateMappingValidation.js).
 import { http, HttpResponse } from 'msw'
-import { validarHomologacion } from '../../features/state-mapping/stateMappingValidation'
+import { ACCIONES, validarHomologacion } from '../../features/state-mapping/stateMappingValidation'
 import { ENDPOINTS } from '../../lib/api/endpoints'
-import { estadosCatalogo } from '../datos/homologacion'
+import { ESTADOS_CATALOGO } from '../datos/homologacion'
 import { db, persistir } from '../db'
 import { ahoraBogotaISO, error, espera, exigirSesion, leerCuerpo, SOLO_ADMIN, url } from '../utilidades'
 
@@ -15,7 +15,7 @@ export const homologacionHandlers = [
   http.get(url(ENDPOINTS.estadosTU), async () => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ADMIN)
-    return respuesta ?? HttpResponse.json(estadosCatalogo())
+    return respuesta ?? HttpResponse.json(ESTADOS_CATALOGO)
   }),
 
   http.get(url(ENDPOINTS.homologacionEstados), async () => {
@@ -33,13 +33,13 @@ export const homologacionHandlers = [
     const cuerpo = await leerCuerpo(request)
     const accion = cuerpo.accion ?? null
     const estadoTu = typeof cuerpo.estado_tu === 'string' && cuerpo.estado_tu.trim() ? cuerpo.estado_tu.trim() : null
-    const errores = validarHomologacion({ accion, estadoTu }, estadosCatalogo())
+    const errores = validarHomologacion({ accion, estadoTu }, ESTADOS_CATALOGO)
     if (errores.accion || errores.estadoTu) {
       return error(400, { ...(errores.accion && { accion: [errores.accion] }), ...(errores.estadoTu && { estado_tu: [errores.estadoTu] }) })
     }
     Object.assign(actual, {
       accion,
-      estado_tu: accion === 'ESTADO' ? estadoTu : null,
+      estado_tu: accion === ACCIONES.ESTADO ? estadoTu : null,
       confirmado: cuerpo.confirmado === true,
       actualizado_por: usuario.nombre,
       fecha_actualizacion: ahoraBogotaISO(),

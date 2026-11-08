@@ -116,6 +116,17 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
     expect(screen.getByRole('button', { name: 'Editar la homologación del estado C' })).toBeDisabled()
   })
 
+  test('sin estados cargados lo dice y no afirma que todo esté homologado', async () => {
+    server.use(
+      http.get(`${API_URL}/homologacion-estados/`, () => HttpResponse.json([])),
+      http.get(`${API_URL}/estados/`, () => HttpResponse.json([])),
+    )
+    await renderConSesion('/homologacion-estados')
+    expect(await screen.findByText('No hay estados del SAC cargados: se cargan con la carga inicial de la base (script 12).')).toBeInTheDocument()
+    expect(screen.getByText('No hay estados de TransUnion cargados.')).toBeInTheDocument()
+    expect(screen.queryByText('Todos los estados del SAC están homologados.')).not.toBeInTheDocument()
+  })
+
   test('muestra la carga y, si falla, el error con «Reintentar»', async () => {
     let fallar = true
     server.use(http.get(`${API_URL}/homologacion-estados/`, () => (fallar ? HttpResponse.json({ detail: 'x' }, { status: 503 }) : undefined)))

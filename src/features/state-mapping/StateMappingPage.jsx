@@ -5,12 +5,12 @@
 //    la carga inicial y aquí no se edita (contrato 0.9.1).
 //  - Estados de TransUnion: los 10 de la Tabla 4b (Manual, p. 64), para consulta.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Alert, Badge, Button, Card, Icon, PageHeader, PorConfirmar, Spinner, Table, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, Table, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaHora, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
 import CandadoCerrada from '../transunion/CandadoCerrada'
-import { ESTADOS_OBLIGACION } from '../transunion/catalogosTU'
+import { descripcionEstado } from '../transunion/catalogosTU'
 import EstadoBadge from '../transunion/EstadoBadge'
 import { mapHomologacionFieldErrors } from './stateMappingMapper'
 import { getStateMappings, getTuStates, updateStateMapping } from './stateMappingService'
@@ -31,8 +31,9 @@ const NOTAS = {
   '12': 'Solo si el cliente está admitido en el proceso de ley',
 }
 
-const textoEstado = (codigo) => `${codigo} · ${ESTADOS_OBLIGACION[codigo]}`
-const comoSeReporta = (accion, estadoTu) => (accion === ACCIONES.CIERRE ? 'cierre' : textoEstado(estadoTu))
+// «01 · Vigente», con el nombre que manda la API (GET /estados/) o, si no lo trae, el del catálogo local.
+const textoEstado = (codigo, estados) => `${codigo} · ${estados.find((e) => e.codigo === codigo)?.nombre ?? descripcionEstado(codigo)}`
+const comoSeReporta = (accion, estadoTu, estados) => (accion === ACCIONES.CIERRE ? 'cierre' : textoEstado(estadoTu, estados))
 
 export default function StateMappingPage() {
   usePageTitle(TITULO)
@@ -72,9 +73,9 @@ export default function StateMappingPage() {
     (h) => {
       setDatos((d) => ({ ...d, homologaciones: d.homologaciones.map((x) => (x.estadoSac === h.estadoSac ? h : x)) }))
       salir(h.estadoSac)
-      toast.success(`Homologación guardada: el estado ${h.estadoSac} se reporta como ${comoSeReporta(h.accion, h.estadoTu)}.`)
+      toast.success(`Homologación guardada: el estado ${h.estadoSac} se reporta como ${comoSeReporta(h.accion, h.estadoTu, datos.estados)}.`)
     },
-    [salir, toast],
+    [salir, toast, datos],
   )
 
   const sinCambios = useCallback(
@@ -130,6 +131,7 @@ export default function StateMappingPage() {
 
 function AvisoSinHomologar({ homologaciones }) {
   const sin = homologaciones.filter((h) => !h.accion)
+  if (!homologaciones.length) return null // sin estados cargados no hay nada que avisar: lo dice la tabla
   if (!sin.length) {
     return (
       <div className="mb-5">
@@ -161,10 +163,13 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
         Cada estado del crédito en el SAC se reporta como un estado de TransUnion o como un cierre. Solo se pueden elegir los estados que CENS usa.
       </p>
       <p className="mb-3 text-sm text-muted">
-        Si los créditos de una obligación tienen estados distintos, la obligación toma el de menor prioridad; si alguno está sin homologar, se bloquea en la validación del
-        corte (RF53). La prioridad viene de la carga inicial y aquí no se edita. <PorConfirmar />
+        Si los créditos de una obligación tienen estados distintos, la obligación toma el de menor número de prioridad (el 1 gana sobre el 5); si alguno está sin
+        homologar, se bloquea en la validación del corte (RF53). La prioridad viene de la carga inicial y aquí no se edita. <PorConfirmar />
       </p>
       <Card className="overflow-hidden">
+        {datos.homologaciones.length === 0 ? (
+          <EmptyState>No hay estados del SAC cargados: se cargan con la carga inicial de la base (script 12).</EmptyState>
+        ) : (
         <Table caption="Estados del sistema comercial (SAC)">
           <thead>
             <tr>
@@ -204,7 +209,9 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
                   </td>
                   <td>
                     <Button
-                      ref={(el) => (botonesEditar.current[h.estadoSac] = el)}
+                      ref={(el) => {
+                        botonesEditar.current[h.estadoSac] = el
+                      }}
                       variant="outline"
                       size="sm"
                       disabled={editando !== null}
@@ -220,6 +227,7 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
             )}
           </tbody>
         </Table>
+        )}
       </Card>
     </section>
   )
@@ -286,6 +294,8 @@ function FilaEdicion({ homologacion: h, estados, onCancelar, onGuardada, onSinCa
             id={ids.accion}
             ref={selectorAccion}
             value={accion}
+            aria-invalid={errores.accion ? 'true' : undefined}
+            aria-describedby={errores.accion ? ids.error : undefined}
             onChange={(e) => {
               setAccion(e.target.value)
               setErrores({})
@@ -307,19 +317,27 @@ function FilaEdicion({ homologacion: h, estados, onCancelar, onGuardada, onSinCa
               setErrores({})
             }}
             aria-invalid={errores.estadoTu ? 'true' : undefined}
-            aria-describedby={mensaje ? ids.error : undefined}
+            aria-describedby={errores.estadoTu ? ids.error : undefined}
             className="rounded-ctl border border-gris-d bg-white px-3 py-2 text-sm disabled:bg-slate-100 aria-[invalid=true]:border-error"
           >
             <option value="">Selecciona…</option>
             {asignables(estados).map((e) => (
               <option key={e.codigo} value={e.codigo} disabled={!e.usado}>
-                {textoEstado(e.codigo)}
+                {textoEstado(e.codigo, estados)}
                 {e.usado ? '' : ' (no se usa)'}
               </option>
             ))}
           </select>
           <label htmlFor={ids.confirmado} className="flex items-center gap-2 text-sm">
-            <input id={ids.confirmado} type="checkbox" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)} />
+            <input
+              id={ids.confirmado}
+              type="checkbox"
+              checked={confirmado}
+              onChange={(e) => {
+                setConfirmado(e.target.checked)
+                setErrores({})
+              }}
+            />
             Confirmado por CENS
           </label>
         </div>
@@ -352,6 +370,9 @@ function EstadosTransUnion({ estados }) {
       </h2>
       <p className="mb-3 text-sm text-muted">Los 10 estados del Manual, para consulta: los define TransUnion y su uso lo aprueba CENS.</p>
       <Card className="overflow-hidden">
+        {estados.length === 0 ? (
+          <EmptyState>No hay estados de TransUnion cargados.</EmptyState>
+        ) : (
         <Table compact caption="Estados de TransUnion (Tabla 4b)">
           <thead>
             <tr>
@@ -377,6 +398,7 @@ function EstadosTransUnion({ estados }) {
             ))}
           </tbody>
         </Table>
+        )}
       </Card>
     </section>
   )

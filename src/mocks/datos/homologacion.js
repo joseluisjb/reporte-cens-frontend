@@ -24,9 +24,9 @@ const USO = {
   '12': { usado: true, confirmado: false },
 }
 
-// EstadoCatalogoTU[] (contrato 0.9), por código. Se ordena a mano: en un objeto, '10', '11' y '12' (claves
-// de tipo entero) van antes que '01'.
-export const estadosCatalogo = () =>
+// EstadoCatalogoTU[] (contrato 0.9), por código. Es fijo: se arma una vez. Se ordena a mano: en un objeto,
+// '10', '11' y '12' (claves de tipo entero) van antes que '01'.
+export const ESTADOS_CATALOGO = Object.freeze(
   Object.entries(ESTADOS_OBLIGACION)
     .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([codigo, nombre]) => ({
@@ -35,7 +35,8 @@ export const estadosCatalogo = () =>
     usado: USO[codigo].usado,
     es_cierre: ESTADOS_DE_CIERRE.includes(codigo),
     confirmado: USO[codigo].confirmado,
-  }))
+  })),
+)
 
 const homologacion = (estado_sac, prioridad, descripcion, accion, estado_tu) => ({
   estado_sac,

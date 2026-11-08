@@ -90,6 +90,16 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('datos de la entidad (pantalla 15), con marcador y con un error de campo', async () => {
+    await renderConSesion('/entidad')
+    await screen.findByRole('button', { name: 'Guardar datos' })
+    await expectAccesible()
+    await userEvent.clear(screen.getByLabelText('Tipo de entidad'))
+    await userEvent.type(screen.getByLabelText('Tipo de entidad'), '12')
+    await userEvent.click(boton('Guardar datos'))
+    await expectAccesible()
+  })
+
   test('parametrización de conceptos con datos', async () => {
     await renderConSesion('/parametrizacion')
     await screen.findByText('CUOTA FINANCIACION ENERGIA')

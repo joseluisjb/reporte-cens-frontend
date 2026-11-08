@@ -14,3 +14,10 @@ export function mapEntidad(raw) {
     fechaActualizacion: raw.fecha_actualizacion ? new Date(raw.fecha_actualizacion) : null,
   }
 }
+
+// Errores del backend ({ tipo_entidad: '...' }) → nombres del formulario.
+export const mapEntidadFieldErrors = (fe = {}) => ({
+  tipoEntidad: fe.tipo_entidad,
+  codigoEntidad: fe.codigo_entidad,
+  codigoSucursal: fe.codigo_sucursal,
+})

@@ -465,6 +465,25 @@ describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligacion
     expect(await verifica('get', '/catalogos/{nombre}/', 404, { url: '/catalogos/colores/' })).toEqual({ detail: 'Catálogo no encontrado.' })
   })
 
+  test('PUT /entidad/ 200 cumple Entidad (datos y vuelta al marcador), 400 por campo, 403 al Analista y 401', async () => {
+    const datos = { tipo_entidad: '001', codigo_entidad: '123', codigo_sucursal: 'A1B2C3' }
+    expect(() => expectPeticionCumpleContrato('put', '/entidad/', datos)).not.toThrow()
+    await verifica('put', '/entidad/', 401, { datos })
+    await entrar(ANALISTA)
+    await verifica('put', '/entidad/', 403, { datos })
+    await entrar(ADMIN)
+    expect(await verifica('put', '/entidad/', 200, { datos })).toMatchObject({ ...datos, con_marcador: false, prefijo_archivo: 'SSR001123', actualizado_por: 'Rosa Martínez' })
+    const marcador = { tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX' }
+    expect(await verifica('put', '/entidad/', 200, { datos: marcador })).toMatchObject({ con_marcador: true, prefijo_archivo: 'SSRXXXXXX' })
+    expect(await verifica('put', '/entidad/', 400, { datos: { ...datos, tipo_entidad: '12' } })).toEqual({
+      tipo_entidad: ['El tipo de entidad debe tener 3 dígitos (o XXX mientras TransUnion no los asigne).'],
+    })
+    expect(await verifica('put', '/entidad/', 400, { datos: { ...datos, codigo_sucursal: 'a1-b2' } })).toHaveProperty('codigo_sucursal')
+    expect(await verifica('put', '/entidad/', 400, { datos: {} })).toEqual({
+      tipo_entidad: ['Este campo es requerido.'], codigo_entidad: ['Este campo es requerido.'], codigo_sucursal: ['Este campo es requerido.'],
+    })
+  })
+
   test('GET /entidad/ 200 cumple Entidad con el marcador para los dos roles; 401 sin sesión', async () => {
     await verifica('get', '/entidad/', 401)
     for (const usuario of [ADMIN, ANALISTA]) {

@@ -13,6 +13,7 @@ import { CODIGOS_ROL } from '../features/auth/roles'
 import { archivosIniciales } from './datos/archivos'
 import { cicloInicial } from './datos/ciclos'
 import { homologacionesIniciales } from './datos/homologacion'
+import { eliminacionesIniciales, novedadesIniciales, rectificacionesIniciales } from './datos/novedades'
 import { obligacionesIniciales } from './datos/obligacionesIteracion2'
 import { refinanciacionesIniciales } from './datos/refinanciaciones'
 import { resultadosIniciales } from './datos/resultadosCargue'
@@ -65,7 +66,26 @@ const cortesIniciales = () => [
 const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'contenidosArchivo', 'resultadosCargue', 'homologacionEstados', 'ciclos', 'refinanciaciones']
+const COLECCIONES = [
+  'usuarios',
+  'siguienteId',
+  'conceptos',
+  'grupos',
+  'siguienteGrupoId',
+  'cortes',
+  'siguienteCorteId',
+  'obligaciones',
+  'entidad',
+  'archivos',
+  'contenidosArchivo',
+  'resultadosCargue',
+  'homologacionEstados',
+  'ciclos',
+  'refinanciaciones',
+  'novedades',
+  'eliminaciones',
+  'rectificaciones',
+]
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -88,6 +108,9 @@ const inicial = () => ({
   // Actualizaciones mensuales ejecutadas (pantalla 10): al inicio, la del corte 2026-09-30.
   ciclos: [cicloInicial()],
   refinanciaciones: refinanciacionesIniciales(),
+  novedades: novedadesIniciales(),
+  eliminaciones: eliminacionesIniciales(),
+  rectificaciones: rectificacionesIniciales(),
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

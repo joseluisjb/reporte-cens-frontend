@@ -7,7 +7,7 @@ import {
   ESTADOS_OBLIGACION,
   TABLA_9,
   TIPOS_IDENTIFICACION,
-} from '../features/extraction/catalogosTU'
+} from '../features/transunion/catalogosTU'
 import { enmascararIdentificacion } from '../lib/format'
 
 describe('Tabla 9: edad de mora', () => {

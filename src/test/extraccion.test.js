@@ -2,7 +2,7 @@
 // siguen el contrato 0.4 y el manual de TransUnion (sector Servicios). Ver docs/contrato/DISCREPANCIAS.md.
 // Se fija la fecha de HOY en 2026-10-10 (solo `Date`: con todos los temporizadores falsos, MSW y axios se cuelgan).
 import { login } from '../features/auth/authService'
-import { edadMoraDesdeDias } from '../features/extraction/catalogosTU'
+import { edadMoraDesdeDias } from '../features/transunion/catalogosTU'
 import { mapCorte, mapCorteFieldErrors, mapCorteValidado, mapObligacionCorte } from '../features/extraction/extractionMapper'
 import { deleteCut, generateCut, getCut, getLatestCut, listCutObligations, listCuts, registerSubmission, validateCut } from '../features/extraction/extractionService'
 import { updateConceptGroup } from '../features/parameters/parametersService'

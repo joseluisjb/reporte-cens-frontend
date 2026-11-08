@@ -187,7 +187,7 @@ Hazlo siempre en este orden, como en `features/users/`:
 > }
 > ```
 >
-> **Identificación enmascarada:** el mapper entrega `identificacion` ya enmascarada (`******0001`); el número completo es un dato personal y nunca llega a la pantalla (no lo reconstruyas ni lo registres). Los códigos vienen con su texto: `estado.descripcion` (Tabla 4b) y `edadMora.descripcion` (Tabla 9). Los catálogos (`TABLA_9`, `ESTADOS_OBLIGACION`, `TIPOS_IDENTIFICACION`) y sus funciones están en `features/extraction/catalogosTU.js`. Para marcar campos del formulario usa `mapCorteFieldErrors(err.fieldErrors)` (`fechaCorte`, `grupoId`, `fechaEnvio`).
+> **Identificación enmascarada:** el mapper entrega `identificacion` ya enmascarada (`******0001`); el número completo es un dato personal y nunca llega a la pantalla (no lo reconstruyas ni lo registres). Los códigos vienen con su texto: `estado.descripcion` (Tabla 4b) y `edadMora.descripcion` (Tabla 9). Los catálogos (`TABLA_9`, `ESTADOS_OBLIGACION`, `TIPOS_IDENTIFICACION`) y sus funciones están en `features/transunion/catalogosTU.js`. Para marcar campos del formulario usa `mapCorteFieldErrors(err.fieldErrors)` (`fechaCorte`, `grupoId`, `fechaEnvio`).
 >
 > Los datos de los mocks siguen el manual de TransUnion (sector Servicios): el corte incluye obligaciones **Saldadas** (`estado.codigo === '02'`, con saldo y mora en 0), que el backend de hoy todavía no entrega; ver `docs/PENDIENTES_BACKEND.md`, sección 2.4.
 

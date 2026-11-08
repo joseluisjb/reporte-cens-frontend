@@ -4,7 +4,7 @@
 //  - A2: el corte incluye obligaciones Saldadas (estado 02). A4: estado de la obligación (Tabla 4b).
 //    Ver mocks/datos/obligaciones.js y docs/contrato/DISCREPANCIAS.md. (A3, el tipo de identificación de la
 //    Tabla 2, aplica a los endpoints que devuelven `tipo_id_tu`, que son del historial y aún no se simulan;
-//    el catálogo ya está en features/extraction/catalogosTU.js.)
+//    el catálogo ya está en features/transunion/catalogosTU.js.)
 //  - A9: la fecha de corte debe ser posterior a la del último corte ENVIADO (409).
 //  - S: un id no numérico responde 404 'Corte no encontrado.' (el backend de hoy da 500) y `limite` /
 //    `desplazamiento` se validan (el backend de hoy no).

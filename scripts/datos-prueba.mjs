@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { edadMoraDesdeDias, TABLA_9 } from '../src/features/extraction/catalogosTU.js'
+import { edadMoraDesdeDias, TABLA_9 } from '../src/features/transunion/catalogosTU.js'
 
 // Tramos de la Tabla 9 (edad de mora) de la app, como [código, desde, hasta] en días; `hasta: null` = sin tope.
 export const TRAMOS = Object.entries(TABLA_9)

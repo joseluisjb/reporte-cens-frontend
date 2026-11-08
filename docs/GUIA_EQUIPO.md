@@ -276,8 +276,8 @@ npm test && npm run lint && npm run build
 
 ## 10. Git y Pull Request
 
-- Una rama por tarea desde `main` actualizado: `feature/RFxx-descripcion` (ej. `feature/RF35-pantalla-parametros`). **Nunca trabajes sobre `main`.**
-- Haz `git fetch` y actualiza `main` antes de crear la rama.
+- Una rama por tarea desde `dev` actualizado: `feature/RFxx-descripcion` (ej. `feature/RF35-pantalla-parametros`). **Nunca trabajes sobre `dev` ni sobre `main`.**
+- Haz `git fetch` y actualiza `dev` antes de crear la rama. El PR va hacia `dev`; `dev` pasa a `main` cuando se cierra una entrega.
 - Configura tu correo de GitHub: `git config user.email "tu-correo-de-github"`. Si no, tus commits no cuentan como tuyos.
 - El PR **menciona el RF**, incluye pruebas, indica **si usaste IA y en qué parte**, y no trae datos reales, credenciales ni `.env`.
 - Frontend lo revisa Johan; backend lo revisa José Luis.

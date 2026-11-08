@@ -9,6 +9,7 @@ import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
 import { server } from '../mocks/server'
 import { renderConSesion } from './renderApp'
+import { detalleCorrectivas, detalleSinRegistro2, estadisticos, noReportados } from './escenarios/resultadosTU'
 
 const ANALISTA = ['jperez@example.com', 'Analista123']
 
@@ -239,5 +240,101 @@ describe('pantalla 12 · estados', () => {
     for (const b of screen.getAllByRole('button', { name: 'Reintentar' })) await userEvent.click(b)
     expect(await screen.findByRole('list', { name: 'Validaciones antes de generar' })).toBeInTheDocument()
     expect(await screen.findByRole('table', { name: 'Archivos generados' })).toBeInTheDocument()
+  })
+})
+
+describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
+  // El archivo del 31/08 (id 1) ya enviado y sin resultados: muestra «Cargar resultados».
+  const sinResultados = () => {
+    delete db.resultadosCargue[1]
+    db.archivos.find((a) => a.id === 1).tiene_resultados = false
+  }
+  const cargar = async (...archivos) => {
+    await userEvent.click(boton('Cargar los resultados del archivo SSR00112320260831'))
+    const modal = await screen.findByRole('dialog', { name: 'Cargar resultados de TransUnion' })
+    await userEvent.upload(within(modal).getByLabelText('Archivos de resultado'), archivos)
+    await userEvent.click(within(modal).getByRole('button', { name: 'Cargar resultados' }))
+    return modal
+  }
+
+  test('cada archivo ofrece su acción: ver resultados, o requiere los datos de la entidad si no es apto', async () => {
+    await abrir()
+    const tabla = screen.getByRole('table', { name: 'Archivos generados' })
+    expect(within(tabla).getByRole('button', { name: 'Ver los resultados del archivo SSR00112320260831' })).toBeInTheDocument()
+    expect(within(tabla).getByText('SSRXXXXXX20260930').closest('tr')).toHaveTextContent('Requiere los datos de la entidad')
+    expect(within(tabla).queryByRole('button', { name: /Registrar el envío/ })).not.toBeInTheDocument()
+  })
+
+  test('registra el envío del archivo apto y después deja cargar sus resultados', async () => {
+    db.entidad = { ...db.entidad, tipo_entidad: '001', codigo_entidad: '123', codigo_sucursal: 'A1B2C3' }
+    await abrir()
+    await validarYGenerar()
+    await screen.findByText('Archivo generado: SSR00112320260930.')
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar el envío del archivo SSR00112320260930' }))
+    expect(await screen.findByText('Envío registrado. Cuando TransUnion responda, carga aquí sus archivos de resultados.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Cargar los resultados del archivo SSR00112320260930' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · ENVIADO'))
+    expect(within(screen.getByRole('region', { name: 'Archivo generado' })).getByText('Enviado')).toBeInTheDocument()
+  })
+
+  test('las correctivas se asocian a la obligación y el corte queda ENVIADO_CON_INCONSISTENCIAS', async () => {
+    sinResultados()
+    await abrir()
+    await cargar(detalleCorrectivas('2026-08-31', [{ numero: '2258-7731', codigo: '707', descripcion: 'EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA' }]))
+    expect(await screen.findByText('Resultados cargados: 9 registros cargados, 1 inconsistencia.')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
+    expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos9Cargados1Con inconsistencias0No reportadas (R)')
+    const fila = within(vista).getByRole('link', { name: '2258-7731' }).closest('tr')
+    expect(within(vista).getByRole('link', { name: '2258-7731' })).toHaveAttribute('href', '/obligaciones?obligacion=2')
+    expect(fila).toHaveTextContent('Correctiva707 · EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA')
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO_CON_INCONSISTENCIAS')
+    expect(await screen.findByRole('button', { name: 'Ver los resultados del archivo SSR00112320260831' })).toBeInTheDocument()
+  })
+
+  test('sin correctivas el corte queda ENVIADO; el norep marca la obligación como no reportada', async () => {
+    sinResultados()
+    db.cortes.find((c) => c.id === 1).estado = 'ENVIADO_CON_INCONSISTENCIAS'
+    await abrir()
+    await cargar(estadisticos('2026-08-31'), noReportados('2026-08-31', ['2260-5543']))
+    const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
+    expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos10Cargados1Con inconsistencias1No reportadas (R)')
+    expect(within(vista).getByRole('link', { name: '2260-5543' }).closest('tr')).toHaveTextContent('No reportadaR · Obligación activa no reportada en el corte')
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
+  })
+
+  test('un archivo de otro corte o con otra estructura se rechaza con el motivo y no se guarda nada', async () => {
+    sinResultados()
+    await abrir()
+    const modal = await cargar(detalleCorrectivas('2026-07-31', []))
+    expect(await within(modal).findByText('El archivo Detalle_Inco_CSR_001_123_Correctivas_20260731.txt es del corte 31/07/2026, no del 31/08/2026.')).toBeInTheDocument()
+    await userEvent.upload(within(modal).getByLabelText('Archivos de resultado'), [detalleSinRegistro2('2026-08-31')])
+    await userEvent.click(within(modal).getByRole('button', { name: 'Cargar resultados' }))
+    expect(await within(modal).findByText(/no tiene la estructura esperada \(línea 2: no trae el registro tipo 2/)).toBeInTheDocument()
+    expect(db.resultadosCargue[1]).toBeUndefined()
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
+  })
+
+  test('sin archivos elegidos pide al menos uno', async () => {
+    sinResultados()
+    await abrir()
+    await userEvent.click(boton('Cargar los resultados del archivo SSR00112320260831'))
+    const modal = await screen.findByRole('dialog', { name: 'Cargar resultados de TransUnion' })
+    await userEvent.click(within(modal).getByRole('button', { name: 'Cargar resultados' }))
+    expect(within(modal).getByRole('alert')).toHaveTextContent('Selecciona al menos un archivo de resultados.')
+    expect(within(modal).getByLabelText('Archivos de resultado')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  test('ver resultados muestra el cargue guardado y, si falla, el error con «Reintentar»', async () => {
+    let fallar = true
+    server.use(http.get(`${API_URL}/archivos/1/resultados/`, () => (fallar ? HttpResponse.json({ detail: 'x' }, { status: 503 }) : undefined)))
+    await abrir()
+    await userEvent.click(boton('Ver los resultados del archivo SSR00112320260831'))
+    expect(await screen.findByText(/^No se pudieron cargar los resultados de SSR00112320260831\./)).toBeInTheDocument()
+    fallar = false
+    await userEvent.click(boton('Reintentar'))
+    const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
+    expect(vista).toHaveTextContent('Archivos de respuesta de TransUnion cargados el 05/09/2026 14:00 (RF54)')
+    expect(within(vista).getByRole('table', { name: 'Inconsistencias del cargue del corte 31/08/2026' }).querySelectorAll('tbody tr')).toHaveLength(2)
   })
 })

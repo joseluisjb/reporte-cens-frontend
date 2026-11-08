@@ -48,8 +48,11 @@ export function obligacionesDelCorte(fechaCorte) {
 // Las obligaciones que ya existían en la fecha del corte (las que no entran cuentan como excluidas).
 export const obligacionesExistentes = (fechaCorte) => db.obligaciones.filter((o) => o.ingreso <= fechaCorte)
 
-// Fecha del último corte ENVIADO ('' si no hay ninguno).
-export const ultimoCorteEnviado = () => db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+// Estados de un corte ya enviado a TransUnion (contrato 0.9: con resultados del cargue puede quedar con inconsistencias).
+export const ESTADOS_ENVIADOS = ['ENVIADO', 'ENVIADO_CON_INCONSISTENCIAS']
+
+// Fecha del último corte enviado ('' si no hay ninguno).
+export const ultimoCorteEnviado = () => db.cortes.filter((c) => ESTADOS_ENVIADOS.includes(c.estado)).reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
 
 // ValidacionesCorte del contrato 0.9 para un corte de `db.cortes`.
 export function validacionesDelCorte(corte, { entidadConMarcador }) {

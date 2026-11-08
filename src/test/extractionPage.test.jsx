@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { server } from '../mocks/server'
 import { renderConSesion } from './renderApp'
+import { conArchivoApto } from './escenarios/envio'
 
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
 
@@ -103,7 +104,8 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     expect(screen.getByRole('button', { name: 'Registrar envío a TransUnion' })).toBeInTheDocument()
     expect(screen.getByText(/Validado con observaciones informativas/i)).toBeInTheDocument()
 
-    // 2. Registrar envío a TransUnion
+    // 2. Registrar envío a TransUnion (contrato 0.9: con un archivo apto del corte)
+    conArchivoApto(2)
     await userEvent.click(boton('Registrar envío a TransUnion'))
     const dialog = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
     expect(dialog.getByLabelText('Fecha de reporte o envío')).toBeInTheDocument()

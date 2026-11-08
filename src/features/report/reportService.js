@@ -1,9 +1,9 @@
-// Reporte a TransUnion (pantalla 12, RF20–RF22, RF51, RF53, RF57). Analista y Administrador (como
-// `validar`). Propuesto en el contrato 0.9; hoy responden los mocks. Los errores llegan como ApiError:
-// el 409 de generar trae `datos.errores` (usa `mapErroresCorrectivos`).
+// Reporte a TransUnion (pantalla 12, RF20–RF22, RF51, RF53, RF54, RF57). Propuesto en el contrato 0.9; hoy
+// responden los mocks. Los errores llegan como ApiError: el 409 de generar trae `datos.errores` (usa
+// `mapErroresCorrectivos`) y el 422 de cargar resultados, el motivo en `message`.
 import { api, ENDPOINTS } from '../../lib/api'
 import { TIEMPO_ESPERA_CORTE_MS } from '../../lib/config'
-import { mapArchivo, mapValidaciones } from './reportMapper'
+import { mapArchivo, mapResultadosCargue, mapValidaciones } from './reportMapper'
 
 // «Validaciones antes de generar» del corte (solo consulta: no cambia el corte).
 export async function getValidations(corteId) {
@@ -45,4 +45,19 @@ export async function downloadFile(archivo) {
   enlace.remove()
   setTimeout(() => URL.revokeObjectURL(url), ESPERA_REVOCAR_MS)
   return nombre
+}
+
+// Resultados del cargue de TransUnion de un archivo (RF54). 404 si todavía no tiene.
+export async function getUploadResults(archivoId) {
+  const { data } = await api.get(ENDPOINTS.resultadosArchivo(archivoId))
+  return mapResultadosCargue(data)
+}
+
+// Carga los archivos de respuesta de TransUnion (lista de File) de un archivo ya enviado. 409 si no se ha
+// registrado su envío; 422 si un archivo es de otro corte o no tiene la estructura esperada (no se guarda nada).
+export async function uploadResults(archivoId, archivos) {
+  const formulario = new FormData()
+  for (const archivo of archivos) formulario.append('archivos', archivo)
+  const { data } = await api.post(ENDPOINTS.resultadosArchivo(archivoId), formulario, { timeout: TIEMPO_ESPERA_CORTE_MS })
+  return mapResultadosCargue(data)
 }

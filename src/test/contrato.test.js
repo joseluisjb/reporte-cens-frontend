@@ -10,6 +10,8 @@ import { db } from '../mocks/db'
 import { server } from '../mocks/server'
 import { expectCumpleContrato, expectPeticionCumpleContrato } from './contrato'
 import { cicloConRechazosYRevisiones, corteDeOctubreEnBorrador } from './escenarios/ciclo'
+import { conArchivoApto } from './escenarios/envio'
+import { detalleCorrectivas, detalleSinRegistro2, estadisticos, noReportados } from './escenarios/resultadosTU'
 
 const ADMIN = ['rmartinez@example.com', 'Admin12345'] // id 2
 const ANALISTA = ['jperez@example.com', 'Analista123']
@@ -290,6 +292,7 @@ describe('conformidad de los mocks de extracción con el contrato', () => {
     await verifica('post', '/extracciones/{id}/registrar-envio/', 409, { url: '/extracciones/2/registrar-envio/' }) // sigue en BORRADOR
     await verifica('post', '/extracciones/{id}/registrar-envio/', 404, { url: '/extracciones/999/registrar-envio/' })
     await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    conArchivoApto(2) // contrato 0.9: el último archivo del corte debe ser apto
     await verifica('post', '/extracciones/{id}/registrar-envio/', 400, { url: '/extracciones/2/registrar-envio/', datos: { fecha_envio: '2099-01-01' } }) // { detail }
     await verifica('post', '/extracciones/{id}/registrar-envio/', 400, { url: '/extracciones/2/registrar-envio/', datos: { fecha_envio: 'ayer' } }) // { fecha_envio: [...] }
     const enviado = await verifica('post', '/extracciones/{id}/registrar-envio/', 200, { url: '/extracciones/2/registrar-envio/', datos: { fecha_envio: '2026-10-09' } })
@@ -299,6 +302,7 @@ describe('conformidad de los mocks de extracción con el contrato', () => {
   test('POST /extracciones/{id}/registrar-envio/ 200 sin cuerpo', async () => {
     await entrar(ADMIN)
     await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    conArchivoApto(2)
     const res = await api.request({ method: 'post', url: '/extracciones/2/registrar-envio/', validateStatus: () => true })
     expect(res.status).toBe(200)
     expectCumpleContrato('post', '/extracciones/{id}/registrar-envio/', 200, res.data)
@@ -731,5 +735,99 @@ describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): vali
     expect((await verifica('get', '/archivos/', 200)).map((a) => a.id)).toEqual([2, 1])
     expect((await verifica('get', '/archivos/', 200, { url: '/archivos/?corte_id=1' })).map((a) => a.id)).toEqual([1])
     expect(await verifica('get', '/archivos/', 400, { url: '/archivos/?corte_id=abc' })).toEqual({ corte_id: ['Indica el id numérico del corte.'] })
+  })
+})
+
+describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, RF54)', () => {
+  const adjuntar = (...archivos) => {
+    const formulario = new FormData()
+    for (const a of archivos) formulario.append('archivos', a)
+    return formulario
+  }
+  // El archivo del 31/08 (id 1) ya enviado y sin resultados, listo para cargarlos.
+  const sinResultados = () => {
+    delete db.resultadosCargue[1]
+    db.archivos.find((a) => a.id === 1).tiene_resultados = false
+  }
+
+  test('GET /archivos/{id}/resultados/ 200 cumple ResultadosCargue; 404 sin resultados; 403 al Administrador y 401', async () => {
+    await verifica('get', '/archivos/{id}/resultados/', 401, { url: '/archivos/1/resultados/' })
+    await entrar(ADMIN)
+    await verifica('get', '/archivos/{id}/resultados/', 403, { url: '/archivos/1/resultados/' })
+    await entrar(ANALISTA)
+    const r = await verifica('get', '/archivos/{id}/resultados/', 200, { url: '/archivos/1/resultados/' })
+    expect(r).toMatchObject({ archivo_id: 1, estado_corte: 'ENVIADO_CON_INCONSISTENCIAS', recibidos: 10, cargados: 9, con_inconsistencias: 2, no_reportadas: 1 })
+    expect(await verifica('get', '/archivos/{id}/resultados/', 404, { url: '/archivos/2/resultados/' })).toEqual({ detail: 'Este archivo todavía no tiene resultados cargados.' })
+    expect(await verifica('get', '/archivos/{id}/resultados/', 404, { url: '/archivos/99/resultados/' })).toEqual({ detail: 'Archivo no encontrado.' })
+  })
+
+  test('POST /archivos/{id}/resultados/ con correctivas asocia cada una y deja el corte ENVIADO_CON_INCONSISTENCIAS', async () => {
+    sinResultados()
+    await entrar(ANALISTA)
+    const r = await verifica('post', '/archivos/{id}/resultados/', 201, {
+      url: '/archivos/1/resultados/',
+      datos: adjuntar(detalleCorrectivas('2026-08-31', [{ numero: '2258-7731', codigo: '707', descripcion: 'EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA' }]), estadisticos('2026-08-31')),
+    })
+    expect(r).toMatchObject({ estado_corte: 'ENVIADO_CON_INCONSISTENCIAS', recibidos: 10, cargados: 9, con_inconsistencias: 1, no_reportadas: 0, cargado_por: 'Juan Pérez' })
+    expect(r.archivos_cargados).toEqual([
+      { nombre_archivo: 'Detalle_Inco_CSR_001_123_Correctivas_20260831.txt', tipo_archivo: 'CORRECTIVAS', n_filas: 1 },
+      { nombre_archivo: 'Esta_Inco_CSR_001_123_Correctivas_20260831.txt', tipo_archivo: 'ESTADISTICOS', n_filas: 1 },
+    ])
+    expect(r.inconsistencias).toEqual([{ obligacion_id: 2, numero_obligacion: '2258-7731', tipo: 'CORRECTIVA', codigo: '707', descripcion: 'EDAD DE MORA MAYOR A 00 SIN VALOR DE MORA' }])
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO_CON_INCONSISTENCIAS')
+    expect(db.archivos.find((a) => a.id === 1)).toMatchObject({ tiene_resultados: true, estado_corte: 'ENVIADO_CON_INCONSISTENCIAS' })
+  })
+
+  test('POST sin correctivas deja el corte ENVIADO y el norep marca la obligación como no reportada', async () => {
+    sinResultados()
+    db.cortes.find((c) => c.id === 1).estado = 'ENVIADO_CON_INCONSISTENCIAS'
+    await entrar(ANALISTA)
+    const r = await verifica('post', '/archivos/{id}/resultados/', 201, { url: '/archivos/1/resultados/', datos: adjuntar(noReportados('2026-08-31', ['2260-5543', '9999-0000'])) })
+    expect(r).toMatchObject({ estado_corte: 'ENVIADO', cargados: 10, con_inconsistencias: 2, no_reportadas: 2 })
+    expect(r.inconsistencias).toEqual([
+      { obligacion_id: 4, numero_obligacion: '2260-5543', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación activa no reportada en el corte' },
+      { obligacion_id: null, numero_obligacion: '9999-0000', tipo: 'NO_REPORTADA', codigo: 'R', descripcion: 'Obligación activa no reportada en el corte' },
+    ])
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
+  })
+
+  test('POST 422 con un archivo de otro corte o con otra estructura, y no guarda nada; 409 sin envío; 404 y 403', async () => {
+    sinResultados()
+    await entrar(ANALISTA)
+    const ruta = { url: '/archivos/1/resultados/' }
+    expect(await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(estadisticos('2026-08-31'), detalleCorrectivas('2026-07-31', [])) })).toEqual({
+      detail: 'El archivo Detalle_Inco_CSR_001_123_Correctivas_20260731.txt es del corte 31/07/2026, no del 31/08/2026.',
+      code: 'archivo_de_otro_corte',
+    })
+    expect(await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(detalleSinRegistro2('2026-08-31')) })).toEqual({
+      detail: 'El archivo Detalle_Inco_CSR_001_123_Correctivas_20260831.txt no tiene la estructura esperada (línea 2: no trae el registro tipo 2 con el código, la descripción y el tipo de la inconsistencia).',
+      code: 'estructura_invalida',
+    })
+    const conOtroNombre = new File(['A|B'], 'resultados.txt')
+    expect((await verifica('post', '/archivos/{id}/resultados/', 422, { ...ruta, datos: adjuntar(conOtroNombre) })).code).toBe('estructura_invalida')
+    expect(db.resultadosCargue[1]).toBeUndefined()
+    expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
+    expect(await verifica('post', '/archivos/{id}/resultados/', 409, { url: '/archivos/2/resultados/', datos: adjuntar(estadisticos('2026-09-30')) })).toEqual({
+      detail: 'Registra el envío del archivo antes de cargar sus resultados.',
+    })
+    await verifica('post', '/archivos/{id}/resultados/', 404, { url: '/archivos/99/resultados/', datos: adjuntar(estadisticos('2026-08-31')) })
+    await entrar(ADMIN)
+    await verifica('post', '/archivos/{id}/resultados/', 403, { ...ruta, datos: adjuntar(estadisticos('2026-08-31')) })
+  })
+
+  test('POST /extracciones/{id}/registrar-envio/ 0.9: 409 sin archivo o no apto; con archivo apto lo marca enviado', async () => {
+    await entrar(ANALISTA)
+    await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    db.archivos = db.archivos.filter((a) => a.corte_id !== 2)
+    expect(await verifica('post', '/extracciones/{id}/registrar-envio/', 409, { url: '/extracciones/2/registrar-envio/' })).toEqual({
+      detail: 'Primero genera el archivo plano del corte.',
+      code: 'sin_archivo',
+    })
+    await verifica('post', '/extracciones/{id}/archivo/', 201, { url: '/extracciones/2/archivo/' })
+    expect(await verifica('post', '/extracciones/{id}/registrar-envio/', 409, { url: '/extracciones/2/registrar-envio/' })).toMatchObject({ code: 'archivo_no_apto' })
+    db.entidad = { ...db.entidad, tipo_entidad: '001', codigo_entidad: '123', codigo_sucursal: 'A1B2C3' }
+    const archivo = await verifica('post', '/extracciones/{id}/archivo/', 201, { url: '/extracciones/2/archivo/' })
+    expect((await verifica('post', '/extracciones/{id}/registrar-envio/', 200, { url: '/extracciones/2/registrar-envio/' })).estado).toBe('ENVIADO')
+    expect(db.archivos.find((a) => a.id === archivo.id)).toMatchObject({ enviado: true, estado_corte: 'ENVIADO' })
   })
 })

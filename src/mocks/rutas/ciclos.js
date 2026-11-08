@@ -9,6 +9,7 @@ import { errorFechaCorte, MSG_CICLO } from '../../features/cycle/cycleValidation
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { cicloInicial, FECHA_CICLO_CON_FOTO, obligacionesTrasCiclo, resultadoCiclo2026_10_31, resultadoSinCambios } from '../datos/ciclos'
 import { matrizEstados } from '../datos/matrizEstados'
+import { ultimoCorteEnviado } from '../datos/reporte'
 import { FECHA_ULTIMO_CICLO, obligacionesIniciales } from '../datos/obligacionesIteracion2'
 import { db, persistir } from '../db'
 import { ahoraBogotaISO, error, espera, exigirSesion, idDeRuta, leerCuerpo, SOLO_ANALISTA, url } from '../utilidades'
@@ -58,7 +59,7 @@ export const ciclosHandlers = [
     const errorFecha = errorFechaCorte(valor)
     if (errorFecha) return error(400, { fecha_corte: [errorFecha] })
     const fecha = valor.trim()
-    const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+    const ultimaEnviada = ultimoCorteEnviado()
     if (ultimaEnviada && fecha <= ultimaEnviada) return error(400, { fecha_corte: [MSG_CICLO.anterior(ultimaEnviada)] })
     const borrador = db.cortes.find((c) => c.fecha_corte === fecha && c.estado === 'BORRADOR')
     if (!borrador) return error(409, SIN_BORRADOR)

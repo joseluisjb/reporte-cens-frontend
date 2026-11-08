@@ -10,6 +10,7 @@
 //   mgomez@example.com    / Temporal123     → debe cambiar la contraseña (primer ingreso)
 //   avargas@example.com   / Cartera123      → usuario desactivado
 import { CODIGOS_ROL } from '../features/auth/roles'
+import { archivosIniciales } from './datos/archivos'
 import { obligacionesIniciales } from './datos/obligacionesIteracion2'
 
 const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
@@ -58,7 +59,7 @@ const cortesIniciales = () => [
 const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -71,6 +72,7 @@ const inicial = () => ({
   // Iteración 2: no se mezclan con las obligaciones FIC- de la extracción (mocks/datos/obligaciones.js).
   obligaciones: obligacionesIniciales(),
   entidad: entidadInicial(),
+  archivos: archivosIniciales(),
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

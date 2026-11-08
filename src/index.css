@@ -26,6 +26,14 @@
   --color-aviso-claro: #fef3c7;
   --color-turquesa: #0f766e; /* texto de la insignia 07 Castigada recuperada */
   --color-turquesa-claro: #ccfbf1;
+  /* Barra de distribución por estado (panel, RF19). Los de la maqueta v3, oscurecidos donde hacía falta
+     para llegar a 3:1 sobre blanco (contraste de gráficos): 03 #f59e0b → #d97706 y 07 #14b8a6 → #0d9488. */
+  --color-estado-01: #16a34a;
+  --color-estado-02: #3b82f6;
+  --color-estado-03: #d97706;
+  --color-estado-06: #dc2626;
+  --color-estado-07: #0d9488;
+  --color-estado-otro: #64748b;
 
   --font-hd: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;
   --font-body: 'Mulish', system-ui, -apple-system, 'Segoe UI', sans-serif;

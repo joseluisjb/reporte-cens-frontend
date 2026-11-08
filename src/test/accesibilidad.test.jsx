@@ -54,6 +54,13 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('inicio (Analista) con el panel de la cartera', async () => {
+    await renderConSesion('/panel', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('heading', { name: 'Estado de la cartera' })
+    await screen.findByText(/Corte al/)
+    await expectAccesible()
+  })
+
   test('inicio (Administrador)', async () => {
     renderApp('/panel')
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })

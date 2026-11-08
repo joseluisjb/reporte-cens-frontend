@@ -37,8 +37,9 @@ export function hoyISO() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-// '2026-09-30' → 30 de septiembre de 2026
+// '2026-09-30' → 30 de septiembre de 2026. Sin fecha devuelve "—".
 export function formatearFechaISOLarga(iso) {
+  if (!iso) return '—'
   const [a, m, d] = partesISO(iso)
   return `${d} de ${MESES[m - 1]} de ${a}`
 }
@@ -57,3 +58,7 @@ export function enmascararIdentificacion(numero) {
   if (texto.length <= 4) return '*'.repeat(texto.length)
   return '*'.repeat(texto.length - 4) + texto.slice(-4)
 }
+
+// Fecha de la API ('2026-09-30' o '2026-09-30T00:00:00') → 'YYYY-MM-DD' como texto, sin pasar por Date
+// (con new Date() se correría un día en Colombia). Sin valor → null.
+export const soloFecha = (valor) => (valor ? String(valor).slice(0, 10) : null)

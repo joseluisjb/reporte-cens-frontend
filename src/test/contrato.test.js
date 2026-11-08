@@ -484,6 +484,18 @@ describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligacion
     })
   })
 
+  test('GET /panel/resumen/ 200 cumple PanelResumen (Analista), también sin archivos; 403 al Administrador y 401', async () => {
+    await verifica('get', '/panel/resumen/', 401)
+    await entrar(ADMIN)
+    await verifica('get', '/panel/resumen/', 403)
+    await entrar(ANALISTA)
+    const panel = await verifica('get', '/panel/resumen/', 200)
+    expect(panel).toMatchObject({ fecha_ultimo_ciclo: '2026-09-30', total_obligaciones: 12, en_reclamo: 2, con_dos_o_mas_cuotas: 5, entidad_con_marcador: true })
+    expect(panel.ultimo_archivo).toMatchObject({ id: 2, nombre: 'SSRXXXXXX20260930', apto_envio: false })
+    db.archivos = []
+    expect((await verifica('get', '/panel/resumen/', 200)).ultimo_archivo).toBeNull()
+  })
+
   test('GET /entidad/ 200 cumple Entidad con el marcador para los dos roles; 401 sin sesión', async () => {
     await verifica('get', '/entidad/', 401)
     for (const usuario of [ADMIN, ANALISTA]) {

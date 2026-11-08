@@ -7,7 +7,7 @@ import CuotasMoraBadge from '../features/transunion/CuotasMoraBadge'
 import EdadMoraBadge from '../features/transunion/EdadMoraBadge'
 import EstadoBadge from '../features/transunion/EstadoBadge'
 import RfTag from '../features/transunion/RfTag'
-import { formatearDias } from '../lib/format'
+import { formatearDias, formatearFechaISOLarga } from '../lib/format'
 
 describe('EstadoBadge', () => {
   test.each([
@@ -167,3 +167,4 @@ test('formatearDias', () => {
   expect(formatearDias(null)).toBe('—')
   expect(formatearDias(1500)).toBe('1.500 días')
 })
+test('formatearFechaISOLarga sin fecha devuelve —', () => { expect(formatearFechaISOLarga(null)).toBe('—') })

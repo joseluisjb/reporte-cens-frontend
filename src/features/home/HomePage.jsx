@@ -6,10 +6,12 @@ import { useAuth } from '../auth/authContext'
 import { ROLES } from '../auth/roles'
 import { getLatestCut } from '../extraction/extractionService'
 import { countActiveUsers } from '../users/usersService'
+import PanelAnalista from './PanelAnalista'
 
 // Inicio. La tarjeta "Usuarios activos" (RF27) la ve solo el Administrador: el Analista ni la
 // muestra ni pide /users/ (el backend le respondería 403). La tarjeta "Última extracción" (RF1, RF44)
-// la ven ambos roles y consulta el corte más reciente con getLatestCut().
+// la ven ambos roles y consulta el corte más reciente con getLatestCut(). Las tarjetas de HU-B y HU-C
+// (PanelAnalista) son solo del Analista: el Administrador no las ve ni pide /panel/resumen/.
 export default function HomePage() {
   usePageTitle('Inicio')
   const { user } = useAuth()
@@ -22,6 +24,7 @@ export default function HomePage() {
         {esAdmin && <TarjetaUsuariosActivos />}
         <TarjetaUltimaExtraccion />
       </div>
+      {user.rol === ROLES.ANALISTA && <PanelAnalista />}
     </>
   )
 }

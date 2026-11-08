@@ -124,8 +124,8 @@ export const obligacionesIniciales = () => [
     eventos: eventos(
       ['2025-02-28', '01', 'Primer reporte en Vigente (01), al día'],
       ['2026-02-28', '03', 'Crédito caducado en el SAC: pasa a Dudoso Recaudo (03)', '04'],
-      ['2026-08-20', '07', 'Pago total estando en Dudoso Recaudo: pasa a Cartera Recuperada (07)'],
-      ['2026-08-31', '07', 'Se reportó como Cartera Recuperada en el corte 31/08/2026. Desde septiembre ya no se reporta'],
+      ['2026-08-20', '07', 'Pago total estando en Dudoso Recaudo: pasa a Castigada recuperada (07)'],
+      ['2026-08-31', '07', 'Se reportó como Castigada recuperada en el corte 31/08/2026. Desde septiembre ya no se reporta'],
     ),
   }),
   obligacion({

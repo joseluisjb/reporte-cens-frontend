@@ -107,6 +107,16 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('obligaciones y estados (pantalla 9), con la lista y el detalle abierto', async () => {
+    await renderConSesion('/obligaciones', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('table', { name: 'Obligaciones y estados' })
+    await screen.findByRole('group', { name: 'Filtrar por estado' })
+    await expectAccesible()
+    await userEvent.click(boton('Ver el detalle de la obligación 2271-5502'))
+    await screen.findByRole('list', { name: 'Línea de tiempo de estados' })
+    await expectAccesible()
+  })
+
   test('parametrización de conceptos con datos', async () => {
     await renderConSesion('/parametrizacion')
     await screen.findByText('CUOTA FINANCIACION ENERGIA')

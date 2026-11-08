@@ -5,13 +5,12 @@ import RecoverPasswordPage from '../features/auth/RecoverPasswordPage'
 import RequireAuth from '../features/auth/RequireAuth'
 import ResetPasswordPage from '../features/auth/ResetPasswordPage'
 import RequireRole from '../features/auth/RequireRole'
-import { ROLES } from '../features/auth/roles'
 import CatalogPage from './CatalogPage'
 import AppLayout from './layout/AppLayout'
 import { NAV_ITEMS, RUTA_INICIAL } from './navigation'
 
 // Públicas arriba. Las internas cuelgan de RequireAuth (sin sesión → /login) y salen de NAV_ITEMS.
-// Las pantallas con adminOnly (navigation.js) solo las abre el Administrador, también por URL.
+// Las pantallas con `roles` (navigation.js) solo las abre ese rol, también escribiendo la dirección.
 export default function AppRoutes() {
   return (
     <Routes>
@@ -22,13 +21,13 @@ export default function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route path="/cambio-password" element={<ChangePasswordPage />} />
         <Route element={<AppLayout />}>
-          {NAV_ITEMS.map(({ path, label, adminOnly, Page }) => (
+          {NAV_ITEMS.map(({ path, label, roles, Page }) => (
             <Route
               key={path}
               path={path}
               element={
-                adminOnly ? (
-                  <RequireRole roles={[ROLES.ADMIN]} seccion={label}>
+                roles ? (
+                  <RequireRole roles={roles} seccion={label}>
                     <Page />
                   </RequireRole>
                 ) : (

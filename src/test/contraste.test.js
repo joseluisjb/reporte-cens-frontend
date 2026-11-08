@@ -58,6 +58,7 @@ describe('contraste WCAG AA de los tokens', () => {
     ['texto grande blanco sobre bosque (panel del login)', () => [BLANCO, t('bosque')], 3],
     ['texto blanco sobre el hover del menú (negro 10 % sobre bosque-d)', () => [BLANCO, mezclar(NEGRO, 0.1, t('bosque-d'))], 4.5],
     ['texto blanco sobre el ítem activo del menú (negro 20 % sobre bosque-d)', () => [BLANCO, mezclar(NEGRO, 0.2, t('bosque-d'))], 4.5],
+    ['texto sobre-citrico sobre citrico (etiquetas ADMIN y ANALISTA del menú)', () => [t('sobre-citrico'), t('citrico')], 4.5],
   ])('%s', (_nombre, colores, minimo) => {
     const [a, b] = colores()
     expect(contraste(a, b)).toBeGreaterThanOrEqual(minimo)

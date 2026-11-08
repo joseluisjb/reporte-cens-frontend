@@ -5,23 +5,47 @@ import { ANALISTA, renderApp, renderConSesion } from './renderApp'
 const menuPrincipal = () => screen.getByRole('navigation', { name: 'Navegación principal' })
 
 describe('menú lateral por rol', () => {
-  test('el Administrador ve las 5 opciones, las de administración con etiqueta ADMIN', async () => {
+  test('el menú tiene las 13 opciones agrupadas por sección, en el orden de la maqueta v3', async () => {
     renderApp('/panel')
     await screen.findByRole('heading', { name: /bienvenido/i })
     const nav = within(menuPrincipal())
-    expect(nav.getAllByRole('link')).toHaveLength(5)
-    expect(nav.getByRole('link', { name: /gestión de usuarios/i })).toHaveTextContent('ADMIN')
-    expect(nav.getByRole('link', { name: /auditoría/i })).toHaveTextContent('ADMIN')
-    expect(nav.getByRole('link', { name: /parametrización/i })).toHaveTextContent('ADMIN')
-    expect(nav.getByRole('link', { name: /inicio/i })).not.toHaveTextContent('ADMIN')
+    expect(nav.getAllByRole('link')).toHaveLength(13)
+    const seccion = (nombre) => within(nav.getByRole('list', { name: nombre })).getAllByRole('link').map((a) => a.textContent.replace(/ \(solo para el rol.*$/, '').replace(/(ADMIN|ANALISTA)$/, ''))
+    expect(seccion('Extracción')).toEqual(['Extracción de Cartera', 'Parametrización de Conceptos'])
+    expect(seccion('Ciclo de vida')).toEqual(['Obligaciones y Estados', 'Actualización Mensual', 'Refinanciaciones'])
+    expect(seccion('Reporte a TransUnion')).toEqual(['Generar Reporte', 'Reclamos Habeas Data', 'Novedades Urgentes'])
+    expect(seccion('Administración')).toEqual(['Gestión de Usuarios', 'Auditoría', 'Datos de la Entidad', 'Homologación de Estados'])
   })
 
-  test('el Analista de Cartera solo ve Inicio y Extracción', async () => {
+  test('el Administrador ve sus opciones con ADMIN y las del Analista bloqueadas con ANALISTA', async () => {
+    renderApp('/panel')
+    await screen.findByRole('heading', { name: /bienvenido/i })
+    const nav = within(menuPrincipal())
+    for (const nombre of [/gestión de usuarios/i, /auditoría/i, /parametrización/i, /datos de la entidad/i, /homologación de estados/i]) {
+      const enlace = nav.getByRole('link', { name: nombre })
+      expect(enlace).toHaveTextContent('ADMIN')
+      expect(enlace).not.toHaveTextContent('solo para el rol')
+    }
+    for (const nombre of [/obligaciones y estados/i, /actualización mensual/i, /refinanciaciones/i, /generar reporte/i, /reclamos/i, /novedades/i]) {
+      const enlace = nav.getByRole('link', { name: nombre })
+      expect(enlace).toHaveTextContent('ANALISTA')
+      expect(enlace).toHaveAccessibleName(expect.stringContaining('(solo para el rol Analista de Cartera)'))
+      expect(enlace).not.toHaveAttribute('title')
+    }
+    expect(nav.getByRole('link', { name: /inicio/i })).not.toHaveTextContent(/ADMIN|ANALISTA/)
+    expect(nav.getByRole('link', { name: /extracción de cartera/i })).not.toHaveTextContent(/ADMIN|ANALISTA/)
+  })
+
+  test('el Analista ve las opciones de administración bloqueadas y las suyas sin etiqueta', async () => {
     renderApp('/panel', ANALISTA)
     await screen.findByRole('heading', { name: /bienvenido, juan/i })
     const nav = within(menuPrincipal())
-    expect(nav.getAllByRole('link').map((a) => a.textContent)).toEqual(['Inicio', 'Extracción de Cartera'])
-    expect(nav.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument()
+    for (const nombre of [/gestión de usuarios/i, /auditoría/i, /parametrización/i, /datos de la entidad/i, /homologación de estados/i]) {
+      expect(nav.getByRole('link', { name: nombre })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
+    }
+    for (const nombre of [/obligaciones y estados/i, /generar reporte/i, /novedades/i]) {
+      expect(nav.getByRole('link', { name: nombre })).not.toHaveTextContent(/ADMIN|ANALISTA/)
+    }
   })
 
   test('marca la página actual con aria-current', async () => {

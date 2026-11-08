@@ -1,0 +1,12 @@
+// Pantallas de la Iteración 2 que todavía no existen. Cada una se reemplaza en navigation.js por su
+// página real (features/<modulo>/) en el PR que la construye.
+import PlaceholderPage from './PlaceholderPage'
+
+export const Obligaciones = () => <PlaceholderPage title="Obligaciones y Estados" responsable="Johan" rf="RF10–RF17, RF19, RF45–RF47, RF49, RF52" />
+export const ActualizacionMensual = () => <PlaceholderPage title="Actualización Mensual de Estados" responsable="Johan" rf="RF10–RF17, RF19, RF45–RF49" />
+export const Refinanciaciones = () => <PlaceholderPage title="Refinanciaciones" responsable="Johan" rf="RF18" />
+export const ReporteTransUnion = () => <PlaceholderPage title="Reporte a TransUnion" responsable="Johan" rf="RF20–RF22, RF51–RF54" />
+export const Reclamos = () => <PlaceholderPage title="Reclamos Habeas Data" responsable="Omar" rf="RF23" />
+export const Novedades = () => <PlaceholderPage title="Novedades Urgentes" responsable="Angel" rf="RF24, RF50, RF55" />
+export const DatosEntidad = () => <PlaceholderPage title="Datos de la Entidad ante TransUnion" responsable="Johan" rf="RF57" />
+export const HomologacionEstados = () => <PlaceholderPage title="Homologación de Estados" responsable="Johan" rf="RF48" />

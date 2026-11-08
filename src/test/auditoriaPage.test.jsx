@@ -121,9 +121,9 @@ describe('Log de auditoría', () => {
     expect(screen.queryByText('Ocurrió un error en el servidor. Intenta de nuevo más tarde.')).not.toBeInTheDocument()
   })
 
-  test('el Analista ve "Acceso restringido" (y la sección no aparece en su menú)', async () => {
+  test('el Analista ve "Acceso restringido" (y la sección sale bloqueada en su menú)', async () => {
     renderApp('/auditoria', ANALISTA)
     expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Auditoría/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Auditoría/ })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
   })
 })

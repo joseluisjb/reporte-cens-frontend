@@ -50,6 +50,20 @@ describe('conformidad de los mocks con el contrato OpenAPI', () => {
     expect(() => expectCumpleContrato('get', '/grupos-conceptos/{id}/', 200, { id: 1, nombre: 'G', activo: true, conceptos: [{ codigo: 30, descripcion: null }], creado: '2026-10-10' })).not.toThrow()
   })
 
+  test('0.9: una referencia que puede ser null (nullable + allOf) acepta null y sigue validando el objeto', () => {
+    const panel = {
+      fecha_ultimo_ciclo: null, total_obligaciones: 0, distribucion: [], ultimo_archivo: null,
+      en_reclamo: 0, novedades_pendientes: 0, con_dos_o_mas_cuotas: 0, entidad_con_marcador: true,
+    }
+    expect(() => expectCumpleContrato('get', '/panel/resumen/', 200, panel)).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/panel/resumen/', 200, { ...panel, ultimo_archivo: { id: 1 } })).toThrow(/no cumple el contrato/)
+    // los tipos «o nulo» de la 0.9 aceptan null y rechazan códigos que no existen
+    const transicion = { obligacion_id: 1, numero_obligacion: '2265-2208', nombre_titular: 'A', estado_anterior: null, estado_nuevo: '01', edad_anterior: null, edad_nueva: '00', primer_reporte: true, requiere_revision: false, reglas: [] }
+    const ciclo = { corte_id: 3, fecha_corte: '2026-10-31', fecha_ejecucion: '2026-11-03T09:15:00-05:00', ejecutada_por: null, primer_reporte: 1, cambios_estado: 0, cierres: 0, rechazados: 0, con_pagos: 0, a_dudoso: 0, a_castigada: 0, normalizadas: 0, transiciones: [transicion], rechazos: [] }
+    expect(() => expectCumpleContrato('get', '/ciclos/{corte_id}/', 200, ciclo)).not.toThrow()
+    expect(() => expectCumpleContrato('get', '/ciclos/{corte_id}/', 200, { ...ciclo, transiciones: [{ ...transicion, estado_anterior: '05' }] })).toThrow(/no cumple el contrato/)
+  })
+
   test('auditoría: RegistroAuditoria acepta las acciones del sistema (0.6) y rechaza un rol desconocido', () => {
     const registro = { id: 7, fecha_hora: '2026-10-12T08:30:00-05:00', usuario_id: 3, usuario: 'Rosa Martínez', rol: 'ADMINISTRADOR', accion: 'Usuario desactivado', tipo_accion: 'desactivacion', modulo: 'Usuarios', detalle: '' }
     const sistema = { ...registro, id: 8, usuario_id: null, usuario: 'Sistema', rol: null, accion: 'Actualización mensual', tipo_accion: 'calculo', modulo: 'Extracción' }

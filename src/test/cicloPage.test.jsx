@@ -118,10 +118,10 @@ describe('pantalla 10 · ejecución', () => {
     const kpis = screen.getByRole('list', { name: 'Resultado de la actualización del corte 31/10/2026' })
     expect(within(kpis).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       '3En primer reporte',
-      '5Con pagos aplicados',
+      '7Con pagos aplicados',
       '1Cierres (02 o 07)',
       '1A Dudoso o Castigada',
-      '2Pagaron la mora',
+      '1Pagaron la mora',
       '0Cambios rechazados',
     ])
     expect(filas('Cambios aplicados')).toHaveLength(10)
@@ -152,14 +152,62 @@ describe('pantalla 10 · ejecución', () => {
     const rechazos = await screen.findByRole('table', { name: 'Cambios rechazados' })
     expect(screen.getByRole('heading', { name: '2 cambios rechazados: bloquean la validación del corte' })).toBeInTheDocument()
     expect(within(rechazos).getAllByRole('row').slice(1).map((f) => f.textContent)).toEqual([
-      '2267-3361Taller Mecánico Los PinosPrimer reportepasa a07 · Castigada recuperadaError 881 Error 881: estado no permitido en primer reporte',
-      '2259-1092Jorge Iván Salcedo02 · Saldadapasa a03 · Dudoso recaudoError 713 Error 713: la matriz no permite pasar de Saldada sin mora a Dudoso Recaudo',
+      '2267-3361Taller Mecánico Los PinosPrimer reportepasa a07 · Castigada recuperadaError 881: estado no permitido en primer reporte',
+      '2259-1092Jorge Iván Salcedo02 · Saldadapasa a03 · Dudoso recaudoError 713: la matriz no permite pasar de Saldada sin mora a Dudoso Recaudo',
     ])
     // RF10: nueva caducada sin mora → entra en 01 y queda para revisión.
     expect(filaDe('Cambios aplicados', '2268-1100')).toHaveTextContent('RevisarEntra con su estado y su mora realesRF10Crédito caducado en el SAC sin mora')
     // RF11: salto 00 → 03 y baja 02 → 00 sin abono, para revisión.
     expect(filaDe('Cambios aplicados', '2257-4156')).toHaveTextContent('00 → 03Revisar')
     expect(filaDe('Cambios aplicados', '2260-5543')).toHaveTextContent('02 → 00RevisarLa edad bajó de 02 a 00 sin un abono en el periodo')
+  })
+})
+
+describe('pantalla 10 · respuestas cruzadas', () => {
+  test('un «Ver resultado» lento no reemplaza el ciclo recién ejecutado', async () => {
+    corteDeOctubreEnBorrador()
+    let soltar
+    server.use(
+      http.get(`${API_URL}/ciclos/2/`, async () => {
+        await new Promise((r) => {
+          soltar = r
+        })
+        return undefined
+      }),
+    )
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Ver el resultado del corte 30/09/2026' }))
+    await ejecutar()
+    expect(await screen.findByRole('heading', { name: '10 obligaciones actualizadas en el corte 31/10/2026' })).toBeInTheDocument()
+    soltar()
+    await waitFor(() => expect(filas('Actualizaciones mensuales anteriores')).toHaveLength(2))
+    expect(screen.getByRole('heading', { name: '10 obligaciones actualizadas en el corte 31/10/2026' })).toBeInTheDocument()
+  })
+
+  test('la fecha propuesta no pisa la que el usuario ya escribió', async () => {
+    let soltar
+    server.use(
+      http.get(`${API_URL}/ciclos/`, async () => {
+        await new Promise((r) => {
+          soltar = r
+        })
+        return undefined
+      }),
+    )
+    await renderConSesion('/ciclo', ...ANALISTA)
+    await screen.findByRole('status', { name: 'Cargando el historial' })
+    cambiarFecha('2026-12-31')
+    soltar()
+    await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
+    expect(fecha()).toHaveValue('2026-12-31')
+  })
+
+  test('el aviso de «sin borrador» se quita al cambiar la fecha', async () => {
+    await abrir()
+    await ejecutar()
+    await screen.findByText(/Primero genera la extracción de ese corte\./)
+    cambiarFecha('2026-11-30')
+    expect(screen.queryByText(/Primero genera la extracción de ese corte\./)).not.toBeInTheDocument()
   })
 })
 

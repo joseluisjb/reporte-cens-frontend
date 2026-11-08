@@ -81,8 +81,9 @@ export const obligacionesHandlers = [
     if (respuesta) return respuesta
     const { filtros, errores } = leerFiltrosObligaciones(new URL(request.url).searchParams)
     if (errores) return error(400, errores)
+    const corte = corteVigente()
     const filas = db.obligaciones
-      .map((o) => aResumen(o, corteVigente()))
+      .map((o) => aResumen(o, corte))
       .filter((fila) => cumple(fila, filtros))
       .sort((a, b) => a.numero_obligacion.localeCompare(b.numero_obligacion))
     const { limite, desplazamiento } = filtros

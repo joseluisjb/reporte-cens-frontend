@@ -543,7 +543,7 @@ describe('conformidad de los mocks de la actualización mensual (contrato 0.9): 
     await entrar(ANALISTA)
     expect(() => expectPeticionCumpleContrato('post', '/ciclos/', { fecha_corte: '2026-10-31' })).not.toThrow()
     const ciclo = await verifica('post', '/ciclos/', 201, { datos: { fecha_corte: '2026-10-31' } })
-    expect(ciclo).toMatchObject({ corte_id: 3, fecha_corte: '2026-10-31', ejecutada_por: 'Juan Pérez', primer_reporte: 3, cambios_estado: 3, cierres: 1, rechazados: 0, con_pagos: 5 })
+    expect(ciclo).toMatchObject({ corte_id: 3, fecha_corte: '2026-10-31', ejecutada_por: 'Juan Pérez', primer_reporte: 3, cambios_estado: 3, cierres: 1, rechazados: 0, con_pagos: 7, normalizadas: 1 })
     expect(ciclo.transiciones).toHaveLength(10)
     // Las obligaciones quedan al corte nuevo: 15, la del Hotel en Castigada y 2261-8820 cerrada.
     const resumen = await verifica('get', '/obligaciones/resumen/', 200)
@@ -569,6 +569,19 @@ describe('conformidad de los mocks de la actualización mensual (contrato 0.9): 
     expect(await verifica('post', '/ciclos/', 409, { datos: { fecha_corte: '2026-10-31' } })).toEqual({ detail: 'Primero genera la extracción de ese corte.' })
     await entrar(ADMIN)
     await verifica('post', '/ciclos/', 403, { datos: { fecha_corte: '2026-09-30' } })
+  })
+
+  test('el ciclo de un corte borrado sale del historial y repetir un corte anterior descarta los posteriores', async () => {
+    corteDeOctubreEnBorrador()
+    await entrar(ANALISTA)
+    await verifica('post', '/ciclos/', 201, { datos: { fecha_corte: '2026-10-31' } })
+    // Se borra el BORRADOR del 31/10 y el 30/09 vuelve a estar en borrador.
+    db.cortes = db.cortes.filter((c) => c.id !== 3).map((c) => (c.id === 2 ? { ...c, estado: 'BORRADOR', fecha_envio: null } : c))
+    expect((await verifica('get', '/ciclos/', 200)).map((c) => c.fecha_corte)).toEqual(['2026-09-30'])
+    await verifica('get', '/ciclos/{corte_id}/', 404, { url: '/ciclos/3/' })
+    await verifica('post', '/ciclos/', 201, { datos: { fecha_corte: '2026-09-30' } })
+    expect(await verifica('get', '/obligaciones/resumen/', 200)).toMatchObject({ fecha_ultimo_ciclo: '2026-09-30', total: 12 })
+    expect(db.ciclos.map((c) => c.fecha_corte)).toEqual(['2026-09-30'])
   })
 
   test('el escenario con rechazos 713 y 881 y revisiones cumple CicloDetalle', async () => {

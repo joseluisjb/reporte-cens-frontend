@@ -20,8 +20,11 @@ const CAMPOS_RESUMEN = ['corte_id', 'fecha_corte', 'fecha_ejecucion', 'ejecutada
 const aResumen = (ciclo) => Object.fromEntries(CAMPOS_RESUMEN.map((k) => [k, ciclo[k]]))
 const masRecientePrimero = (a, b) => b.fecha_corte.localeCompare(a.fecha_corte)
 
+// Solo cuentan los ciclos cuyo corte sigue existiendo: si se borra el BORRADOR, su ciclo desaparece.
+const ciclosVigentes = () => db.ciclos.filter((c) => db.cortes.some((k) => k.id === c.corte_id)).sort(masRecientePrimero)
+
 // Fecha del último ciclo ejecutado: la mora de las obligaciones se calcula a ese corte.
-export const corteVigente = () => [...db.ciclos].sort(masRecientePrimero)[0]?.fecha_corte ?? FECHA_ULTIMO_CICLO
+export const corteVigente = () => ciclosVigentes()[0]?.fecha_corte ?? FECHA_ULTIMO_CICLO
 
 // Obligaciones y resultado del ciclo de `fecha` (el mock no recalcula; ver mocks/datos/ciclos.js).
 function calcular(fecha) {
@@ -44,7 +47,7 @@ export const ciclosHandlers = [
   http.get(url(ENDPOINTS.ciclos), async () => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
-    return respuesta ?? HttpResponse.json([...db.ciclos].sort(masRecientePrimero).map(aResumen))
+    return respuesta ?? HttpResponse.json(ciclosVigentes().map(aResumen))
   }),
 
   http.post(url(ENDPOINTS.ciclos), async ({ request }) => {
@@ -62,8 +65,9 @@ export const ciclosHandlers = [
 
     const { obligaciones, resultado } = calcular(fecha)
     const ciclo = { corte_id: borrador.id, fecha_corte: fecha, fecha_ejecucion: ahoraBogotaISO(), ejecutada_por: usuario.nombre, ...resultado }
-    // Volver a ejecutarlo sobre el mismo BORRADOR reemplaza el resultado anterior.
-    db.ciclos = [...db.ciclos.filter((c) => c.corte_id !== borrador.id), ciclo]
+    // Volver a ejecutarlo sobre el mismo BORRADOR reemplaza el resultado anterior. Los ciclos de cortes
+    // posteriores (o de cortes borrados) dejan de valer: las obligaciones vuelven a este corte.
+    db.ciclos = [...ciclosVigentes().filter((c) => c.corte_id !== borrador.id && c.fecha_corte < fecha), ciclo]
     db.obligaciones = obligaciones
     persistir()
     return HttpResponse.json(ciclo, { status: 201 })
@@ -73,7 +77,7 @@ export const ciclosHandlers = [
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
-    const ciclo = db.ciclos.find((c) => c.corte_id === idDeRuta(params.corteId))
+    const ciclo = ciclosVigentes().find((c) => c.corte_id === idDeRuta(params.corteId))
     return ciclo ? HttpResponse.json(ciclo) : error(404, SIN_CICLO)
   }),
 ]

@@ -149,15 +149,18 @@ export function obligacionesTrasCiclo(obligaciones) {
 }
 
 // Resultado (CicloDetalle sin corte, fecha ni usuario, que pone la ruta).
+// `con_pagos` cuenta las 7 obligaciones con pagos del SAC en CAMBIOS (el mockup no contaba la cuota del
+// mes de las que estaban al día) y `normalizadas` solo la que volvió a 01 por RF46 (2244-6410), como
+// define el contrato.
 export const resultadoCiclo2026_10_31 = () => ({
   primer_reporte: 3,
   cambios_estado: 3,
   cierres: 1,
   rechazados: 0,
-  con_pagos: 5,
+  con_pagos: 7,
   a_dudoso: 0,
   a_castigada: 1,
-  normalizadas: 2,
+  normalizadas: 1,
   transiciones: [
     transicion(13, '2265-2208', 'Panadería La Espiga', null, '01', null, '00', [ENTRA]),
     transicion(14, '2266-7745', 'Colegio San Rafael', null, '01', null, '01', [ENTRA]),

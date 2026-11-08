@@ -47,6 +47,9 @@ export default function CyclePage() {
   const [intentoNuevas, setIntentoNuevas] = useState(0)
   const [resultado, setResultado] = useState(null) // { ciclo, recienEjecutado } | null
   const [sinBorrador, setSinBorrador] = useState('')
+  // Número de la última petición de resultado (ejecutar o «Ver resultado»): una respuesta de una
+  // petición anterior se descarta y no reemplaza la más reciente.
+  const ultimaConsulta = useRef(0)
 
   const form = useFormulario({
     valoresIniciales: { fechaCorte: '' },
@@ -55,9 +58,10 @@ export default function CyclePage() {
     onSubmit: async ({ fechaCorte }) => {
       setSinBorrador('')
       setResultado(null)
+      const numero = ++ultimaConsulta.current
       try {
         const ciclo = await runCycle(fechaCorte)
-        setResultado({ ciclo, recienEjecutado: true })
+        if (numero === ultimaConsulta.current) setResultado({ ciclo, recienEjecutado: true })
         setIntentoHistorial((n) => n + 1)
         setIntentoNuevas((n) => n + 1)
         toast.success(`Actualización mensual completada: ${plural(ciclo.transiciones.length, 'obligación actualizada', 'obligaciones actualizadas')} en el corte ${formatearFechaISO(ciclo.fechaCorte)}.`)
@@ -70,6 +74,10 @@ export default function CyclePage() {
   })
   const { setValor } = form
   const fechaPropuesta = useRef(false)
+  const fechaEscrita = useRef('')
+  useEffect(() => {
+    fechaEscrita.current = form.valores.fechaCorte
+  })
 
   // Historial. La primera vez que llega, propone el corte del mes siguiente al último ejecutado.
   useEffect(() => {
@@ -79,7 +87,8 @@ export default function CyclePage() {
         if (cancelado) return
         setHistorial(lista)
         setErrorHistorial('')
-        if (!fechaPropuesta.current && lista.length) setValor('fechaCorte', corteSiguiente(lista[0].fechaCorte))
+        // Solo si el usuario no ha escrito una fecha mientras cargaba.
+        if (!fechaPropuesta.current && lista.length && !fechaEscrita.current) setValor('fechaCorte', corteSiguiente(lista[0].fechaCorte))
         fechaPropuesta.current = true
       },
       (err) => !cancelado && setErrorHistorial(mensajeDeError(err)),
@@ -92,13 +101,16 @@ export default function CyclePage() {
   const ultimo = historial?.[0] ?? null
 
   const verResultado = useCallback(async (corteId) => {
+    const numero = ++ultimaConsulta.current
     setResultado({ cargando: corteId })
     try {
-      setResultado({ ciclo: await getCycle(corteId), recienEjecutado: false })
+      const ciclo = await getCycle(corteId)
+      if (numero === ultimaConsulta.current) setResultado({ ciclo, recienEjecutado: false })
     } catch (err) {
-      setResultado({ error: mensajeDeError(err), corteId })
+      if (numero === ultimaConsulta.current) setResultado({ error: mensajeDeError(err), corteId })
     }
   }, [])
+  const campoFecha = form.campo('fechaCorte')
 
   return (
     <>
@@ -113,7 +125,11 @@ export default function CyclePage() {
               className="w-56"
               disabled={form.enviando}
               describedBy="ciclo-ayuda"
-              {...form.campo('fechaCorte')}
+              {...campoFecha}
+              onChange={(e) => {
+                setSinBorrador('') // el aviso de «sin borrador» era de la fecha anterior
+                campoFecha.onChange(e)
+              }}
             />
             <div className="min-w-48 flex-1 pb-1">
               <div className="text-xs text-muted">Última actualización</div>
@@ -376,7 +392,8 @@ function CambiosRechazados({ rechazos }) {
                 <CambioEstado anterior={r.estadoAnterior} nuevo={r.estadoCalculado} />
               </td>
               <td>
-                <Badge tone="error">Error {r.codigo}</Badge> {r.motivo}
+                {/* El motivo ya empieza por «Error 713:» o «Error 881:». */}
+                <span className="font-semibold text-error-d">{r.motivo}</span>
               </td>
             </tr>
           ))}

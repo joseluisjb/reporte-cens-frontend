@@ -1,7 +1,7 @@
 // Validación de la fecha de corte de la actualización mensual (pantalla 10). La usan el formulario y el
 // backend simulado, para que digan lo mismo. El backend además exige que sea posterior al último corte
 // ENVIADO y que exista un corte en BORRADOR de esa fecha (eso solo lo sabe él: 400 y 409).
-import { formatearFechaISO } from '../../lib/format'
+import { formatearFechaISO, pad } from '../../lib/format'
 
 export const MSG_CICLO = {
   falta: 'Selecciona una fecha de corte.',
@@ -9,8 +9,6 @@ export const MSG_CICLO = {
   finDeMes: (sugerida) => `El corte es el último día del mes. Para ese mes sería el ${formatearFechaISO(sugerida)}.`,
   anterior: (ultimaEnviada) => `La fecha de corte debe ser posterior al último corte enviado (${formatearFechaISO(ultimaEnviada)}).`,
 }
-
-const dos = (n) => String(n).padStart(2, '0')
 
 // '2026-10-31' válida (también el día: 2026-02-30 no existe) → [año, mes, día]; si no, null.
 function partes(fecha) {
@@ -24,13 +22,13 @@ function partes(fecha) {
 // Último día del mes de la fecha ('2026-10-15' → '2026-10-31').
 export function finDeMes(fecha) {
   const [anio, mes] = partes(fecha)
-  return `${anio}-${dos(mes)}-${dos(new Date(Date.UTC(anio, mes, 0)).getUTCDate())}`
+  return `${anio}-${pad(mes)}-${pad(new Date(Date.UTC(anio, mes, 0)).getUTCDate())}`
 }
 
 // Corte del mes siguiente ('2026-09-30' → '2026-10-31'): la fecha que propone el formulario.
 export function corteSiguiente(fecha) {
   const [anio, mes] = partes(fecha)
-  return finDeMes(mes === 12 ? `${anio + 1}-01-01` : `${anio}-${dos(mes + 1)}-01`)
+  return finDeMes(mes === 12 ? `${anio + 1}-01-01` : `${anio}-${pad(mes + 1)}-01`)
 }
 
 // Mensaje de error de la fecha de corte, o '' si sirve.

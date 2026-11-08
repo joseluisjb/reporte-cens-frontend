@@ -13,6 +13,7 @@ export function corteDeOctubreEnBorrador() {
     id: 3, fecha_corte: '2026-10-31', fecha_ejecucion: '2026-11-01T08:00:00-05:00', grupo_id: 2, grupo_nombre: 'Solo cuota de energía',
     estado: 'BORRADOR', fecha_envio: null, ejecutada_por: 'Juan Pérez', observacion: null,
   })
+  db.siguienteCorteId = 4
 }
 
 const regla = (rf, texto, porConfirmar = false) => ({ rf, texto, por_confirmar: porConfirmar })

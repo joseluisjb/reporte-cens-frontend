@@ -64,6 +64,7 @@ describe('contraste WCAG AA de los tokens', () => {
     ['insignia error: error-d sobre error-claro (06 Castigada, 2 o más cuotas en mora)', () => [t('error-d'), t('error-claro')], 4.5],
     ['insignia turquesa: turquesa sobre turquesa-claro (07 Castigada recuperada)', () => [t('turquesa'), t('turquesa-claro')], 4.5],
     ['aviso informativo: info-d sobre info-claro', () => [t('info-d'), t('info-claro')], 4.5],
+    ...['01', '02', '03', '06', '07', 'otro'].map((e) => [`barra del panel: estado-${e} sobre blanco (gráfico, 3:1)`, () => [t(`estado-${e}`), BLANCO], 3]),
   ])('%s', (_nombre, colores, minimo) => {
     const [a, b] = colores()
     expect(contraste(a, b)).toBeGreaterThanOrEqual(minimo)

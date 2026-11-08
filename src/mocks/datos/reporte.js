@@ -28,15 +28,28 @@ const resultado = (regla, titulo, nivel, detalle, rf, { porConfirmar = false, ob
 const referida = (o, campo, mensaje) => ({ obligacion_id: o.obligacion_id, numero_obligacion: o.numero_obligacion, campo, mensaje })
 const lista = (obligaciones) => obligaciones.map((o) => o.numero_obligacion).join(', ')
 
-// Las obligaciones que entran en el archivo del corte, con sus valores a esa fecha (y el registro
-// guardado, para los campos que el detalle no trae, como el nombre completo).
+// Estado de la obligación a la fecha del corte, según su línea de tiempo: en un corte anterior, una
+// obligación que cerró después todavía estaba abierta.
+const estadoAlCorte = (o, fechaCorte) => o.eventos.filter((e) => e.fecha <= fechaCorte).at(-1)?.estado ?? o.estado
+
+// Las obligaciones que entran en el archivo del corte: las que ya existían, sin las eliminadas ni las
+// que cerraron en un corte anterior. Con su estado y su mora a esa fecha (y el registro guardado, para
+// los campos que el detalle no trae, como el nombre completo). Los saldos son los de hoy: el mock no
+// guarda su historia.
 export function obligacionesDelCorte(fechaCorte) {
-  return db.obligaciones
-    .filter((o) => !o.eliminada && o.ingreso <= fechaCorte && (!esEstadoDeCierre(o.estado) || o.cierre?.fecha_corte === fechaCorte))
-    .map((o) => ({ ...aDetalle(o, fechaCorte), registro: o }))
+  return obligacionesExistentes(fechaCorte)
+    .filter((o) => !o.eliminada && (!esEstadoDeCierre(o.estado) || o.cierre?.fecha_corte >= fechaCorte))
+    .map((o) => {
+      const estado = estadoAlCorte(o, fechaCorte)
+      return { ...aDetalle(o, fechaCorte), estado_tu: estado, cerrada: esEstadoDeCierre(estado), registro: o }
+    })
 }
 
-const ultimoCorteEnviado = () => db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+// Las obligaciones que ya existían en la fecha del corte (las que no entran cuentan como excluidas).
+export const obligacionesExistentes = (fechaCorte) => db.obligaciones.filter((o) => o.ingreso <= fechaCorte)
+
+// Fecha del último corte ENVIADO ('' si no hay ninguno).
+export const ultimoCorteEnviado = () => db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
 
 // ValidacionesCorte del contrato 0.9 para un corte de `db.cortes`.
 export function validacionesDelCorte(corte, { entidadConMarcador }) {

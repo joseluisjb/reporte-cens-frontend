@@ -3,7 +3,8 @@
 // (como `validar`).
 import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
-import { camposLargos, contenidoArchivo, obligacionesDelCorte, validacionesDelCorte } from '../datos/reporte'
+import { SUCURSAL_ARCHIVO_INICIAL } from '../datos/archivos'
+import { camposLargos, contenidoArchivo, obligacionesDelCorte, obligacionesExistentes, validacionesDelCorte } from '../datos/reporte'
 import { db, persistir } from '../db'
 import { aEntero, ahoraBogotaISO, error, espera, exigirSesion, idDeRuta, url } from '../utilidades'
 import { aEntidad } from './entidad'
@@ -19,20 +20,22 @@ const masReciente = (a, b) => Date.parse(b.fecha_generacion) - Date.parse(a.fech
 // Las validaciones del corte con la entidad actual.
 export const validacionesDe = (corte) => validacionesDelCorte(corte, { entidadConMarcador: aEntidad(db.entidad).con_marcador })
 
-// El contenido de cada archivo generado vive solo en memoria. Uno sin contenido (los iniciales, o
-// después de recargar la página) se arma de nuevo con las obligaciones actuales de su corte.
-const contenidos = new Map()
+// El contenido de cada archivo se guarda en `db.contenidosArchivo` al generarlo. Los iniciales no lo
+// traen: se arma la primera vez que se descargan, con los datos de entidad con que se generaron, y
+// desde ahí queda fijo.
 function contenidoDe(archivo) {
-  if (contenidos.has(archivo.id)) return contenidos.get(archivo.id)
-  const prefijo = archivo.nombre.slice(3, 9) // SSR + tipo (3) + código (3) + fecha
-  return contenidoArchivo({
-    fechaCorte: archivo.fecha_corte,
-    tipoEntidad: prefijo.slice(0, 3),
-    codigoEntidad: prefijo.slice(3, 6),
-    sucursal: db.entidad.codigo_sucursal,
-    longitud: archivo.longitud_registro_tipo2,
-    incluidas: obligacionesDelCorte(archivo.fecha_corte),
-  })
+  if (!(archivo.id in db.contenidosArchivo)) {
+    db.contenidosArchivo[archivo.id] = contenidoArchivo({
+      fechaCorte: archivo.fecha_corte,
+      tipoEntidad: archivo.nombre.slice(3, 6), // SSR + tipo (3) + código (3) + fecha
+      codigoEntidad: archivo.nombre.slice(6, 9),
+      sucursal: SUCURSAL_ARCHIVO_INICIAL[archivo.id] ?? db.entidad.codigo_sucursal,
+      longitud: archivo.longitud_registro_tipo2,
+      incluidas: obligacionesDelCorte(archivo.fecha_corte),
+    })
+    persistir()
+  }
+  return db.contenidosArchivo[archivo.id]
 }
 
 export const reporteHandlers = [
@@ -66,7 +69,7 @@ export const reporteHandlers = [
       generado_por: usuario.nombre,
       n_registros: incluidas.length,
       total_registros: incluidas.length + 2,
-      n_excluidas: db.obligaciones.length - incluidas.length,
+      n_excluidas: obligacionesExistentes(corte.fecha_corte).length - incluidas.length,
       saldo_total: incluidas.reduce((suma, o) => suma + o.valor_saldo, 0),
       longitud_registro_tipo2: LONGITUD_REGISTRO_2,
       apto_envio: !entidad.con_marcador,
@@ -76,17 +79,14 @@ export const reporteHandlers = [
       estado_corte: corte.estado,
       tiene_resultados: false,
     }
-    contenidos.set(
-      archivo.id,
-      contenidoArchivo({
-        fechaCorte: corte.fecha_corte,
-        tipoEntidad: entidad.tipo_entidad,
-        codigoEntidad: entidad.codigo_entidad,
-        sucursal: entidad.codigo_sucursal,
-        longitud: LONGITUD_REGISTRO_2,
-        incluidas,
-      }),
-    )
+    db.contenidosArchivo[archivo.id] = contenidoArchivo({
+      fechaCorte: corte.fecha_corte,
+      tipoEntidad: entidad.tipo_entidad,
+      codigoEntidad: entidad.codigo_entidad,
+      sucursal: entidad.codigo_sucursal,
+      longitud: LONGITUD_REGISTRO_2,
+      incluidas,
+    })
     db.archivos = [...db.archivos, archivo]
     persistir()
     return HttpResponse.json(archivo, { status: 201 })

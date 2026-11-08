@@ -15,7 +15,7 @@ import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { enmascararIdentificacion } from '../../lib/format'
 import { generarObligaciones, totalesCorte } from '../datos/obligaciones'
-import { erroresCorrectivos } from '../datos/reporte'
+import { erroresCorrectivos, ultimoCorteEnviado } from '../datos/reporte'
 import { validarCorte } from '../datos/validaciones'
 import { validacionesDe } from './reporte'
 import { db, persistir } from '../db'
@@ -138,7 +138,7 @@ export const extraccionesHandlers = [
     if (otroBorrador) {
       return error(409, { detail: `Ya existe un corte en BORRADOR con fecha ${otroBorrador.fecha_corte}. Elimínelo o complételo antes de generar otro.` })
     }
-    const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+    const ultimaEnviada = ultimoCorteEnviado()
     if (ultimaEnviada && fechaCorte <= ultimaEnviada) {
       return error(409, { detail: 'La fecha de corte debe ser posterior a la del último corte enviado.' })
     }

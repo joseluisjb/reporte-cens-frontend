@@ -4,6 +4,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { API_URL } from '../lib/config'
+import { ESPERA_REVOCAR_MS } from '../features/report/reportService'
 import { forzarErrorCorrectivo } from '../mocks/datos/validaciones'
 import { db } from '../mocks/db'
 import { server } from '../mocks/server'
@@ -137,23 +138,84 @@ describe('pantalla 12 · generar y descargar (RF20)', () => {
     expect(screen.queryByRole('region', { name: 'Archivo generado' })).not.toBeInTheDocument()
   })
 
-  test('descarga el archivo con el nombre que manda el servidor', async () => {
-    const crear = vi.fn(() => 'blob:archivo')
-    const revocar = vi.fn()
-    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: crear, revokeObjectURL: revocar }))
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    await abrir()
-    await userEvent.click(boton('Descargar el archivo SSR00112320260831'))
-    expect(await screen.findByText('Descarga iniciada: SSR00112320260831.txt.')).toBeInTheDocument()
-    expect(crear).toHaveBeenCalledWith(expect.any(Blob))
-    expect(click).toHaveBeenCalled()
-    expect(revocar).toHaveBeenCalledWith('blob:archivo')
-    click.mockRestore()
-    vi.unstubAllGlobals()
+  describe('descarga', () => {
+    let crear, revocar, click
+    beforeEach(() => {
+      crear = vi.fn(() => 'blob:archivo')
+      revocar = vi.fn()
+      // jsdom no trae createObjectURL: se usa una subclase de URL que sí lo tiene, sin tocar la global.
+      vi.stubGlobal('URL', class extends URL {
+        static createObjectURL = crear
+        static revokeObjectURL = revocar
+      })
+      click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    })
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    test('pide texto, guarda con el nombre del servidor y revoca el enlace después', async () => {
+      let accept = null
+      server.events.on('request:start', ({ request }) => {
+        if (request.url.includes('/descarga/')) accept = request.headers.get('accept')
+      })
+      const programar = vi.spyOn(globalThis, 'setTimeout')
+      await abrir()
+      await userEvent.click(boton('Descargar el archivo SSR00112320260831'))
+      expect(await screen.findByText('Descarga iniciada: SSR00112320260831.txt.')).toBeInTheDocument()
+      server.events.removeAllListeners()
+      expect(accept).toBe('text/plain, */*')
+      expect(crear).toHaveBeenCalledWith(expect.any(Blob))
+      expect(click).toHaveBeenCalled()
+      // El enlace no se revoca en el mismo instante del clic, sino después de ESPERA_REVOCAR_MS.
+      expect(revocar).not.toHaveBeenCalled()
+      const [revocarDespues] = programar.mock.calls.find(([, ms]) => ms === ESPERA_REVOCAR_MS)
+      revocarDespues()
+      expect(revocar).toHaveBeenCalledWith('blob:archivo')
+    })
+
+    test('si falla, muestra el mensaje del servidor', async () => {
+      server.use(http.get(`${API_URL}/archivos/1/descarga/`, () => HttpResponse.json({ detail: 'Archivo no encontrado.' }, { status: 404 })))
+      await abrir()
+      await userEvent.click(boton('Descargar el archivo SSR00112320260831'))
+      expect(await screen.findByText('No se pudo descargar el archivo. Archivo no encontrado.')).toBeInTheDocument()
+      expect(click).not.toHaveBeenCalled()
+    })
+
+    test('cada descarga tiene su propio indicador', async () => {
+      let soltar
+      const pendiente = new Promise((r) => (soltar = r))
+      let llego = false
+      server.use(
+        http.get(`${API_URL}/archivos/2/descarga/`, async () => {
+          llego = true
+          await pendiente
+        }),
+      )
+      await abrir()
+      await userEvent.click(boton('Descargar el archivo SSRXXXXXX20260930'))
+      await waitFor(() => expect(llego).toBe(true))
+      await userEvent.click(boton('Descargar el archivo SSR00112320260831'))
+      expect(await screen.findByText('Descarga iniciada: SSR00112320260831.txt.')).toBeInTheDocument()
+      // Terminó la del 31/08, pero la del 30/09 sigue en curso.
+      expect(boton('Descargar el archivo SSRXXXXXX20260930')).toHaveAttribute('aria-busy', 'true')
+      expect(boton('Descargar el archivo SSR00112320260831')).not.toHaveAttribute('aria-busy')
+      soltar()
+      expect(await screen.findByText('Descarga iniciada: SSRXXXXXX20260930.txt.')).toBeInTheDocument()
+    })
   })
 })
 
 describe('pantalla 12 · estados', () => {
+  test('con el corte ya enviado explica que hace falta la extracción del próximo corte', async () => {
+    db.cortes = db.cortes.filter((c) => c.id === 1)
+    await abrir()
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · ENVIADO')
+    expect(screen.getByText(/Este corte ya se envió a TransUnion y no admite otro archivo\./)).toBeInTheDocument()
+    expect(boton('Generar archivo plano')).toBeDisabled()
+  })
+
   test('sin cortes lo dice y enlaza a la extracción', async () => {
     db.cortes = []
     await renderConSesion('/reporte', ...ANALISTA)

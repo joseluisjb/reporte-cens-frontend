@@ -1,11 +1,9 @@
 // Tarjeta «Archivo generado» de la pantalla 12 (mockup v3: vReporteRes): nombre, estado, aviso de «no apto
 // para envío» con su motivo (RF57), los conteos de registros y «Descargar archivo» (RF20).
 import { useId } from 'react'
-import { Alert, Button, Card, Icon } from '../../components/ui'
+import { Alert, Button, Card, Dato, Icon } from '../../components/ui'
 import { formatearCOP, formatearFechaISOLarga, plural } from '../../lib/format'
 import EstadoArchivoBadge from './EstadoArchivoBadge'
-
-const miles = (pesos) => Math.round(pesos / 1000).toLocaleString('es-CO')
 
 export default function GeneratedFileCard({ archivo, onDescargar, descargando }) {
   const id = useId()
@@ -34,7 +32,7 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         <Dato etiqueta="Obligaciones (registros 2)" valor={archivo.nRegistros} nota={`${plural(archivo.totalRegistros, 'registro', 'registros')} con el 1 y el 9`} />
         <Dato etiqueta="No incluidas" valor={archivo.nExcluidas} nota="Cerradas antes o eliminadas" />
         <Dato etiqueta="Fecha de corte" valor={formatearFechaISOLarga(archivo.fechaCorte)} />
-        <Dato etiqueta="Saldo del archivo" valor={formatearCOP(archivo.saldoTotal)} nota={`Se reporta en miles: ${miles(archivo.saldoTotal)}`} />
+        <Dato etiqueta="Saldo del archivo" valor={formatearCOP(archivo.saldoTotal)} />
       </dl>
       <Button onClick={() => onDescargar(archivo)} loading={descargando}>
         {!descargando && <Icon name="download" size={16} />}
@@ -45,15 +43,5 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         con TransUnion) y registro 9 (33).
       </p>
     </Card>
-  )
-}
-
-function Dato({ etiqueta, valor, nota }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted">{etiqueta}</dt>
-      <dd className="font-semibold">{valor}</dd>
-      {nota && <dd className="text-xs text-muted">{nota}</dd>}
-    </div>
   )
 }

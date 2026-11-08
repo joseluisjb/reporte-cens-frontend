@@ -3,7 +3,7 @@
 // El Administrador no lo ve ni lo pide (HomePage lo muestra solo al Analista). Mockup v3: vPanel2.
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, buttonClasses, Card, Icon, Spinner } from '../../components/ui'
+import { Alert, Button, buttonClasses, Card, Dato, Icon, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
 import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../../lib/format'
@@ -129,16 +129,6 @@ function EstadoCartera({ resumen }) {
         <p className="mt-3 text-sm text-muted">Aún no hay obligaciones: se cargan con la primera actualización mensual.</p>
       )}
     </Card>
-  )
-}
-
-function Dato({ etiqueta, valor, nota }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted">{etiqueta}</dt>
-      <dd className="font-semibold">{valor}</dd>
-      {nota && <dd className="text-xs text-muted">{nota}</dd>}
-    </div>
   )
 }
 

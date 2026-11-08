@@ -61,7 +61,7 @@ const cortesIniciales = () => [
 const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'ciclos', 'refinanciaciones']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'contenidosArchivo', 'ciclos', 'refinanciaciones']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -75,6 +75,8 @@ const inicial = () => ({
   obligaciones: obligacionesIniciales(),
   entidad: entidadInicial(),
   archivos: archivosIniciales(),
+  // Contenido de cada archivo plano, por id (mocks/rutas/reporte.js lo guarda al generarlo).
+  contenidosArchivo: {},
   // Actualizaciones mensuales ejecutadas (pantalla 10): al inicio, la del corte 2026-09-30.
   ciclos: [cicloInicial()],
   refinanciaciones: refinanciacionesIniciales(),

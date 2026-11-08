@@ -54,6 +54,19 @@ const tieneCuerpo = (data) => data != null && data !== ''
 const esJson = (respuesta) => String(respuesta.headers?.['content-type'] ?? '').toLowerCase().includes('application/json')
 const esperaJson = (config) => !config?.responseType || config.responseType === 'json'
 
+// En una descarga (`responseType: 'blob'`) el cuerpo de un error también llega como Blob: se lee como
+// JSON para no perder el `detail` del servidor. Si no es JSON, el error queda sin cuerpo.
+async function conCuerpoLeido(error) {
+  const res = error?.response
+  if (typeof Blob === 'undefined' || !(res?.data instanceof Blob)) return error
+  try {
+    res.data = JSON.parse(await res.data.text())
+  } catch {
+    res.data = null
+  }
+  return error
+}
+
 api.interceptors.response.use(
   (respuesta) => {
     if (esperaJson(respuesta.config) && tieneCuerpo(respuesta.data) && !esJson(respuesta)) {
@@ -61,8 +74,8 @@ api.interceptors.response.use(
     }
     return respuesta
   },
-  (error) => {
-    const apiError = toApiError(error)
+  async (error) => {
+    const apiError = toApiError(await conCuerpoLeido(error))
     const config = error?.config ?? {}
     if (!config.skipAuthRedirect) {
       if (apiError.status === 401) handlers.onUnauthorized?.(apiError)

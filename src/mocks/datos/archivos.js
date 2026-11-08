@@ -1,7 +1,13 @@
 // Archivos planos generados (NV_ARCHIVO), FICTICIOS: los dos del ejemplo de `GET /archivos/` del
 // contrato 0.9. Son una foto fija: `estado_corte` es el del ejemplo y no se recalcula con los cortes de
 // la extracción (mocks/db.js), que siguen siendo los de la Iteración 1. El archivo del 31/08/2026 se
-// generó con datos de entidad de prueba (001, 123), como el caso de prueba de RF57.
+// generó con datos de entidad de prueba (001, 123), como el caso de prueba de RF57. Sus conteos cuadran
+// con las obligaciones del mock a esa fecha (9 activas y la Castigada recuperada que cerró ese día), no
+// con el ejemplo del contrato (9 y 11).
+
+// Sucursal con que se generó cada archivo inicial (el contenido se arma la primera vez que se descarga).
+export const SUCURSAL_ARCHIVO_INICIAL = { 1: 'A1B2C3', 2: 'XXXXXX' }
+
 export const archivosIniciales = () => [
   {
     id: 2,
@@ -31,8 +37,8 @@ export const archivosIniciales = () => [
     tipo_reporte: '01',
     fecha_generacion: '2026-09-01T09:20:00-05:00',
     generado_por: 'Carlos Sánchez',
-    n_registros: 9,
-    total_registros: 11,
+    n_registros: 10,
+    total_registros: 12,
     n_excluidas: 0,
     saldo_total: 19844130,
     longitud_registro_tipo2: 930,

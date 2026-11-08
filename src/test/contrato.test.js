@@ -704,6 +704,22 @@ describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): vali
     expect(await verifica('get', '/archivos/{id}/descarga/', 404, { url: '/archivos/99/descarga/' })).toEqual({ detail: 'Archivo no encontrado.' })
   })
 
+  test('el archivo de un corte anterior se arma con las obligaciones de esa fecha y queda fijo', async () => {
+    await entrar(ANALISTA)
+    const descargar = async () => (await api.request({ method: 'get', url: '/archivos/1/descarga/', responseType: 'text' })).data.split('\r\n').filter(Boolean)
+    const lineas = await descargar()
+    // El 31/08 aún no habían cerrado las del 30/09: el archivo cuadra con lo que declara (10 registros 2).
+    const [archivo] = await verifica('get', '/archivos/', 200, { url: '/archivos/?corte_id=1' })
+    expect(archivo).toMatchObject({ n_registros: 10, total_registros: 12 })
+    expect(lineas).toHaveLength(12)
+    expect(lineas.at(-1)).toBe('900000012000000100000000000000000')
+    expect(lineas.find((l) => l.includes('2259-1092')).slice(21, 30)).toBe('A1B2C301' + '0') // sucursal del archivo, Vigente (01) al 31/08
+    // Ya armado, no cambia con la entidad ni con las obligaciones de hoy.
+    db.entidad.codigo_sucursal = 'Z9Z9Z9'
+    db.obligaciones = db.obligaciones.filter((o) => o.numero !== '2259-1092')
+    expect(await descargar()).toEqual(lineas)
+  })
+
   test('POST /extracciones/{id}/archivo/ 409 con un campo que no cabe; GET /archivos/ filtra por corte y 400', async () => {
     db.obligaciones.find((o) => o.numero === '2262-3318').titular = 'N'.repeat(61)
     await entrar(ANALISTA)

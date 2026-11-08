@@ -5,7 +5,8 @@ import { Button, Table } from '../../components/ui'
 import { formatearCOP, formatearFechaHora, formatearFechaISO } from '../../lib/format'
 import EstadoArchivoBadge from './EstadoArchivoBadge'
 
-export default function FilesTable({ archivos, onDescargar, descargandoId }) {
+// `descargando`: Set con los ids de los archivos que se están descargando.
+export default function FilesTable({ archivos, onDescargar, descargando }) {
   return (
     <Table compact caption="Archivos generados">
       <thead>
@@ -28,7 +29,7 @@ export default function FilesTable({ archivos, onDescargar, descargandoId }) {
       </thead>
       <tbody>
         {archivos.map((a) => (
-          <Fila key={a.id} archivo={a} onDescargar={onDescargar} descargando={descargandoId === a.id} />
+          <Fila key={a.id} archivo={a} onDescargar={onDescargar} descargando={descargando.has(a.id)} />
         ))}
       </tbody>
     </Table>

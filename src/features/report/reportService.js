@@ -27,10 +27,14 @@ export async function listFiles({ corteId } = {}) {
 // Nombre del archivo en `Content-Disposition: attachment; filename="SSR….txt"`, o null.
 export const nombreDeDescarga = (cabecera) => /filename="?([^";]+)"?/i.exec(cabecera ?? '')?.[1] ?? null
 
+// Tiempo que se conserva el enlace temporal del archivo: revocarlo en el mismo instante del clic
+// cancela la descarga en algunos navegadores.
+export const ESPERA_REVOCAR_MS = 40000
+
 // Descarga el archivo tal cual lo devuelve el backend (texto Windows-1252, sin transformarlo) y lo
-// guarda con el nombre que manda el servidor.
+// guarda con el nombre que manda el servidor. Pide texto, no JSON (el cliente manda JSON por defecto).
 export async function downloadFile(archivo) {
-  const { data, headers } = await api.get(ENDPOINTS.archivoDescarga(archivo.id), { responseType: 'blob' })
+  const { data, headers } = await api.get(ENDPOINTS.archivoDescarga(archivo.id), { responseType: 'blob', headers: { Accept: 'text/plain, */*' } })
   const nombre = nombreDeDescarga(headers?.['content-disposition']) ?? `${archivo.nombre}.txt`
   const enlace = document.createElement('a')
   const url = URL.createObjectURL(data)
@@ -39,6 +43,6 @@ export async function downloadFile(archivo) {
   document.body.appendChild(enlace)
   enlace.click()
   enlace.remove()
-  URL.revokeObjectURL(url)
+  setTimeout(() => URL.revokeObjectURL(url), ESPERA_REVOCAR_MS)
   return nombre
 }

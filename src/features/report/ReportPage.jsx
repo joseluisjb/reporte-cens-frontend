@@ -42,7 +42,7 @@ export default function ReportPage() {
   const [archivos, setArchivos] = useState(null)
   const [errorArchivos, setErrorArchivos] = useState('')
   const [intentoArchivos, setIntentoArchivos] = useState(0)
-  const [descargandoId, setDescargandoId] = useState(null)
+  const [descargando, setDescargando] = useState(() => new Set()) // ids de los archivos que se están descargando
 
   // Corte, validaciones y entidad. Las validaciones se vuelven a pedir después de validar o generar.
   useEffect(() => {
@@ -116,14 +116,18 @@ export default function ReportPage() {
 
   const descargar = useCallback(
     async (archivo) => {
-      setDescargandoId(archivo.id)
+      setDescargando((ids) => new Set(ids).add(archivo.id))
       try {
         const nombre = await downloadFile(archivo)
         toast.success(`Descarga iniciada: ${nombre}.`)
       } catch (err) {
         toast.error(`No se pudo descargar el archivo. ${mensajeDeError(err)}`)
       } finally {
-        setDescargandoId(null)
+        setDescargando((ids) => {
+          const quedan = new Set(ids)
+          quedan.delete(archivo.id)
+          return quedan
+        })
       }
     },
     [toast],
@@ -183,7 +187,7 @@ export default function ReportPage() {
           {errorAccion && <ErrorAccion error={errorAccion} />}
           <Validaciones validaciones={validaciones} />
           {(accion === 'generar' || generado) && <Progreso enCurso={accion === 'generar'} />}
-          {generado && <GeneratedFileCard archivo={generado} onDescargar={descargar} descargando={descargandoId === generado.id} />}
+          {generado && <GeneratedFileCard archivo={generado} onDescargar={descargar} descargando={descargando.has(generado.id)} />}
         </>
       )}
 
@@ -195,7 +199,7 @@ export default function ReportPage() {
           setIntentoArchivos((n) => n + 1)
         }}
         onDescargar={descargar}
-        descargandoId={descargandoId}
+        descargando={descargando}
       />
     </>
   )
@@ -205,7 +209,8 @@ function Parametros({ corte, validaciones, entidad, accion, yaGenerado, onValida
   const hayCorrectivas = validaciones.resultados.some((r) => r.nivel === 'correctiva')
   const nombre = entidad ? `${entidad.prefijoArchivo}${corte.fechaCorte.replaceAll('-', '')}` : null
   let ayuda = 'Incluye las obligaciones abiertas y las que cerraron en este corte. Las que cerraron antes ya no se reportan.'
-  if (hayCorrectivas) ayuda = 'Corrige las validaciones en rojo para poder validar el corte y generar el archivo.'
+  if (!corte.esBorrador && !corte.esValidado) ayuda = 'Este corte ya se envió a TransUnion y no admite otro archivo. Para el siguiente reporte, genera la extracción del próximo corte.'
+  else if (hayCorrectivas) ayuda = 'Corrige las validaciones en rojo para poder validar el corte y generar el archivo.'
   else if (corte.esBorrador) ayuda = 'El corte está en borrador: valídalo para poder generar el archivo.'
   else if (yaGenerado) ayuda = 'Ya existe un archivo para este corte: se generará una nueva versión.'
   return (
@@ -311,7 +316,7 @@ function Progreso({ enCurso }) {
   )
 }
 
-function Archivos({ archivos, error, onReintentar, onDescargar, descargandoId }) {
+function Archivos({ archivos, error, onReintentar, onDescargar, descargando }) {
   const id = useId()
   return (
     <section aria-labelledby={id}>
@@ -337,7 +342,7 @@ function Archivos({ archivos, error, onReintentar, onDescargar, descargandoId })
           {archivos.length === 0 ? (
             <EmptyState>Aún no se ha generado ningún archivo.</EmptyState>
           ) : (
-            <FilesTable archivos={archivos} onDescargar={onDescargar} descargandoId={descargandoId} />
+            <FilesTable archivos={archivos} onDescargar={onDescargar} descargando={descargando} />
           )}
         </Card>
       )}

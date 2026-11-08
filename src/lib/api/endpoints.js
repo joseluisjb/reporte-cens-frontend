@@ -26,6 +26,14 @@ export const ENDPOINTS = {
   obligacionesCorte: (id) => `/extracciones/${id}/obligaciones/`,
   // Auditoría (RF30). Implementado en el backend (contrato 0.6). Solo Administrador.
   auditoria: '/auditoria/',
+  // Iteración 2 · propuesto (contrato 0.9): el backend aún no los tiene; hoy responden los mocks.
+  // Pendientes en docs/PENDIENTES_BACKEND.md, sección 5.
+  obligaciones: '/obligaciones/', // propuesto (contrato 0.9) · solo Analista
+  obligacionesResumen: '/obligaciones/resumen/', // propuesto (contrato 0.9) · solo Analista
+  obligacion: (id) => `/obligaciones/${id}/`, // propuesto (contrato 0.9) · solo Analista
+  obligacionLineaTiempo: (id) => `/obligaciones/${id}/linea-tiempo/`, // propuesto (contrato 0.9) · solo Analista
+  catalogo: (nombre) => `/catalogos/${nombre}/`, // propuesto (contrato 0.9) · los dos roles
+  entidad: '/entidad/', // propuesto (contrato 0.9) · lectura de los dos roles
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

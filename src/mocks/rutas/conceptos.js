@@ -6,7 +6,7 @@
 import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { db, persistir } from '../db'
-import { aEntero, error, espera, exigirSesion, idDeRuta, leerCuerpo, url } from '../utilidades'
+import { aEntero, error, espera, exigirSesion, SOLO_ADMIN, idDeRuta, leerCuerpo, url } from '../utilidades'
 
 const esTexto = (v) => typeof v === 'string'
 
@@ -55,7 +55,7 @@ export const conceptosHandlers = [
 
   http.post(url(ENDPOINTS.conceptos), async ({ request }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const cuerpo = await leerCuerpo(request)
     const errores = validar(cuerpo, { crear: true })
@@ -75,7 +75,7 @@ export const conceptosHandlers = [
 
   http.patch(url(ENDPOINTS.concepto(':codigo')), async ({ request, params }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const concepto = db.conceptos.find((c) => c.codigo === idDeRuta(params.codigo))
     if (!concepto) return sinConcepto()

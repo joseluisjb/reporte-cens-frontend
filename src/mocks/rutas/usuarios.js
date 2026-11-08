@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { CODIGOS_ROL } from '../../features/auth/roles'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { CLAVE_TEMPORAL_MOCK, db, persistir, publico } from '../db'
-import { enviarCorreoSimulado, error, espera, exigirSesion, url } from '../utilidades'
+import { enviarCorreoSimulado, error, espera, exigirSesion, SOLO_ADMIN, url } from '../utilidades'
 
 const MSG_ROL_INVALIDO = 'Selecciona un rol válido.'
 const rolValido = (rol) => Object.values(CODIGOS_ROL).includes(rol)
@@ -11,13 +11,13 @@ const rolValido = (rol) => Object.values(CODIGOS_ROL).includes(rol)
 export const usuariosHandlers = [
   http.get(url(ENDPOINTS.users), async () => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     return respuesta ?? HttpResponse.json(db.usuarios.map(publico))
   }),
 
   http.post(url(ENDPOINTS.users), async ({ request }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const { nombre, email, rol } = await request.json()
     const errores = {}
@@ -40,7 +40,7 @@ export const usuariosHandlers = [
 
   http.patch(url('/users/:id/'), async ({ request, params }) => {
     await espera()
-    const { usuario, respuesta } = exigirSesion(true)
+    const { usuario, respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const u = db.usuarios.find((x) => x.id === Number(params.id))
     if (!u) return error(404, { detail: 'Not found.' })

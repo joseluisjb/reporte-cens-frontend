@@ -660,3 +660,76 @@ describe('conformidad de los mocks de refinanciaciones (contrato 0.9)', () => {
     })
   })
 })
+
+describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): validaciones, archivo y descarga', () => {
+  test('GET /extracciones/{id}/validaciones/ 200 cumple ValidacionesCorte para los dos roles; 404 y 401', async () => {
+    await verifica('get', '/extracciones/{id}/validaciones/', 401, { url: '/extracciones/2/validaciones/' })
+    for (const usuario of [ADMIN, ANALISTA]) {
+      await entrar(usuario)
+      const v = await verifica('get', '/extracciones/{id}/validaciones/', 200, { url: '/extracciones/2/validaciones/' })
+      expect(v).toMatchObject({ corte_id: 2, estado_corte: 'BORRADOR', puede_generar: false })
+      expect(v.resultados.find((r) => r.regla === 'ENTIDAD_CON_MARCADOR').nivel).toBe('advertencia')
+    }
+    expect(await verifica('get', '/extracciones/{id}/validaciones/', 404, { url: '/extracciones/99/validaciones/' })).toEqual({ detail: 'Corte no encontrado.' })
+  })
+
+  test('POST /extracciones/{id}/validar/ 409 trae las correctivas con la obligación y el campo (0.9)', async () => {
+    db.obligaciones.find((o) => o.numero === '2259-1092').cierre.fecha_pago = null
+    await entrar(ANALISTA)
+    const r = await verifica('post', '/extracciones/{id}/validar/', 409, { url: '/extracciones/2/validar/' })
+    expect(r.errores).toContainEqual({ regla: 'CIERRE_INCOMPLETO', mensaje: 'Falta la fecha de pago del cierre.', obligacion_id: 3, numero_obligacion: '2259-1092', campo: 'fecha_pago' })
+  })
+
+  test('POST /extracciones/{id}/archivo/ 409 sin validar, 201 cumple Archivo y la descarga es texto plano', async () => {
+    await entrar(ANALISTA)
+    expect(await verifica('post', '/extracciones/{id}/archivo/', 409, { url: '/extracciones/2/archivo/' })).toEqual({ detail: 'Valida el corte antes de generar el archivo.' })
+    await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    const archivo = await verifica('post', '/extracciones/{id}/archivo/', 201, { url: '/extracciones/2/archivo/' })
+    expect(archivo).toMatchObject({
+      id: 3, corte_id: 2, nombre: 'SSRXXXXXX20260930', tipo_reporte: '01', n_registros: 11, total_registros: 13, n_excluidas: 1,
+      longitud_registro_tipo2: 930, apto_envio: false, enviado: false, estado_corte: 'VALIDADO', generado_por: 'Juan Pérez',
+    })
+    // Como la pantalla, se pide como texto (el cliente rechaza un cuerpo no JSON si espera JSON).
+    const res = await api.request({ method: 'get', url: '/archivos/3/descarga/', responseType: 'text', validateStatus: () => true })
+    expect(res.status).toBe(200)
+    expectCumpleContrato('get', '/archivos/{id}/descarga/', 200, res.data)
+    expect(res.headers['content-disposition']).toBe('attachment; filename="SSRXXXXXX20260930.txt"')
+    const lineas = res.data.split('\r\n').filter(Boolean)
+    expect(lineas).toHaveLength(13)
+    expect(lineas[0]).toBe('111XXXXXX          0120260930')
+    expect(lineas[0]).toHaveLength(29)
+    expect(lineas[1]).toHaveLength(930)
+    expect(lineas.at(-1)).toBe('900000013000000110000000000000000')
+    expect(lineas.at(-1)).toHaveLength(33)
+    expect(await verifica('get', '/archivos/{id}/descarga/', 404, { url: '/archivos/99/descarga/' })).toEqual({ detail: 'Archivo no encontrado.' })
+  })
+
+  test('el archivo de un corte anterior se arma con las obligaciones de esa fecha y queda fijo', async () => {
+    await entrar(ANALISTA)
+    const descargar = async () => (await api.request({ method: 'get', url: '/archivos/1/descarga/', responseType: 'text' })).data.split('\r\n').filter(Boolean)
+    const lineas = await descargar()
+    // El 31/08 aún no habían cerrado las del 30/09: el archivo cuadra con lo que declara (10 registros 2).
+    const [archivo] = await verifica('get', '/archivos/', 200, { url: '/archivos/?corte_id=1' })
+    expect(archivo).toMatchObject({ n_registros: 10, total_registros: 12 })
+    expect(lineas).toHaveLength(12)
+    expect(lineas.at(-1)).toBe('900000012000000100000000000000000')
+    expect(lineas.find((l) => l.includes('2259-1092')).slice(21, 30)).toBe('A1B2C301' + '0') // sucursal del archivo, Vigente (01) al 31/08
+    // Ya armado, no cambia con la entidad ni con las obligaciones de hoy.
+    db.entidad.codigo_sucursal = 'Z9Z9Z9'
+    db.obligaciones = db.obligaciones.filter((o) => o.numero !== '2259-1092')
+    expect(await descargar()).toEqual(lineas)
+  })
+
+  test('POST /extracciones/{id}/archivo/ 409 con un campo que no cabe; GET /archivos/ filtra por corte y 400', async () => {
+    db.obligaciones.find((o) => o.numero === '2262-3318').titular = 'N'.repeat(61)
+    await entrar(ANALISTA)
+    await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
+    expect(await verifica('post', '/extracciones/{id}/archivo/', 409, { url: '/extracciones/2/archivo/' })).toEqual({
+      detail: 'No se generó el archivo: hay campos que no caben en su posición.',
+      errores: [{ regla: 'CAMPO_EXCEDE_LONGITUD', mensaje: 'El nombre del titular tiene 61 caracteres y el campo admite 60.', obligacion_id: 6, numero_obligacion: '2262-3318', campo: 'nombre_titular' }],
+    })
+    expect((await verifica('get', '/archivos/', 200)).map((a) => a.id)).toEqual([2, 1])
+    expect((await verifica('get', '/archivos/', 200, { url: '/archivos/?corte_id=1' })).map((a) => a.id)).toEqual([1])
+    expect(await verifica('get', '/archivos/', 400, { url: '/archivos/?corte_id=abc' })).toEqual({ corte_id: ['Indica el id numérico del corte.'] })
+  })
+})

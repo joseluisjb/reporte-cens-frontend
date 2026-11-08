@@ -39,6 +39,10 @@ export const ENDPOINTS = {
   ciclo: (corteId) => `/ciclos/${corteId}/`, // propuesto (contrato 0.9) · solo Analista
   matrizEstados: '/matriz-estados/', // propuesto (contrato 0.9) · solo Analista
   refinanciaciones: '/refinanciaciones/', // propuesto (contrato 0.9) · solo Analista (GET y POST)
+  validacionesCorte: (id) => `/extracciones/${id}/validaciones/`, // propuesto (contrato 0.9) · los dos roles
+  generarArchivo: (id) => `/extracciones/${id}/archivo/`, // propuesto (contrato 0.9) · los dos roles
+  archivos: '/archivos/', // propuesto (contrato 0.9) · los dos roles
+  archivoDescarga: (id) => `/archivos/${id}/descarga/`, // propuesto (contrato 0.9) · los dos roles (text/plain)
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

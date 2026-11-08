@@ -27,3 +27,31 @@ export function mapArchivo(raw) {
     tieneResultados: raw.tiene_resultados,
   }
 }
+
+// ValidacionesCorte (GET /extracciones/{id}/validaciones/) → { corteId, fechaCorte, estadoCorte, puedeGenerar,
+// resultados: [{ regla, titulo, nivel, detalle, rf: [], porConfirmar, obligaciones: [{ id, numeroObligacion, campo, mensaje }] }] }
+// `nivel`: 'ok' | 'correctiva' (bloquea) | 'advertencia' | 'informativa'.
+export function mapValidaciones(raw) {
+  return {
+    corteId: raw.corte_id,
+    fechaCorte: fecha(raw.fecha_corte),
+    estadoCorte: raw.estado_corte,
+    puedeGenerar: raw.puede_generar,
+    resultados: raw.resultados.map((r) => ({
+      regla: r.regla,
+      titulo: r.titulo,
+      nivel: r.nivel,
+      detalle: r.detalle,
+      rf: r.rf,
+      porConfirmar: r.por_confirmar,
+      obligaciones: r.obligaciones.map(mapObligacionReferida),
+    })),
+  }
+}
+
+const mapObligacionReferida = (o) => ({ id: o.obligacion_id ?? null, numeroObligacion: o.numero_obligacion, campo: o.campo ?? null, mensaje: o.mensaje })
+
+// `errores` del 409 de validar o de generar (ReglaMensaje, contrato 0.9) → [{ regla, mensaje, id, numeroObligacion, campo }].
+// Los errores sin obligación traen `id` y `numeroObligacion` en null.
+export const mapErroresCorrectivos = (errores = []) =>
+  errores.map((e) => ({ regla: e.regla, mensaje: e.mensaje, id: e.obligacion_id ?? null, numeroObligacion: e.numero_obligacion ?? null, campo: e.campo ?? null }))

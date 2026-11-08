@@ -15,7 +15,9 @@ import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { enmascararIdentificacion } from '../../lib/format'
 import { generarObligaciones, totalesCorte } from '../datos/obligaciones'
+import { erroresCorrectivos, ultimoCorteEnviado } from '../datos/reporte'
 import { validarCorte } from '../datos/validaciones'
+import { validacionesDe } from './reporte'
 import { db, persistir } from '../db'
 import { ahoraBogotaISO, aEntero, error, espera, exigirSesion, hoyLocalISO, idDeRuta, leerCuerpo, url } from '../utilidades'
 
@@ -136,7 +138,7 @@ export const extraccionesHandlers = [
     if (otroBorrador) {
       return error(409, { detail: `Ya existe un corte en BORRADOR con fecha ${otroBorrador.fecha_corte}. Elimínelo o complételo antes de generar otro.` })
     }
-    const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+    const ultimaEnviada = ultimoCorteEnviado()
     if (ultimaEnviada && fechaCorte <= ultimaEnviada) {
       return error(409, { detail: 'La fecha de corte debe ser posterior a la del último corte enviado.' })
     }
@@ -178,6 +180,13 @@ export const extraccionesHandlers = [
     if (!corte) return sinCorte()
     if (corte.estado !== 'BORRADOR') return error(409, { detail: 'El corte no está en estado BORRADOR.' })
     const { errores, advertencias } = validarCorte(corte, generarObligaciones(corte))
+    // Contrato 0.9 (RF53): un corte con actualización mensual (Iteración 2) también debe pasar las reglas
+    // de «Validaciones antes de generar» (pantalla 12); sus correctivas traen la obligación y el campo.
+    // Los cortes sin ciclo (Iteración 1) siguen con sus reglas de siempre.
+    // SIN_IDENTIFICACION ya la pone validarCorte (cuando una prueba la fuerza): no se repite.
+    if (db.ciclos.some((c) => c.corte_id === corte.id)) {
+      errores.push(...erroresCorrectivos(validacionesDe(corte)).filter((e) => e.regla !== 'SIN_IDENTIFICACION'))
+    }
     if (errores.length) return error(409, { detail: 'El corte tiene errores correctivos que deben resolverse.', errores })
     corte.estado = 'VALIDADO'
     persistir()

@@ -3,7 +3,8 @@
 // ella (RF12–RF18, RF45–RF47, como `ReglaAplicada`), las cuotas vencidas, los pagos extraídos del SAC
 // (RF17) y la línea de tiempo de estados. Aquí no se registran pagos: vienen de la extracción.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, Badge, Button, Modal, PorConfirmar, Spinner } from '../../components/ui'
+import { Link } from 'react-router-dom'
+import { Alert, Badge, Button, buttonClasses, Icon, Modal, PorConfirmar, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
 import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearDias, formatearFechaISO } from '../../lib/format'
@@ -70,9 +71,18 @@ export default function ObligationDetailPanel({ obligacionId, onCerrar, onAbrir 
       title={o ? `Obligación ${o.numeroObligacion}` : 'Detalle de la obligación'}
       subtitle={o && <Subtitulo o={o} />}
       footer={
-        <Button variant="ghost" onClick={onCerrar}>
-          Cerrar
-        </Button>
+        <>
+          {/* Registro manual de la refinanciación (pantalla 11, RF18): solo si sigue abierta y no está eliminada. */}
+          {o && !o.cerrada && !o.eliminada && (
+            <Link to={`/refinanciaciones?obligacion=${o.id}`} className={buttonClasses({ variant: 'outline' })}>
+              <Icon name="link" size={16} />
+              Registrar refinanciación
+            </Link>
+          )}
+          <Button variant="ghost" onClick={onCerrar}>
+            Cerrar
+          </Button>
+        </>
       }
     >
       <div ref={contenidoRef} tabIndex={-1} className="outline-none">

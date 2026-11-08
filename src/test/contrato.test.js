@@ -591,3 +591,65 @@ describe('conformidad de los mocks de la actualización mensual (contrato 0.9): 
     expect(ciclo.rechazos.map((r) => r.codigo)).toEqual(['881', '713'])
   })
 })
+
+describe('conformidad de los mocks de refinanciaciones (contrato 0.9)', () => {
+  const pedido = { obligacion_original_id: 7, naturaleza: '06', numero_cuotas: 24, fecha: '2026-10-15' }
+
+  test('GET /refinanciaciones/ 200 cumple la lista de Refinanciacion; 403 al Administrador y 401', async () => {
+    await verifica('get', '/refinanciaciones/', 401)
+    await entrar(ADMIN)
+    await verifica('get', '/refinanciaciones/', 403)
+    await entrar(ANALISTA)
+    const [inicial] = await verifica('get', '/refinanciaciones/', 200)
+    expect(inicial).toMatchObject({
+      origen: 'MANUAL',
+      obligacion_original: { numero_obligacion: '2255-7788', estado_cierre: '02', modo_extincion: { codigo: '16' } },
+      obligacion_nueva: { numero_obligacion: '2271-5502', estado_tu: '01', numero_reestructuraciones: 1 },
+      naturaleza: { codigo: '07', confirmado: false },
+    })
+  })
+
+  test('POST /refinanciaciones/ 201 cierra la original en 07 (venía de 03) y crea la nueva reestructurada', async () => {
+    await entrar(ANALISTA)
+    expect(() => expectPeticionCumpleContrato('post', '/refinanciaciones/', pedido)).not.toThrow()
+    const r = await verifica('post', '/refinanciaciones/', 201, { datos: pedido })
+    expect(r).toMatchObject({
+      origen: 'MANUAL',
+      registrada_por: 'Juan Pérez',
+      obligacion_original: { obligacion_id: 7, estado_cierre: '07', modo_extincion: { codigo: '16', descripcion: 'Refinanciación' } },
+      obligacion_nueva: { numero_obligacion: '2272-6101', estado_tu: '01', numero_reestructuraciones: 1 },
+      saldo_refinanciado: 5420000,
+      naturaleza: { codigo: '06', descripcion: 'Ordinaria', confirmado: false },
+      numero_cuotas: 24,
+    })
+    const nueva = await verifica('get', '/obligaciones/{id}/', 200, { url: `/obligaciones/${r.obligacion_nueva.obligacion_id}/` })
+    expect(nueva).toMatchObject({ primer_reporte: true, reestructuracion: { numero_reestructuraciones: 1, obligacion_anterior: { obligacion_id: 7 } } })
+    const original = await verifica('get', '/obligaciones/{id}/', 200, { url: '/obligaciones/7/' })
+    expect(original).toMatchObject({ estado_tu: '07', cerrada: true, refinanciada_en: { numero_obligacion: '2272-6101' }, cierre: { tipo_pago: { codigo: '02' } } })
+    // Refinanciarla otra vez: ya está cerrada.
+    expect(await verifica('post', '/refinanciaciones/', 409, { datos: pedido })).toEqual({
+      detail: 'La obligación 2250-0987 ya está cerrada: no se puede refinanciar.',
+      code: 'obligacion_cerrada',
+    })
+  })
+
+  test('POST /refinanciaciones/ 400 por campo, 404 sin obligación y 409 si la matriz no lo permite', async () => {
+    await entrar(ANALISTA)
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, numero_cuotas: 0 } })).toEqual({ numero_cuotas: ['Ingresa un número de cuotas entre 1 y 120.'] })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, numero_cuotas: 121 } })).toEqual({ numero_cuotas: ['Ingresa un número de cuotas entre 1 y 120.'] })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, naturaleza: '99' } })).toEqual({ naturaleza: ['Selecciona la naturaleza de la reestructuración.'] })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: { ...pedido, fecha: '2999-01-01' } })).toEqual({ fecha: ['La fecha de la refinanciación no puede ser futura.'] })
+    expect(await verifica('post', '/refinanciaciones/', 400, { datos: {} })).toEqual({
+      obligacion_original_id: ['Selecciona la obligación original.'],
+      naturaleza: ['Selecciona la naturaleza de la reestructuración.'],
+      numero_cuotas: ['Ingresa un número de cuotas entre 1 y 120.'],
+      fecha: ['Selecciona la fecha de la refinanciación.'],
+    })
+    expect(await verifica('post', '/refinanciaciones/', 404, { datos: { ...pedido, obligacion_original_id: 999 } })).toEqual({ detail: 'Obligación no encontrada.' })
+    db.obligaciones.find((o) => o.id === 5).estado = '04'
+    expect(await verifica('post', '/refinanciaciones/', 409, { datos: { ...pedido, obligacion_original_id: 5 } })).toEqual({
+      detail: 'TransUnion no acepta pasar de 04 · Suspendida por la entidad a 02 · Saldada (error 713). Define el tratamiento con CENS.',
+      code: 'transicion_no_permitida',
+    })
+  })
+})

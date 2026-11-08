@@ -13,6 +13,7 @@ import { CODIGOS_ROL } from '../features/auth/roles'
 import { archivosIniciales } from './datos/archivos'
 import { cicloInicial } from './datos/ciclos'
 import { obligacionesIniciales } from './datos/obligacionesIteracion2'
+import { refinanciacionesIniciales } from './datos/refinanciaciones'
 
 const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
 const DB_KEY = 'nexovolt-mock-db-v3' // solo mocks: usuarios ficticios y sus contraseñas de prueba (v2: roles como código; v3: cortes completos)
@@ -60,7 +61,7 @@ const cortesIniciales = () => [
 const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
 
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'ciclos']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad', 'archivos', 'ciclos', 'refinanciaciones']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -76,6 +77,7 @@ const inicial = () => ({
   archivos: archivosIniciales(),
   // Actualizaciones mensuales ejecutadas (pantalla 10): al inicio, la del corte 2026-09-30.
   ciclos: [cicloInicial()],
+  refinanciaciones: refinanciacionesIniciales(),
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

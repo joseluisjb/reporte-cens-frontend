@@ -11,6 +11,7 @@ import { extraccionesHandlers } from './rutas/extracciones'
 import { gruposHandlers } from './rutas/grupos'
 import { obligacionesHandlers } from './rutas/obligaciones'
 import { panelHandlers } from './rutas/panel'
+import { refinanciacionesHandlers } from './rutas/refinanciaciones'
 import { saludHandlers } from './rutas/salud'
 import { usuariosHandlers } from './rutas/usuarios'
 
@@ -28,4 +29,5 @@ export const handlers = [
   ...entidadHandlers,
   ...panelHandlers,
   ...ciclosHandlers,
+  ...refinanciacionesHandlers,
 ]

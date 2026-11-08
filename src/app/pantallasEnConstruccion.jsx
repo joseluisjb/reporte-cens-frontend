@@ -2,7 +2,6 @@
 // página real (features/<modulo>/) en el PR que la construye.
 import PlaceholderPage from './PlaceholderPage'
 
-export const Refinanciaciones = () => <PlaceholderPage title="Refinanciaciones" responsable="Johan" rf="RF18" />
 export const ReporteTransUnion = () => <PlaceholderPage title="Reporte a TransUnion" responsable="Johan" rf="RF20–RF22, RF51–RF54" />
 export const Reclamos = () => <PlaceholderPage title="Reclamos Habeas Data" responsable="Omar" rf="RF23" />
 export const Novedades = () => <PlaceholderPage title="Novedades Urgentes" responsable="Angel" rf="RF24, RF50, RF55" />

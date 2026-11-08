@@ -105,6 +105,7 @@ describe('pantalla 10 · ejecución', () => {
     expect(progreso).toHaveTextContent('orden por confirmar con CENS')
     expect(screen.getByRole('button', { name: /Actualizando…/ })).toBeDisabled()
     expect(fecha()).toBeDisabled()
+    await waitFor(() => expect(soltar).toBeTypeOf('function')) // la petición ya llegó al handler
     soltar()
     expect(await screen.findByRole('region', { name: 'Actualización mensual completada' })).toBeInTheDocument()
   })
@@ -179,6 +180,7 @@ describe('pantalla 10 · respuestas cruzadas', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ver el resultado del corte 30/09/2026' }))
     await ejecutar()
     expect(await screen.findByRole('heading', { name: '10 obligaciones actualizadas en el corte 31/10/2026' })).toBeInTheDocument()
+    await waitFor(() => expect(soltar).toBeTypeOf('function')) // la petición ya llegó al handler
     soltar()
     await waitFor(() => expect(filas('Actualizaciones mensuales anteriores')).toHaveLength(2))
     expect(screen.getByRole('heading', { name: '10 obligaciones actualizadas en el corte 31/10/2026' })).toBeInTheDocument()
@@ -197,6 +199,7 @@ describe('pantalla 10 · respuestas cruzadas', () => {
     await renderConSesion('/ciclo', ...ANALISTA)
     await screen.findByRole('status', { name: 'Cargando el historial' })
     cambiarFecha('2026-12-31')
+    await waitFor(() => expect(soltar).toBeTypeOf('function')) // la petición ya llegó al handler
     soltar()
     await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
     expect(fecha()).toHaveValue('2026-12-31')

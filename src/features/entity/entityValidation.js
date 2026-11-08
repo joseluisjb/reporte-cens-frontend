@@ -10,8 +10,9 @@ export const MSG_ENTIDAD = {
   codigoSucursal: 'El código de sucursal debe tener 6 caracteres (o XXXXXX mientras TransUnion no los asigne).',
 }
 
-const TRES_DIGITOS = /^(\d{3}|XXX)$/
-const SUCURSAL = /^[A-Z0-9]{6}$/
+// Las usa también el backend simulado (mocks/rutas/entidad.js), para que no se separen.
+export const TRES_DIGITOS = /^(\d{3}|XXX)$/
+export const SUCURSAL = /^[A-Z0-9]{6}$/
 
 // Como se envía: sin espacios y en mayúsculas (la sucursal admite letras).
 export const normalizarEntidad = (valores) => ({

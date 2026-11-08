@@ -1,7 +1,7 @@
 // Datos de la entidad ante TransUnion (RF57, pantalla 15). Propuesto en el contrato 0.9; hoy responden
 // los mocks. Lectura para los dos roles (el Analista ve el aviso de marcador en el panel y en la
 // pantalla 12); escritura solo del Administrador (el Analista recibe 403).
-// Los errores llegan como ApiError; usa `mapEntidadFieldErrors` para llevarlos a cada campo.
+// Los errores llegan como ApiError; usa `mapEntidadFieldErrors` (entityMapper) para llevarlos a cada campo.
 import { api, ENDPOINTS } from '../../lib/api'
 import { mapEntidad } from './entityMapper'
 import { MARCADOR, normalizarEntidad } from './entityValidation'
@@ -24,10 +24,3 @@ export async function updateEntity(valores) {
 
 // «Volver al relleno»: los tres marcadores (los archivos vuelven a salir no aptos para envío).
 export const resetEntity = () => updateEntity(MARCADOR)
-
-// Errores del backend ({ tipo_entidad: '...' }) → nombres del formulario.
-export const mapEntidadFieldErrors = (fe = {}) => ({
-  tipoEntidad: fe.tipo_entidad,
-  codigoEntidad: fe.codigo_entidad,
-  codigoSucursal: fe.codigo_sucursal,
-})

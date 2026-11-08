@@ -82,11 +82,42 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar datos' }))
     await screen.findByRole('note')
     await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
+    const dialogo = await screen.findByRole('alertdialog', { name: 'Volver al relleno' })
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Volver al relleno' }))
     expect(await screen.findByText('Datos de la entidad con relleno: los archivos saldrán no aptos para envío.')).toBeInTheDocument()
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
     expect(screen.getByLabelText('Código de entidad')).toHaveValue('XXX')
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
+  test('«Volver al relleno» con el marcador ya guardado deja los botones activos y limpia lo escrito', async () => {
+    await abrirComoAdmin()
+    await escribir('Tipo de entidad', '001')
+    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Volver al relleno' }))
+    await screen.findByText('Datos de la entidad con relleno: los archivos saldrán no aptos para envío.')
+    expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
+    expect(screen.getByRole('button', { name: 'Guardar datos' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Volver al relleno' })).toBeEnabled()
+  })
+
+  test('cancelar la confirmación no cambia nada', async () => {
+    await abrirComoAdmin()
+    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
+  })
+
+  test('al guardar, el campo muestra lo guardado (en mayúsculas) y el foco no se pierde', async () => {
+    await abrirComoAdmin()
+    await escribir('Código de sucursal', 'xxxxxx')
+    const guardar = screen.getByRole('button', { name: 'Guardar datos' })
+    await userEvent.click(guardar)
+    await screen.findByText('Datos guardados: todavía hay relleno, los archivos saldrán no aptos para envío.')
+    expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
+    expect(screen.getByRole('button', { name: 'Guardar datos' })).toBe(guardar) // el mismo botón: no se remontó
   })
 
   test('si la carga falla muestra el error y permite reintentar', async () => {

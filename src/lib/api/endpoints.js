@@ -33,7 +33,7 @@ export const ENDPOINTS = {
   obligacion: (id) => `/obligaciones/${id}/`, // propuesto (contrato 0.9) · solo Analista
   obligacionLineaTiempo: (id) => `/obligaciones/${id}/linea-tiempo/`, // propuesto (contrato 0.9) · solo Analista
   catalogo: (nombre) => `/catalogos/${nombre}/`, // propuesto (contrato 0.9) · los dos roles
-  entidad: '/entidad/', // propuesto (contrato 0.9) · lectura de los dos roles
+  entidad: '/entidad/', // propuesto (contrato 0.9) · GET de los dos roles; PUT solo Administrador
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

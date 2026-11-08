@@ -2,12 +2,13 @@
 // navigation.js). Mientras TransUnion no asigne los datos llevan el marcador XXX / XXX / XXXXXX y los
 // archivos salen no aptos para envío. Mockup v3: vEntidad.
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Card, Input, PageHeader, PorConfirmar, Spinner, useToast } from '../../components/ui'
+import { Alert, Button, Card, ConfirmDialog, Input, PageHeader, PorConfirmar, Spinner, useToast } from '../../components/ui'
 import { formatearFechaHora } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { getLatestCut } from '../extraction/extractionService'
-import { getEntity, mapEntidadFieldErrors, resetEntity, updateEntity } from './entityService'
+import { mapEntidadFieldErrors } from './entityMapper'
+import { getEntity, resetEntity, updateEntity } from './entityService'
 import { validarEntidad } from './entityValidation'
 
 const TITULO = 'Datos de la Entidad ante TransUnion'
@@ -74,7 +75,6 @@ export default function EntityPage() {
       )}
       {entidad && (
         <FormularioEntidad
-          key={`${entidad.tipoEntidad}-${entidad.codigoEntidad}-${entidad.codigoSucursal}`}
           entidad={entidad}
           fechaCorte={fechaCorte}
           onGuardada={setEntidad}
@@ -100,29 +100,41 @@ function AvisoEntidad({ conMarcador }) {
   )
 }
 
+// Los campos toman lo que devolvió el servidor (ya normalizado) sin remontar el formulario.
+const CAMPOS_ENTIDAD = ['tipoEntidad', 'codigoEntidad', 'codigoSucursal']
+
 function FormularioEntidad({ entidad, fechaCorte, onGuardada }) {
   const toast = useToast()
   const [restaurando, setRestaurando] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
   const form = useFormulario({
     valoresIniciales: { tipoEntidad: entidad.tipoEntidad, codigoEntidad: entidad.codigoEntidad, codigoSucursal: entidad.codigoSucursal },
     validar: validarEntidad,
     traducirErrores: mapEntidadFieldErrors,
     onSubmit: async (valores) => {
       const guardada = await updateEntity(valores)
+      mostrarGuardada(guardada)
       toast.success(guardada.conMarcador ? MSG_GUARDADA_CON_RELLENO : MSG_GUARDADA_APTA)
-      onGuardada(guardada)
     },
   })
+
+  // setValor también quita el error del campo y el error general.
+  const mostrarGuardada = (guardada) => {
+    for (const campo of CAMPOS_ENTIDAD) form.setValor(campo, guardada[campo])
+    onGuardada(guardada)
+  }
 
   const volverAlRelleno = async () => {
     setRestaurando(true)
     try {
       const guardada = await resetEntity()
+      mostrarGuardada(guardada)
       toast.success(MSG_RELLENO)
-      onGuardada(guardada)
     } catch (err) {
       form.setErrorGeneral(err.message)
+    } finally {
       setRestaurando(false)
+      setConfirmando(false)
     }
   }
 
@@ -167,7 +179,7 @@ function FormularioEntidad({ entidad, fechaCorte, onGuardada }) {
           </div>
         )}
         <div className="mt-4 flex flex-wrap justify-end gap-2.5">
-          <Button type="button" variant="ghost" onClick={volverAlRelleno} loading={restaurando} disabled={ocupado}>
+          <Button type="button" variant="ghost" onClick={() => setConfirmando(true)} disabled={ocupado}>
             Volver al relleno
           </Button>
           <Button type="submit" loading={form.enviando} disabled={ocupado}>
@@ -175,6 +187,16 @@ function FormularioEntidad({ entidad, fechaCorte, onGuardada }) {
           </Button>
         </div>
       </Card>
+      <ConfirmDialog
+        open={confirmando}
+        danger
+        title="Volver al relleno"
+        message="Los tres datos quedarán en XXX, XXX y XXXXXX y los archivos nuevos saldrán no aptos para envío hasta que se vuelvan a escribir."
+        confirmLabel="Volver al relleno"
+        loading={restaurando}
+        onConfirm={volverAlRelleno}
+        onCancel={() => setConfirmando(false)}
+      />
       <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted">
         <li>
           Si TransUnion asigna varias sucursales, falta definir la regla para asignarlas a cada obligación.

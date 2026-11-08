@@ -1,7 +1,7 @@
 // Guardas por rol de las pantallas de la Iteración 2 (base compartida): las pantallas 9 a 14 son del
 // Analista de Cartera y las 15 y 16 del Administrador. El otro rol ve «Acceso restringido», también
 // escribiendo la dirección o entrando por la opción bloqueada del menú.
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ADMIN, ANALISTA, renderApp, renderConSesion } from './renderApp'
 
@@ -41,7 +41,7 @@ describe('pantallas del Administrador (15 y 16)', () => {
   test.each(DEL_ADMIN)('el Administrador abre %s', async (ruta, _seccion, titulo) => {
     await renderConSesion(ruta)
     expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
-    if (ruta === '/entidad') await screen.findByRole('button', { name: 'Guardar datos' })
+    await waitFor(() => expect(screen.queryByRole('status', { name: /^Cargando/ })).not.toBeInTheDocument())
   })
 
   test.each(DEL_ADMIN)('el Analista ve «Acceso restringido» en %s', async (ruta, seccion) => {

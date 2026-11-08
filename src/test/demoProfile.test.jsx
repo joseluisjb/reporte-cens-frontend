@@ -20,6 +20,16 @@ describe('Cambiar de perfil (solo demostración)', () => {
     expect(screen.getByText(/ahora estás usando el perfil: rosa martínez · administrador/i)).toBeInTheDocument()
   })
 
+  test('en una pantalla del Analista, el Administrador cambia de perfil y la pantalla se abre (Iteración 2)', async () => {
+    renderApp('/obligaciones', ADMIN)
+    expect(await screen.findByText(/«Obligaciones y Estados» es exclusiva del rol Analista de Cartera/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /cambiar de perfil/i }))
+    const dialogo = screen.getByRole('dialog', { name: 'Cambiar de perfil' })
+    await userEvent.click(within(dialogo).getByRole('radio', { name: /juan pérez/i }))
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Cambiar perfil' }))
+    expect(await screen.findByRole('heading', { name: 'Obligaciones y Estados' })).toBeInTheDocument()
+  })
+
   test('desde el menú de perfil también está disponible y devuelve el foco al botón del perfil', async () => {
     renderApp('/panel', ADMIN)
     const botonPerfil = await screen.findByRole('button', { name: /rosa martínez/i })

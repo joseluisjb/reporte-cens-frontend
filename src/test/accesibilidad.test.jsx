@@ -148,6 +148,12 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('acceso restringido (Administrador en una pantalla del Analista) y menú con opciones bloqueadas', async () => {
+    renderApp('/obligaciones')
+    await screen.findByRole('heading', { name: 'Acceso restringido' })
+    await expectAccesible()
+  })
+
   test('menú de perfil abierto', async () => {
     renderApp('/panel')
     await userEvent.click(await screen.findByRole('button', { name: /rosa martínez/i }))

@@ -5,11 +5,12 @@ import { RUTA_INICIAL } from '../../app/navigation'
 import { DEMO_ACTIVO } from '../../lib/config'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { useAuth } from './authContext'
+import { ROLES } from './roles'
 import SwitchProfileModal from './SwitchProfileModal'
 
 // Pantalla "Acceso restringido" de la maqueta. Se muestra en el lugar de la sección bloqueada
 // (la dirección no cambia) y dentro del layout, para que el usuario pueda seguir navegando.
-export default function AccessRestrictedPage({ seccion }) {
+export default function AccessRestrictedPage({ seccion, rolesPermitidos = [ROLES.ADMIN] }) {
   usePageTitle('Acceso restringido')
   const { user } = useAuth()
   const [cambiando, setCambiando] = useState(false)
@@ -20,7 +21,7 @@ export default function AccessRestrictedPage({ seccion }) {
       </span>
       <h1 className="mb-2 font-hd text-2xl font-bold">Acceso restringido</h1>
       <p className="mb-6 text-sm text-muted">
-        La sección «{seccion}» es exclusiva del rol Administrador. Tu perfil actual es <b>{user.rol}</b>.
+        La sección «{seccion}» es exclusiva del rol {rolesPermitidos.join(' o ')}. Tu perfil actual es <b>{user.rol}</b>.
       </p>
       <div className="flex flex-wrap justify-center gap-2.5">
         {DEMO_ACTIVO && (

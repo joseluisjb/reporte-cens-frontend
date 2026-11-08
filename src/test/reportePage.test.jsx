@@ -113,6 +113,8 @@ describe('pantalla 12 · generar y descargar (RF20)', () => {
     expect(tarjeta).toHaveTextContent('No apto para envío: La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.')
     expect(tarjeta).toHaveTextContent('Obligaciones (registros 2)1113 registros con el 1 y el 9')
     expect(tarjeta).toHaveTextContent('No incluidas1Cerradas antes o eliminadas')
+    // Como el mockup v3, con el redondeo de RF51 marcado por confirmar.
+    expect(tarjeta).toHaveTextContent('Se reporta en miles: 21.864 redondeo por confirmar con TransUnion')
     expect(await screen.findByText('Archivo generado: SSRXXXXXX20260930 (no apto para envío).')).toBeInTheDocument()
     await waitFor(() => expect(within(screen.getByRole('table', { name: 'Archivos generados' })).getAllByRole('row')).toHaveLength(4))
     expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · VALIDADO')

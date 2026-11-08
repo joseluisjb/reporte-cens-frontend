@@ -1,9 +1,12 @@
 // Tarjeta «Archivo generado» de la pantalla 12 (mockup v3: vReporteRes): nombre, estado, aviso de «no apto
 // para envío» con su motivo (RF57), los conteos de registros y «Descargar archivo» (RF20).
 import { useId } from 'react'
-import { Alert, Button, Card, Dato, Icon } from '../../components/ui'
+import { Alert, Button, Card, Dato, Icon, PorConfirmar } from '../../components/ui'
 import { formatearCOP, formatearFechaISOLarga, plural } from '../../lib/format'
 import EstadoArchivoBadge from './EstadoArchivoBadge'
+
+// Como el mockup v3 (vReporteRes). La regla de redondeo de RF51 está por confirmar con TransUnion.
+const miles = (pesos) => Math.round(pesos / 1000).toLocaleString('es-CO')
 
 export default function GeneratedFileCard({ archivo, onDescargar, descargando }) {
   const id = useId()
@@ -32,7 +35,15 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         <Dato etiqueta="Obligaciones (registros 2)" valor={archivo.nRegistros} nota={`${plural(archivo.totalRegistros, 'registro', 'registros')} con el 1 y el 9`} />
         <Dato etiqueta="No incluidas" valor={archivo.nExcluidas} nota="Cerradas antes o eliminadas" />
         <Dato etiqueta="Fecha de corte" valor={formatearFechaISOLarga(archivo.fechaCorte)} />
-        <Dato etiqueta="Saldo del archivo" valor={formatearCOP(archivo.saldoTotal)} />
+        <Dato
+          etiqueta="Saldo del archivo"
+          valor={formatearCOP(archivo.saldoTotal)}
+          nota={
+            <>
+              Se reporta en miles: {miles(archivo.saldoTotal)} <PorConfirmar>redondeo por confirmar con TransUnion</PorConfirmar>
+            </>
+          }
+        />
       </dl>
       <Button onClick={() => onDescargar(archivo)} loading={descargando}>
         {!descargando && <Icon name="download" size={16} />}

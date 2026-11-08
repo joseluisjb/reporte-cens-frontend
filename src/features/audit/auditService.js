@@ -2,12 +2,10 @@
 // Implementado en el backend (Dilan, `6f596bb`). Contrato: docs/contrato/openapi.yaml (0.6), `GET /auditoria/`. Más reciente primero. Pagina con `limite` y `desplazamiento`.
 // Los errores llegan como ApiError (`message` en español y `fieldErrors`; usa `mapAuditFieldErrors`).
 import { api, ENDPOINTS } from '../../lib/api'
-import { mapPagina } from '../../lib/api/pagina'
+import { hayValor, mapPagina } from '../../lib/api/pagina'
 import { mapRegistroAuditoria } from './auditMapper'
 
 export const LIMITE_AUDITORIA = 20
-
-const hayValor = (v) => v !== undefined && v !== null && String(v).trim() !== ''
 
 // Una página del log → { items, total } (`total` cuenta todos los que cumplen el filtro).
 //   desde / hasta: 'YYYY-MM-DD' (inclusivos) · usuarioId: id numérico · tipoAccion: código · modulo: texto.

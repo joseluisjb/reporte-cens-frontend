@@ -4,3 +4,6 @@
 export function mapPagina(data, mapItem) {
   return { items: (data?.resultados ?? []).map(mapItem), total: data?.total ?? 0 }
 }
+
+// ¿El filtro trae algo que enviar? (vacío, solo espacios, null o undefined → no se envía)
+export const hayValor = (v) => v !== undefined && v !== null && String(v).trim() !== ''

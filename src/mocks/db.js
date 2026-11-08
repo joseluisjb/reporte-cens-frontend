@@ -1,7 +1,8 @@
 // Base de datos FICTICIA para los mocks. Todos los datos y contraseñas son inventados.
 // Vive en memoria y se copia a sessionStorage (solo en los mocks, nunca en producción) para que
 // una recarga de la página no borre lo creado durante una demostración; cerrar la pestaña la reinicia.
-// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de extracción de ejemplo.
+// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de extracción de ejemplo, y para la
+// Iteración 2 las 12 obligaciones del mockup v3 (`obligaciones`) y los datos de la entidad (`entidad`).
 // Los roles se guardan como CÓDIGO del backend (`ANALISTA_CARTERA`, `ADMINISTRADOR`), igual que el contrato.
 // Cuentas de prueba (solo con VITE_USE_MOCKS=true; el rol se muestra aquí como texto):
 //   rmartinez@example.com / Admin12345      → Administrador
@@ -9,6 +10,7 @@
 //   mgomez@example.com    / Temporal123     → debe cambiar la contraseña (primer ingreso)
 //   avargas@example.com   / Cartera123      → usuario desactivado
 import { CODIGOS_ROL } from '../features/auth/roles'
+import { obligacionesIniciales } from './datos/obligacionesIteracion2'
 
 const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
 const DB_KEY = 'nexovolt-mock-db-v3' // solo mocks: usuarios ficticios y sus contraseñas de prueba (v2: roles como código; v3: cortes completos)
@@ -52,8 +54,11 @@ const cortesIniciales = () => [
   { id: 2, fecha_corte: '2026-09-30', fecha_ejecucion: '2026-10-01T07:40:00-05:00', grupo_id: 2, grupo_nombre: 'Solo cuota de energía', estado: 'BORRADOR', fecha_envio: null, ejecutada_por: 'Juan Pérez', observacion: null },
 ]
 
+// Datos de la entidad ante TransUnion (RF57). Mientras TransUnion no los asigne llevan el marcador.
+const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
+
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId']
+const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId', 'obligaciones', 'entidad']
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -63,6 +68,9 @@ const inicial = () => ({
   siguienteGrupoId: 4,
   cortes: cortesIniciales(),
   siguienteCorteId: 3,
+  // Iteración 2: no se mezclan con las obligaciones FIC- de la extracción (mocks/datos/obligaciones.js).
+  obligaciones: obligacionesIniciales(),
+  entidad: entidadInicial(),
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

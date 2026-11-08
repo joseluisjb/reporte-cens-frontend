@@ -17,13 +17,22 @@ export function enviarCorreoSimulado({ para, asunto, cuerpo }) {
   if (import.meta.env.MODE !== 'test') console.info(`[Correo simulado] Para: ${para} · Asunto: ${asunto} · ${cuerpo}`)
 }
 
-// Devuelve { usuario } o { respuesta } con el error. exigeAdmin → 403 para el Analista.
-export function exigirSesion(exigeAdmin = false) {
+// Devuelve { usuario } o { respuesta } con el error: 401 sin sesión y 403 si el rol no está permitido.
+// `rol`: código del rol (o lista de códigos) que puede usar la ruta; sin `rol`, cualquier usuario con sesión.
+//   exigirSesion()               → los dos roles
+//   exigirSesion(SOLO_ADMIN)     → solo el Administrador
+//   exigirSesion(SOLO_ANALISTA)  → solo el Analista de Cartera (HU-B y HU-C)
+export function exigirSesion(opciones = {}) {
+  // La forma vieja `exigirSesion(true)` dejaría la ruta abierta: se rechaza en vez de fallar abierta.
+  if (typeof opciones !== 'object' || opciones === null) throw new TypeError('exigirSesion recibe { rol }: usa SOLO_ADMIN o SOLO_ANALISTA.')
+  const { rol } = opciones
   const usuario = usuarioActual()
   if (!usuario) return { respuesta: sinSesion() }
-  if (exigeAdmin && usuario.rol !== CODIGOS_ROL.ADMIN) return { respuesta: sinPermiso() }
+  if (rol && ![rol].flat().includes(usuario.rol)) return { respuesta: sinPermiso() }
   return { usuario }
 }
+export const SOLO_ADMIN = Object.freeze({ rol: CODIGOS_ROL.ADMIN })
+export const SOLO_ANALISTA = Object.freeze({ rol: CODIGOS_ROL.ANALISTA })
 
 const dos = (n) => String(n).padStart(2, '0')
 

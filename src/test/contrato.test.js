@@ -366,3 +366,113 @@ describe('conformidad del mock de auditoría con el contrato', () => {
     expect(await verifica('get', '/auditoria/', 400, { url: '/auditoria/?modulo=Cocina' })).toEqual({ modulo: ['Módulo no válido.'] })
   })
 })
+
+describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligaciones, catálogos y entidad', () => {
+  test('GET /obligaciones/ 200 cumple ListaPaginada de ObligacionResumen (Analista); 401 sin sesión y 403 al Administrador', async () => {
+    await verifica('get', '/obligaciones/', 401)
+    await entrar(ADMIN)
+    expect(await verifica('get', '/obligaciones/', 403)).toEqual({ detail: 'You do not have permission to perform this action.' })
+    await entrar(ANALISTA)
+    const pagina = await verifica('get', '/obligaciones/', 200)
+    expect(pagina.total).toBe(12)
+    expect(pagina.resultados.map((o) => o.numero_obligacion)).toEqual([...pagina.resultados.map((o) => o.numero_obligacion)].sort())
+    const hotel = pagina.resultados.find((o) => o.numero_obligacion === '2250-0987')
+    expect(hotel).toMatchObject({ obligacion_id: 7, estado_tu: '03', edad_mora: '05', dias_mora: 156, cuotas_mora: 6, valor_mora: 1620000, caducado: true })
+  })
+
+  test('GET /obligaciones/ filtra por estado, cuotas en mora, búsqueda y eliminadas, y pagina', async () => {
+    await entrar(ANALISTA)
+    const enDudoso = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?estado_tu=03' })
+    expect(enDudoso.resultados.map((o) => o.numero_obligacion)).toEqual(['2250-0987'])
+    const dosOMas = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?cuotas_mora_min=2' })
+    expect(dosOMas.total).toBe(5)
+    const busqueda = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?q=pamplona' })
+    expect(busqueda.total).toBe(2)
+    expect((await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?eliminada=true' })).total).toBe(0)
+    const pagina2 = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?limite=5&desplazamiento=10' })
+    expect(pagina2).toMatchObject({ total: 12 })
+    expect(pagina2.resultados).toHaveLength(2)
+  })
+
+  test('GET /obligaciones/ 400 cumple ErrorCampos en cada filtro inválido', async () => {
+    await entrar(ANALISTA)
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?estado_tu=05' })).toEqual({ estado_tu: ['Estado no válido. Usa un código de la Tabla 4b.'] })
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?cuotas_mora_min=-1' })).toHaveProperty('cuotas_mora_min')
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?eliminada=quizas' })).toHaveProperty('eliminada')
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?limite=0' })).toHaveProperty('limite')
+    expect(await verifica('get', '/obligaciones/', 400, { url: `/obligaciones/?q=${'x'.repeat(61)}` })).toHaveProperty('q')
+  })
+
+  test('GET /obligaciones/resumen/ 200 cumple ResumenObligaciones: las 4 agrupaciones suman las abiertas; 403 al Administrador', async () => {
+    await entrar(ADMIN)
+    await verifica('get', '/obligaciones/resumen/', 403)
+    await entrar(ANALISTA)
+    const resumen = await verifica('get', '/obligaciones/resumen/', 200)
+    expect(resumen).toMatchObject({ fecha_ultimo_ciclo: '2026-09-30', total: 12, abiertas: 9, eliminadas: 0 })
+    expect(resumen.por_cuotas_mora).toEqual({ al_dia: 2, una: 2, dos_a_tres: 2, cuatro_o_mas: 3 })
+    expect(Object.values(resumen.por_cuotas_mora).reduce((a, b) => a + b, 0)).toBe(resumen.abiertas)
+    expect(resumen.por_estado).toEqual([
+      { estado_tu: '01', cantidad: 7 },
+      { estado_tu: '03', cantidad: 1 },
+      { estado_tu: '06', cantidad: 1 },
+      { estado_tu: '02', cantidad: 2 },
+      { estado_tu: '07', cantidad: 1 },
+    ])
+    expect(resumen.financiaciones_nuevas).toHaveLength(3)
+  })
+
+  test('GET /obligaciones/{id}/ 200 cumple ObligacionDetalle (abierta, cerrada y reestructurada); 404 y 403', async () => {
+    await entrar(ANALISTA)
+    const enMora = await verifica('get', '/obligaciones/{id}/', 200, { url: '/obligaciones/2/' })
+    expect(enMora).toMatchObject({ numero_obligacion: '2258-7731', fecha_exigibilidad: '2026-08-14', valor_mora: 140000, cuotas_atrasadas: 2 })
+    expect(enMora.cuotas_vencidas).toEqual([
+      { fecha_vencimiento: '2026-08-14', valor_pendiente: 70000, dias: 47 },
+      { fecha_vencimiento: '2026-09-14', valor_pendiente: 70000, dias: 16 },
+    ])
+    expect(enMora.posibles_transiciones.find((r) => r.rf === 'RF14')).toMatchObject({ por_confirmar: true })
+    const cerrada = await verifica('get', '/obligaciones/{id}/', 200, { url: '/obligaciones/3/' })
+    expect(cerrada).toMatchObject({ cerrada: true, valor_cuota: 0, valor_cuota_antes_cierre: 85000 })
+    expect(cerrada.cierre).toEqual({ fecha_corte: '2026-09-30', fecha_pago: '2026-09-12', modo_extincion: { codigo: '01', descripcion: 'Voluntario' }, tipo_pago: { codigo: '01', descripcion: 'Voluntario' } })
+    expect(cerrada.posibles_transiciones).toEqual([{ rf: 'RF13', texto: 'Se reporta una sola vez, en el corte en que cerró (30/09/2026), y después ya no', por_confirmar: false }])
+    const nueva = await verifica('get', '/obligaciones/{id}/', 200, { url: '/obligaciones/12/' })
+    expect(nueva.reestructuracion).toMatchObject({ numero_reestructuraciones: 1, obligacion_anterior: { obligacion_id: 11, numero_obligacion: '2255-7788' } })
+    for (let id = 1; id <= 12; id++) await verifica('get', '/obligaciones/{id}/', 200, { url: `/obligaciones/${id}/` })
+    expect(await verifica('get', '/obligaciones/{id}/', 404, { url: '/obligaciones/99/' })).toEqual({ detail: 'Obligación no encontrada.' })
+    await verifica('get', '/obligaciones/{id}/', 404, { url: '/obligaciones/abc/' })
+    await entrar(ADMIN)
+    await verifica('get', '/obligaciones/{id}/', 403, { url: '/obligaciones/2/' })
+  })
+
+  test('GET /obligaciones/{id}/linea-tiempo/ 200 cumple EventoObligacion[] (del más reciente al más antiguo); 404 y 403', async () => {
+    await entrar(ANALISTA)
+    const eventos = await verifica('get', '/obligaciones/{id}/linea-tiempo/', 200, { url: '/obligaciones/2/linea-tiempo/' })
+    expect(eventos.map((e) => e.fecha)).toEqual(['2026-09-30', '2026-08-31', '2026-02-28'])
+    await verifica('get', '/obligaciones/{id}/linea-tiempo/', 404, { url: '/obligaciones/99/linea-tiempo/' })
+    await entrar(ADMIN)
+    await verifica('get', '/obligaciones/{id}/linea-tiempo/', 403, { url: '/obligaciones/2/linea-tiempo/' })
+  })
+
+  test('GET /catalogos/{nombre}/ 200 cumple ItemCatalogo[] para los dos roles; 404 y 401', async () => {
+    await verifica('get', '/catalogos/{nombre}/', 401, { url: '/catalogos/tipos-pago/' })
+    await entrar(ADMIN)
+    for (const nombre of ['modos-extincion', 'tipos-pago', 'naturalezas-reestructuracion', 'motivos-eliminacion', 'tipologias-reclamo']) {
+      const items = await verifica('get', '/catalogos/{nombre}/', 200, { url: `/catalogos/${nombre}/` })
+      expect(items.length, nombre).toBeGreaterThan(0)
+    }
+    await entrar(ANALISTA)
+    const naturalezas = await verifica('get', '/catalogos/{nombre}/', 200, { url: '/catalogos/naturalezas-reestructuracion/' })
+    expect(naturalezas.every((n) => n.confirmado === false)).toBe(true) // Tabla 11: código de CENS por definir
+    expect(await verifica('get', '/catalogos/{nombre}/', 404, { url: '/catalogos/colores/' })).toEqual({ detail: 'Catálogo no encontrado.' })
+  })
+
+  test('GET /entidad/ 200 cumple Entidad con el marcador para los dos roles; 401 sin sesión', async () => {
+    await verifica('get', '/entidad/', 401)
+    for (const usuario of [ADMIN, ANALISTA]) {
+      await entrar(usuario)
+      expect(await verifica('get', '/entidad/', 200)).toEqual({
+        tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', con_marcador: true,
+        prefijo_archivo: 'SSRXXXXXX', actualizado_por: null, fecha_actualizacion: null,
+      })
+    }
+  })
+})

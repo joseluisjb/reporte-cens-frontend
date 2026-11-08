@@ -252,4 +252,5 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
 
 - **Rechazos del ciclo (713 y 881).** Hoy se resuelven así: se corrige el dato en el SAC, se regenera la extracción y se repite el ciclo. Falta definir la exclusión de una obligación con justificación (RF10, flujo alterno); no tiene endpoint en la 0.9.
 - **`ENVIADO_CON_INCONSISTENCIAS` cuenta como enviado.** Vale para el historial de reportes, para la regla A9 y para saber cuál es el último corte enviado.
+- **Errores de paginación de `/obligaciones/`.** El contrato 0.9 los define por campo (`{ limite: [...] }`, `ErrorCampos`), pero la paginación que ya tiene el backend en extracción responde `{ detail }`. Hay que elegir una de las dos formas y ajustar el contrato (0.9.x) o el backend.
 - **Plazo de los reclamos.** Son 15 días hábiles, sin contar fines de semana ni festivos de Colombia. La regla exacta de conteo está por confirmar con jurídica.

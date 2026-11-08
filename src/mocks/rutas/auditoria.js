@@ -6,7 +6,7 @@ import { MODULOS_AUDITORIA, TIPOS_ACCION } from '../../features/audit/auditMappe
 import { esFechaISO, MSG_AUDIT } from '../../features/audit/auditValidation'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { registrosAuditoria } from '../datos/auditoria'
-import { aEntero, error, espera, exigirSesion, url } from '../utilidades'
+import { aEntero, error, espera, exigirSesion, SOLO_ADMIN, url } from '../utilidades'
 import { leerPaginacion } from './extracciones'
 
 const MSG_USUARIO = 'Indica el id numérico del usuario.'
@@ -65,7 +65,7 @@ function cumple(registro, { desde, hasta, usuario, tipo_accion: tipo, modulo }) 
 export const auditoriaHandlers = [
   http.get(url(ENDPOINTS.auditoria), async ({ request }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const params = new URL(request.url).searchParams
     const { filtros, errores } = leerFiltros(params)

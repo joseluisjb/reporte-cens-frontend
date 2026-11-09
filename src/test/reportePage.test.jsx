@@ -211,11 +211,11 @@ describe('pantalla 12 · generar y descargar (RF20)', () => {
 })
 
 describe('pantalla 12 · estados', () => {
-  test('con el corte ya enviado explica que hace falta la extracción del próximo corte', async () => {
+  test('con el corte ya enviado explica que no admite otro archivo y que las correcciones van por RF55', async () => {
     db.cortes = db.cortes.filter((c) => c.id === 1)
     await abrir()
     expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · ENVIADO')
-    expect(screen.getByText(/Este corte ya se envió a TransUnion y no admite otro archivo\./)).toBeInTheDocument()
+    expect(screen.getByText('Este corte ya se envió a TransUnion y no admite otro archivo. Las correcciones de un corte ya enviado se registran como «Corrección» en Novedades Urgentes (RF55).')).toBeInTheDocument()
     expect(boton('Generar archivo plano')).toBeDisabled()
   })
 

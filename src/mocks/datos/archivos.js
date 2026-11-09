@@ -6,6 +6,9 @@
 // con el ejemplo del contrato (9 y 11).
 
 // Sucursal con que se generó cada archivo inicial (el contenido se arma la primera vez que se descarga).
+// A1B2C3 es la sucursal de los mismos datos de prueba del contrato (001 / 123 / A1B2C3: ejemplo de
+// PUT /entidad/, openapi.yaml L3362; el archivo del 31/08 «se generó con datos de entidad de prueba», L2445).
+// El del 30/09 lleva el marcador XXXXXX (RF57). Son datos ficticios, no de CENS.
 export const SUCURSAL_ARCHIVO_INICIAL = { 1: 'A1B2C3', 2: 'XXXXXX' }
 
 export const archivosIniciales = () => [

@@ -8,36 +8,34 @@ import { aDetalle, aResumen, lineaTiempo, resumenCartera } from '../datos/obliga
 import { db } from '../db'
 import { corteVigente } from './ciclos'
 import { aEntero, error, espera, exigirSesion, idDeRuta, SOLO_ANALISTA, url } from '../utilidades'
-import { LIMITE_MAXIMO } from './extracciones'
+import { leerPaginacion } from './extracciones'
 
 const MSG = {
   estado: 'Estado no válido. Usa un código de la Tabla 4b.',
   eliminada: 'Usa true o false.',
   cuotas: 'Indica un número entero de cuotas, 0 o más.',
   q: 'La búsqueda admite hasta 60 caracteres.',
-  limite: 'El límite debe ser un entero mayor que 0.',
-  desplazamiento: 'El desplazamiento debe ser un entero de 0 en adelante.',
 }
 const NO_ENCONTRADA = { detail: 'Obligación no encontrada.' }
 
-// Filtros y paginación de `GET /obligaciones/` → { filtros } o { errores } ({ campo: ['mensaje'] }, como DRF).
-// A diferencia de la paginación de extracción (`{ detail }`), el contrato 0.9 define este 400 como
-// ErrorCampos, también para `limite` y `desplazamiento` (anotado en docs/PENDIENTES_BACKEND.md §5).
+// Filtros y paginación de `GET /obligaciones/` → { filtros }, { errores } ({ campo: ['mensaje'] }, como DRF)
+// o { detail } si la paginación no es válida (contrato 0.9.3: igual que la extracción).
 // Un filtro vacío (`?q=`) se ignora, igual que si no viniera.
 export function leerFiltrosObligaciones(params) {
   const valor = (nombre) => (params.get(nombre) ?? '').trim()
   const errores = {}
-  const filtros = { eliminada: false, limite: 20, desplazamiento: 0 }
+  const filtros = { eliminada: false, abierta: false }
 
   const estado = valor('estado_tu')
   if (estado) {
     if (Object.hasOwn(ESTADOS_OBLIGACION, estado)) filtros.estado_tu = estado
     else errores.estado_tu = [MSG.estado]
   }
-  const eliminada = valor('eliminada')
-  if (eliminada) {
-    if (eliminada === 'true' || eliminada === 'false') filtros.eliminada = eliminada === 'true'
-    else errores.eliminada = [MSG.eliminada]
+  for (const nombre of ['eliminada', 'abierta']) {
+    const texto = valor(nombre)
+    if (!texto) continue
+    if (texto === 'true' || texto === 'false') filtros[nombre] = texto === 'true'
+    else errores[nombre] = [MSG.eliminada]
   }
   const cuotas = valor('cuotas_mora_min')
   if (cuotas) {
@@ -49,23 +47,16 @@ export function leerFiltrosObligaciones(params) {
   if (q.length > 60) errores.q = [MSG.q]
   else if (q) filtros.q = q.toLowerCase()
 
-  const limite = valor('limite')
-  if (limite) {
-    const n = aEntero(limite)
-    if (n === null || n < 1) errores.limite = [MSG.limite]
-    else filtros.limite = Math.min(n, LIMITE_MAXIMO)
-  }
-  const desplazamiento = valor('desplazamiento')
-  if (desplazamiento) {
-    const n = aEntero(desplazamiento)
-    if (n === null || n < 0) errores.desplazamiento = [MSG.desplazamiento]
-    else filtros.desplazamiento = n
-  }
-  return Object.keys(errores).length ? { errores } : { filtros }
+  if (Object.keys(errores).length) return { errores }
+
+  const paginacion = leerPaginacion(params)
+  if (paginacion.error) return { detail: paginacion.error }
+  return { filtros: { ...filtros, limite: paginacion.limite, desplazamiento: paginacion.desplazamiento } }
 }
 
-function cumple(fila, { estado_tu: estado, eliminada, cuotas_mora_min: cuotas, q }) {
+function cumple(fila, { estado_tu: estado, eliminada, abierta, cuotas_mora_min: cuotas, q }) {
   if (fila.eliminada !== eliminada) return false
+  if (abierta && (fila.cerrada || fila.eliminada)) return false
   if (estado && fila.estado_tu !== estado) return false
   if (cuotas !== undefined && fila.cuotas_mora < cuotas) return false
   if (q && !fila.numero_obligacion.toLowerCase().includes(q) && !fila.nombre_titular.toLowerCase().includes(q)) return false
@@ -79,8 +70,9 @@ export const obligacionesHandlers = [
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
-    const { filtros, errores } = leerFiltrosObligaciones(new URL(request.url).searchParams)
+    const { filtros, errores, detail } = leerFiltrosObligaciones(new URL(request.url).searchParams)
     if (errores) return error(400, errores)
+    if (detail) return error(400, { detail })
     const corte = corteVigente()
     const filas = db.obligaciones
       .map((o) => aResumen(o, corte))

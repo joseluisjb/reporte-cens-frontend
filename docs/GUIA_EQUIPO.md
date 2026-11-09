@@ -7,7 +7,7 @@ La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hec
 
 **Para todos**
 - **Fuentes, en este orden:** el Manual Sector Real v34 de TransUnion y lo que entregó CENS; luego las fichas (`docs/iteracion2/RF_ITERACION2.md`), el mockup v3 (`docs/iteracion2/NexoVolt_Mockups_Iteracion2_v3.html`) y la matriz (`docs/iteracion2/MATRIZ_ESTADOS_SERVICIOS.md`). Los ejemplos del contrato **no** son fuente: los códigos, textos y posiciones se verifican en el Manual.
-- **Contrato 0.9.2** (`docs/contrato/openapi.yaml`). Toda la Iteración 2 es **propuesta**: el backend todavía no tiene esas rutas, así que las pantallas se construyen contra los mocks.
+- **Contrato 0.9.3** (`docs/contrato/openapi.yaml`). Toda la Iteración 2 es **propuesta**: el backend todavía no tiene esas rutas, así que las pantallas se construyen contra los mocks.
 - **Lo que depende de CENS o de TransUnion** (corchetes o «por confirmar» en las fichas) no se inventa: llega con `confirmado: false` o `por_confirmar: true` y la pantalla lo marca con `<PorConfirmar />`.
 - **Roles:** las pantallas 9 a 14 son solo del Analista de Cartera; la 15 y la 16, solo del Administrador. El otro rol ve «Acceso restringido» (sección 8).
 - **Estados (Tabla 4b):** el 07 se llama «Castigada recuperada» y el 12 «Ley 1564 de 2012 Insolvencia PNNC». Los textos «Cartera Recuperada» del mockup y de las fichas quedan por corregir.
@@ -26,7 +26,7 @@ La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hec
   - un corte puede quedar en `ENVIADO_CON_INCONSISTENCIAS` (RF54). `extractionMapper.esEnviado` solo reconoce `ENVIADO`, así que ese corte se ve como no enviado en Extracción y en Inicio;
   - `registrar-envio` (contrato 0.9) responde 409 si el corte no tiene archivo plano (`code: sin_archivo`) o si el último no es apto (`code: archivo_no_apto`). Conviene que «Registrar envío a TransUnion» lo explique. Las pruebas que registran un envío preparan antes un archivo apto con `conArchivoApto(id)` (`src/test/escenarios/envio.js`).
 
-**Backend (José Luis y Dilan):** lo que el frontend espera de la Iteración 2 está en `docs/PENDIENTES_BACKEND.md`, sección 5. Hay que copiar `openapi.yaml` 0.9.2 al backend.
+**Backend (José Luis y Dilan):** lo que el frontend espera de la Iteración 2 está en `docs/PENDIENTES_BACKEND.md`, sección 5. Hay que copiar `openapi.yaml` 0.9.3 al backend.
 
 ## Iteración 1: estado al 10/10/2026 (referencia)
 
@@ -35,7 +35,7 @@ Esta sección se conserva tal como quedó al cerrar la Iteración 1. Desde la 0.
 **Para todos**
 - **El backend real todavía no se puede usar.** No existe el login (lo hace Dilan) y, sin usuario autenticado, los endpoints de negocio responden 403. Se trabaja con `VITE_USE_MOCKS=true` y las cuentas ficticias del README.
 - **Roles.** En la interfaz `user.rol` es el texto (`ROLES.ADMIN`, `ROLES.ANALISTA`). El backend usa los códigos `ADMINISTRADOR` y `ANALISTA_CARTERA`, y la traducción la hacen los mappers (sección 8).
-- **El contrato manda:** `docs/contrato/openapi.yaml` (hoy, versión 0.9.2). Si cambias un mock, agrega su caso en `src/test/contrato.test.js`: esa prueba falla si el mock no cumple el contrato.
+- **El contrato manda:** `docs/contrato/openapi.yaml` (hoy, versión 0.9.3). Si cambias un mock, agrega su caso en `src/test/contrato.test.js`: esa prueba falla si el mock no cumple el contrato.
 - **El manual de TransUnion va primero.** Donde el backend se aparta del manual, el contrato y los mocks siguen al manual. Las diferencias están en `docs/contrato/DISCREPANCIAS.md`. Sector: **Servicios** (estados de la Tabla 4b).
 - **Contraste AA:**
   - fondos con texto blanco: `bg-bosque-d`;

@@ -115,14 +115,14 @@ export function mapEventoObligacion(raw) {
   return { fecha: fecha(raw.fecha), estado: estado(raw.estado_tu), edadMora: edadMora(raw.edad_mora), descripcion: raw.descripcion }
 }
 
-// Errores de los filtros de `GET /obligaciones/` → nombres que usa `listObligations`.
+// Errores de los filtros de `GET /obligaciones/` → nombres que usa `listObligations`. La paginación
+// inválida no llega por campo sino como `{ detail }` (contrato 0.9.3).
 export const mapObligacionesFieldErrors = (fe = {}) => ({
   estado: fe.estado_tu,
   eliminadas: fe.eliminada,
+  abierta: fe.abierta,
   cuotasMoraMin: fe.cuotas_mora_min,
   q: fe.q,
-  limite: fe.limite,
-  desplazamiento: fe.desplazamiento,
 })
 
 // ConteoEstado { estado_tu, cantidad } → { estado: { codigo, descripcion }, cantidad } (pantalla 9 y panel).

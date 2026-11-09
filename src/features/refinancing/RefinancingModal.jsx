@@ -16,8 +16,8 @@ import { createRefinancing } from './refinancingService'
 import { CUOTAS_MAX, CUOTAS_MIN, ESTADOS_QUE_CIERRAN_EN_07, estadoDeCierre, validarRefinanciacion } from './refinancingValidation'
 
 const ORDEN = ['obligacionOriginalId', 'naturaleza', 'numeroCuotas', 'fecha']
-// Máximo de obligaciones que acepta la API en una página: alcanza para la cartera simulada. Con la
-// cartera real hará falta filtrar las abiertas en el servidor o buscar (docs/PENDIENTES_BACKEND.md).
+// Máximo de obligaciones que acepta la API en una página. Se piden solo las abiertas (`?abierta=true`,
+// contrato 0.9.3) para que las cerradas no gasten la página.
 const LIMITE_OPCIONES = 100
 const AVISO_ENLACE = 'La obligación del enlace no se puede refinanciar: está cerrada o eliminada en TransUnion. Elige otra.'
 const abierta = (o) => !o.cerrada && !o.eliminada
@@ -26,7 +26,7 @@ const abierta = (o) => !o.cerrada && !o.eliminada
 // la página; si ya no está abierta, `aviso` lo explica y no queda elegida.
 async function cargarOpciones(obligacionInicial) {
   const [pagina, naturalezas, matriz] = await Promise.all([
-    listObligations({ limite: LIMITE_OPCIONES }),
+    listObligations({ abierta: true, limite: LIMITE_OPCIONES }),
     getCatalog(CATALOGOS.naturalezasReestructuracion),
     getStateMatrix(),
   ])

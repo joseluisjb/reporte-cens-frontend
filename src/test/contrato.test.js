@@ -395,17 +395,25 @@ describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligacion
     const busqueda = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?q=pamplona' })
     expect(busqueda.total).toBe(2)
     expect((await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?eliminada=true' })).total).toBe(0)
+    // 0.9.3: `abierta=true` deja las no cerradas ni eliminadas; son las mismas que cuenta el resumen.
+    const abiertas = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?abierta=true&limite=100' })
+    expect(abiertas.resultados.every((o) => !o.cerrada && !o.eliminada)).toBe(true)
+    expect(abiertas.total).toBe((await verifica('get', '/obligaciones/resumen/', 200)).abiertas)
+    expect(abiertas.total).toBeLessThan(12)
     const pagina2 = await verifica('get', '/obligaciones/', 200, { url: '/obligaciones/?limite=5&desplazamiento=10' })
     expect(pagina2).toMatchObject({ total: 12 })
     expect(pagina2.resultados).toHaveLength(2)
   })
 
-  test('GET /obligaciones/ 400 cumple ErrorCampos en cada filtro inválido', async () => {
+  test('GET /obligaciones/ 400: ErrorCampos en cada filtro inválido y `detail` en la paginación (0.9.3)', async () => {
     await entrar(ANALISTA)
     expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?estado_tu=05' })).toEqual({ estado_tu: ['Estado no válido. Usa un código de la Tabla 4b.'] })
     expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?cuotas_mora_min=-1' })).toHaveProperty('cuotas_mora_min')
     expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?eliminada=quizas' })).toHaveProperty('eliminada')
-    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?limite=0' })).toHaveProperty('limite')
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?abierta=quizas' })).toHaveProperty('abierta')
+    // 0.9.3: la paginación inválida responde `detail`, como la extracción.
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?limite=0' })).toEqual({ detail: 'El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.' })
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?desplazamiento=x' })).toEqual({ detail: 'Los parámetros limite y desplazamiento deben ser enteros.' })
     expect(await verifica('get', '/obligaciones/', 400, { url: `/obligaciones/?q=${'x'.repeat(61)}` })).toHaveProperty('q')
   })
 
@@ -934,7 +942,9 @@ describe('conformidad de los mocks de novedades, eliminaciones y rectificaciones
     const pagina = await verifica('get', '/eliminaciones/', 200, { url: '/eliminaciones/?limite=100' })
     expect(pagina.total).toBe(1)
     expect(pagina.resultados[0].numero_obligacion).toBe('2249-1180')
-    expect(await verifica('get', '/eliminaciones/', 400, { url: '/eliminaciones/?limite=0' })).toEqual({ limite: ['Debe ser un entero mayor o igual a 1.'] })
+    // 0.9.3: la paginación inválida responde `detail`, como la extracción.
+    expect(await verifica('get', '/eliminaciones/', 400, { url: '/eliminaciones/?limite=0' })).toEqual({ detail: 'El límite debe ser mayor que 0 y el desplazamiento no puede ser negativo.' })
+    expect(await verifica('get', '/eliminaciones/', 400, { url: '/eliminaciones/?limite=x' })).toEqual({ detail: 'Los parámetros limite y desplazamiento deben ser enteros.' })
   })
 
   test('POST /novedades/{id}/gestionar/ exige la fecha de gestión; una eliminación crea la eliminación una sola vez', async () => {

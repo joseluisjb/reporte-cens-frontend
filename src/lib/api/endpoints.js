@@ -47,6 +47,14 @@ export const ENDPOINTS = {
   archivos: '/archivos/', // propuesto (contrato 0.9) · los dos roles
   archivoDescarga: (id) => `/archivos/${id}/descarga/`, // propuesto (contrato 0.9) · los dos roles (text/plain)
   resultadosArchivo: (id) => `/archivos/${id}/resultados/`, // propuesto (contrato 0.9) · solo Analista (GET ver, POST multipart cargar)
+  // Novedades urgentes, eliminaciones y rectificaciones (pantalla 14 · RF24, RF50, RF55) · solo Analista
+  novedades: '/novedades/', // propuesto (contrato 0.9)
+  novedadGestionar: (id) => `/novedades/${id}/gestionar/`, // propuesto (contrato 0.9)
+  novedadRechazar: (id) => `/novedades/${id}/rechazar/`, // propuesto (contrato 0.9)
+  eliminaciones: '/eliminaciones/', // propuesto (contrato 0.9)
+  eliminacionReactivar: (id) => `/eliminaciones/${id}/reactivar/`, // propuesto (contrato 0.9)
+  rectificaciones: '/rectificaciones/', // propuesto (contrato 0.9.2: acepta novedad_id)
+  rectificacionConfirmar: (id) => `/rectificaciones/${id}/confirmar/`, // propuesto (contrato 0.9)
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

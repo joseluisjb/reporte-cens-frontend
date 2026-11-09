@@ -913,3 +913,76 @@ describe('conformidad de los mocks de la homologación de estados (contrato 0.9.
     await verifica('put', '/homologacion-estados/{estado_sac}/', 403, { ...ruta('A'), datos: { accion: 'ESTADO', estado_tu: '01' } })
   })
 })
+
+describe('conformidad de los mocks de novedades, eliminaciones y rectificaciones (contrato 0.9.2, pantalla 14)', () => {
+  test('GET /novedades/ y GET /rectificaciones/ cumplen el contrato; 400 por filtro; 403 al Administrador y 401', async () => {
+    await verifica('get', '/novedades/', 401)
+    await entrar(ADMIN)
+    await verifica('get', '/novedades/', 403)
+    await verifica('get', '/eliminaciones/', 403)
+    await entrar(ANALISTA)
+    const novedades = await verifica('get', '/novedades/', 200)
+    expect(novedades.map((n) => n.id)).toEqual([3, 2, 1])
+    await verifica('get', '/novedades/', 200, { url: '/novedades/?estado=PENDIENTE' })
+    expect(await verifica('get', '/novedades/', 400, { url: '/novedades/?estado=OTRO' })).toEqual({ estado: ['Estado no válido.'] })
+    const rectificaciones = await verifica('get', '/rectificaciones/', 200)
+    expect(rectificaciones[0]).toMatchObject({ novedad_id: 2, fecha_corte: '2026-08-31' })
+  })
+
+  test('GET /eliminaciones/ es una página { total, resultados }; 400 por paginación', async () => {
+    await entrar(ANALISTA)
+    const pagina = await verifica('get', '/eliminaciones/', 200, { url: '/eliminaciones/?limite=100' })
+    expect(pagina.total).toBe(1)
+    expect(pagina.resultados[0].numero_obligacion).toBe('2249-1180')
+    expect(await verifica('get', '/eliminaciones/', 400, { url: '/eliminaciones/?limite=0' })).toEqual({ limite: ['Debe ser un entero mayor o igual a 1.'] })
+  })
+
+  test('POST /novedades/{id}/gestionar/ exige la fecha de gestión; una eliminación crea la eliminación una sola vez', async () => {
+    await entrar(ANALISTA)
+    const peticion = { numero_transaccion_tu: 'TU-AL-001999', fecha_gestion: '2026-11-09' }
+    expectPeticionCumpleContrato('post', '/novedades/{id}/gestionar/', peticion)
+    expect(await verifica('post', '/novedades/{id}/gestionar/', 400, { url: '/novedades/1/gestionar/', datos: { numero_transaccion_tu: 'TU-AL-001999' } })).toEqual({
+      fecha_gestion: ['Usa una fecha válida (AAAA-MM-DD).'],
+    })
+    const gestionada = await verifica('post', '/novedades/{id}/gestionar/', 200, { url: '/novedades/1/gestionar/', datos: peticion })
+    expect(gestionada).toMatchObject({ estado: 'GESTIONADA', fecha_gestion: '2026-11-09' })
+    expect(await verifica('post', '/novedades/{id}/gestionar/', 409, { url: '/novedades/1/gestionar/', datos: peticion })).toEqual({ detail: 'La novedad no está pendiente.' })
+    await verifica('post', '/novedades/{id}/gestionar/', 404, { url: '/novedades/99/gestionar/', datos: peticion })
+
+    // Dos eliminaciones de la misma obligación ya eliminada no la repiten en la lista (mockup v3).
+    for (const id of [1, 2]) {
+      const nueva = { tipo: 'ELIMINACION', sujeto: 'OBLIGACION', referencia: '2249-1180', motivo: `Prueba ${id}`, motivo_eliminacion: '14' }
+      expectPeticionCumpleContrato('post', '/novedades/', nueva)
+      const creada = await verifica('post', '/novedades/', 201, { datos: nueva })
+      await verifica('post', '/novedades/{id}/gestionar/', 200, { url: `/novedades/${creada.id}/gestionar/`, datos: peticion })
+    }
+    expect((await verifica('get', '/eliminaciones/', 200)).total).toBe(1)
+  })
+
+  test('POST /eliminaciones/{id}/reactivar/ exige la fecha de activación; 409 si ya se reactivó', async () => {
+    await entrar(ANALISTA)
+    const ruta = { url: '/eliminaciones/1/reactivar/' }
+    const peticion = { numero_activacion_tu: 'TU-AC-000045', fecha_activacion: '2026-10-20' }
+    expectPeticionCumpleContrato('post', '/eliminaciones/{id}/reactivar/', peticion)
+    expect(await verifica('post', '/eliminaciones/{id}/reactivar/', 400, { ...ruta, datos: { numero_activacion_tu: 'TU-AC-000045' } })).toEqual({
+      fecha_activacion: ['Usa una fecha válida (AAAA-MM-DD).'],
+    })
+    const reactivada = await verifica('post', '/eliminaciones/{id}/reactivar/', 200, { ...ruta, datos: peticion })
+    expect(reactivada).toMatchObject({ bloqueada: false, fecha_activacion: '2026-10-20', numero_activacion_tu: 'TU-AC-000045' })
+    await verifica('post', '/eliminaciones/{id}/reactivar/', 409, { ...ruta, datos: peticion })
+  })
+
+  test('POST /rectificaciones/ 0.9.2 enlaza la novedad; 400 si la novedad no existe; 409 sobre un corte sin enviar', async () => {
+    await entrar(ANALISTA)
+    const novedad = await verifica('post', '/novedades/', 201, {
+      datos: { tipo: 'CORRECCION', sujeto: 'OBLIGACION', obligacion_id: 2, referencia: '2258-7731', motivo: 'Valor en mora errado' },
+    })
+    expect(novedad).not.toHaveProperty('corte_id')
+    const peticion = { novedad_id: novedad.id, obligacion_id: 2, corte_id: 1, campo: 'valor_mora', valor_corregido: '70000', justificacion: 'Valor errado.', medio: 'ACTUALIZACION_LINEA' }
+    expectPeticionCumpleContrato('post', '/rectificaciones/', peticion)
+    const rect = await verifica('post', '/rectificaciones/', 201, { datos: peticion })
+    expect(rect).toMatchObject({ novedad_id: novedad.id, corte_id: 1, estado: 'REGISTRADA' })
+    expect(await verifica('post', '/rectificaciones/', 400, { datos: { ...peticion, novedad_id: 999 } })).toEqual({ novedad_id: ['Novedad no encontrada.'] })
+    expect(await verifica('post', '/rectificaciones/', 409, { datos: { ...peticion, corte_id: 2 } })).toEqual({ detail: 'Solo se rectifican cortes ya enviados a TransUnion.' })
+  })
+})

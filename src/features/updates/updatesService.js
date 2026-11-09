@@ -1,12 +1,20 @@
 // Servicio para Novedades Urgentes, Eliminaciones y Rectificaciones (RF24, RF50, RF55).
-// SOLO Analista de Cartera.
-import { api, ENDPOINTS } from '../../lib/api'
+// SOLO Analista de Cartera. Propuesto en el contrato 0.9 (0.9.2 para `novedad_id` en la
+// rectificación); hoy responden los mocks.
+import { api, ApiError, ENDPOINTS } from '../../lib/api'
+import { mapPagina } from '../../lib/api/pagina'
+import { hoyISO } from '../../lib/format'
+import { listObligations } from '../obligations/obligationsService'
 import {
   aPeticionNovedad,
+  aPeticionRectificacion,
   mapEliminacion,
   mapNovedad,
   mapRectificacion,
 } from './updatesMapper'
+
+// `GET /eliminaciones/` pagina (máximo 100 por página, contrato `Limite`).
+export const LIMITE_ELIMINACIONES = 100
 
 export async function listNovelties(params = {}) {
   const query = {}
@@ -21,7 +29,8 @@ export async function createNovelty(valores) {
   return mapNovedad(data)
 }
 
-export async function manageNovelty(id, { numeroTransaccionTu, fechaGestion }) {
+// La fecha de gestión es la del día, como en el mockup v3 (submitGestion: `n.gest = todayISO()`).
+export async function manageNovelty(id, { numeroTransaccionTu, fechaGestion = hoyISO() }) {
   const { data } = await api.post(ENDPOINTS.novedadGestionar(id), {
     numero_transaccion_tu: numeroTransaccionTu,
     fecha_gestion: fechaGestion,
@@ -36,14 +45,16 @@ export async function rejectNovelty(id, { motivoRechazo }) {
   return mapNovedad(data)
 }
 
-export async function listEliminations() {
-  const { data } = await api.get(ENDPOINTS.eliminaciones)
-  return data.map(mapEliminacion)
+// Una página de eliminaciones → { items, total }.
+export async function listEliminations({ limite = LIMITE_ELIMINACIONES, desplazamiento = 0 } = {}) {
+  const { data } = await api.get(ENDPOINTS.eliminaciones, { params: { limite, desplazamiento } })
+  return mapPagina(data, mapEliminacion)
 }
 
-export async function reactivateElimination(id, { numeroActivacionTu }) {
+export async function reactivateElimination(id, { numeroActivacionTu, fechaActivacion = hoyISO() }) {
   const { data } = await api.post(ENDPOINTS.eliminacionReactivar(id), {
     numero_activacion_tu: numeroActivacionTu,
+    fecha_activacion: fechaActivacion,
   })
   return mapEliminacion(data)
 }
@@ -53,15 +64,9 @@ export async function listRectifications() {
   return data.map(mapRectificacion)
 }
 
+// `valor_anterior` no se envía: lo toma el sistema del corte afectado (contrato, POST /rectificaciones/).
 export async function createRectification(valores) {
-  const { data } = await api.post(ENDPOINTS.rectificaciones, {
-    obligacion_id: Number(valores.obligacionId),
-    corte_id: Number(valores.corteId),
-    campo: valores.campo,
-    valor_corregido: String(valores.valorCorregido),
-    justificacion: valores.justificacion,
-    medio: valores.medio,
-  })
+  const { data } = await api.post(ENDPOINTS.rectificaciones, aPeticionRectificacion(valores))
   return mapRectificacion(data)
 }
 
@@ -70,4 +75,17 @@ export async function confirmRectification(id, { confirmacionTu }) {
     confirmacion_tu: confirmacionTu,
   })
   return mapRectificacion(data)
+}
+
+// La rectificación pide `obligacion_id`; el formulario recibe el número. Se busca con el filtro `q`
+// de `GET /obligaciones/` y se exige coincidencia exacta. Sin coincidencia → error en `referencia`.
+export async function findObligationId(numero) {
+  const buscado = String(numero ?? '').trim()
+  const { items } = await listObligations({ q: buscado })
+  const obligacion = items.find((o) => o.numeroObligacion === buscado)
+  if (!obligacion) {
+    // Mismo texto que el 404 de `GET /obligaciones/{id}/` en el contrato.
+    throw new ApiError('Obligación no encontrada.', { status: 400, fieldErrors: { referencia: 'Obligación no encontrada.' } })
+  }
+  return obligacion.id
 }

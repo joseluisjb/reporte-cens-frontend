@@ -1,6 +1,7 @@
 // Novedades urgentes, eliminaciones y rectificaciones (pantalla 14, RF24, RF50, RF55).
 // SOLO Analista de Cartera.
 import { http, HttpResponse } from 'msw'
+import { esFechaISO, MSG_AUDIT } from '../../features/audit/auditValidation'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { CATALOGOS } from '../datos/catalogos'
 import { db, persistir } from '../db'
@@ -10,6 +11,10 @@ const TIPOS_VALIDOS = ['INCLUSION', 'ACTUALIZACION', 'CORRECCION', 'ELIMINACION'
 const ESTADOS_VALIDOS = ['PENDIENTE', 'GESTIONADA', 'RECHAZADA']
 const SUJETOS_VALIDOS = ['OBLIGACION', 'TITULAR']
 const MEDIOS_VALIDOS = ['ACTUALIZACION_LINEA', 'PROCESO_ESPECIAL']
+const LIMITE_MAXIMO = 100 // contrato, parámetro `Limite`
+
+// `fecha_gestion` y `fecha_activacion` son obligatorias en el contrato (400 por campo si faltan).
+const fechaValida = (valor) => typeof valor === 'string' && esFechaISO(valor.trim())
 
 export const novedadesHandlers = [
   // Listar novedades
@@ -64,35 +69,22 @@ export const novedadesHandlers = [
 
     if (Object.keys(errores).length) return error(400, errores)
 
-    let obligacion = null
-    if (cuerpo.obligacion_id) {
-      obligacion = db.obligaciones.find((o) => o.id === Number(cuerpo.obligacion_id))
-    } else if (cuerpo.sujeto === 'OBLIGACION') {
-      obligacion = db.obligaciones.find((o) => o.numero === cuerpo.referencia?.trim())
-    }
-
-    // Si es corrección de corte (RF55)
-    let corte = null
-    if (cuerpo.tipo === 'CORRECCION' && cuerpo.corte_id) {
-      corte = db.cortes.find((c) => c.id === Number(cuerpo.corte_id))
-      if (corte && !corte.estado?.startsWith('ENVIADO')) {
-        return error(409, { detail: 'Solo se rectifican cortes ya enviados a TransUnion.' })
-      }
-    }
+    const obligacion = cuerpo.obligacion_id ? db.obligaciones.find((o) => o.id === Number(cuerpo.obligacion_id)) : null
 
     const motivoElimObj = cuerpo.motivo_eliminacion
-      ? CATALOGOS['motivos-eliminacion']?.find((m) => m.codigo === cuerpo.motivo_eliminacion || m.codigo === cuerpo.motivo_eliminacion?.codigo) ?? {
+      ? (CATALOGOS['motivos-eliminacion']?.find((m) => m.codigo === cuerpo.motivo_eliminacion) ?? {
           codigo: cuerpo.motivo_eliminacion,
           descripcion: 'Motivo de eliminación',
-        }
+        })
       : null
 
+    // Solo los campos de `Novedad` en el contrato. Los datos de una corrección van en POST /rectificaciones/.
     const nuevoId = db.novedades.reduce((max, n) => Math.max(max, n.id), 0) + 1
     const novedad = {
       id: nuevoId,
       tipo: cuerpo.tipo,
       sujeto: cuerpo.sujeto,
-      obligacion_id: obligacion ? obligacion.id : (cuerpo.obligacion_id ?? null),
+      obligacion_id: obligacion ? obligacion.id : null,
       referencia: cuerpo.referencia.trim(),
       motivo: cuerpo.motivo.trim(),
       motivo_eliminacion: motivoElimObj,
@@ -104,38 +96,9 @@ export const novedadesHandlers = [
       fecha_gestion: null,
       motivo_rechazo: null,
       registrada_por: usuario?.nombre ?? 'Analista',
-      corte_id: corte ? corte.id : (cuerpo.corte_id ?? null),
-      fecha_corte: corte ? corte.fecha_corte : (cuerpo.fecha_corte ?? null),
-      medio: cuerpo.medio ?? null,
-      campo: cuerpo.campo ?? null,
-      valor_anterior: cuerpo.valor_anterior ?? null,
-      valor_corregido: cuerpo.valor_corregido ?? null,
-      justificacion: cuerpo.justificacion ?? null,
     }
 
     db.novedades.unshift(novedad)
-
-    // Si es corrección con datos de rectificación, también se registra en rectificaciones (RF55)
-    if (cuerpo.tipo === 'CORRECCION' && obligacion && corte) {
-      const rectId = db.rectificaciones.reduce((max, r) => Math.max(max, r.id), 0) + 1
-      db.rectificaciones.unshift({
-        id: rectId,
-        novedad_id: novedad.id,
-        obligacion_id: obligacion.id,
-        numero_obligacion: obligacion.numero,
-        corte_id: corte.id,
-        fecha_corte: corte.fecha_corte,
-        campo: cuerpo.campo ?? 'valor_mora',
-        valor_anterior: cuerpo.valor_anterior ?? String(obligacion.cuota || 0),
-        valor_corregido: cuerpo.valor_corregido ?? '0',
-        justificacion: cuerpo.justificacion ?? cuerpo.motivo,
-        medio: cuerpo.medio ?? 'ACTUALIZACION_LINEA',
-        estado: 'REGISTRADA',
-        confirmacion_tu: null,
-        registrada_por: usuario?.nombre ?? 'Analista',
-        fecha_registro: ahoraBogotaISO(),
-      })
-    }
 
     persistir()
     return HttpResponse.json(novedad, { status: 201 })
@@ -155,31 +118,37 @@ export const novedadesHandlers = [
     }
 
     const cuerpo = await leerCuerpo(request)
-    if (!cuerpo.numero_transaccion_tu?.trim()) {
-      return error(400, { numero_transaccion_tu: ['Ingresa el número de transacción de TransUnion.'] })
-    }
+    const errores = {}
+    if (!cuerpo.numero_transaccion_tu?.trim()) errores.numero_transaccion_tu = ['Ingresa el número de transacción de TransUnion.']
+    if (!fechaValida(cuerpo.fecha_gestion)) errores.fecha_gestion = [MSG_AUDIT.fechaInvalida]
+    if (Object.keys(errores).length) return error(400, errores)
 
     novedad.estado = 'GESTIONADA'
     novedad.numero_transaccion_tu = cuerpo.numero_transaccion_tu.trim()
-    novedad.fecha_gestion = cuerpo.fecha_gestion ?? hoyLocalISO()
+    novedad.fecha_gestion = cuerpo.fecha_gestion.trim()
 
     // Si es eliminación, crea la eliminación en la base y bloquea la obligación (RF50)
     if (novedad.tipo === 'ELIMINACION') {
       const ob = db.obligaciones.find((o) => o.id === novedad.obligacion_id || o.numero === novedad.referencia)
       if (ob) ob.eliminada = true
 
-      const elimId = db.eliminaciones.reduce((max, e) => Math.max(max, e.id), 0) + 1
-      db.eliminaciones.unshift({
-        id: elimId,
-        obligacion_id: ob ? ob.id : null,
-        numero_obligacion: ob ? ob.numero : novedad.referencia,
-        fecha: novedad.fecha_gestion,
-        motivo: novedad.motivo_eliminacion ?? { codigo: '14', descripcion: 'Por error entidad' },
-        numero_transaccion_tu: novedad.numero_transaccion_tu,
-        bloqueada: true,
-        fecha_activacion: null,
-        numero_activacion_tu: null,
-      })
+      // Como el mockup v3 (submitGestion): una obligación ya eliminada no se repite en la lista.
+      const numero = ob ? ob.numero : novedad.referencia
+      const yaEliminada = db.eliminaciones.some((e) => e.bloqueada && e.numero_obligacion === numero)
+      if (!yaEliminada) {
+        const elimId = db.eliminaciones.reduce((max, e) => Math.max(max, e.id), 0) + 1
+        db.eliminaciones.unshift({
+          id: elimId,
+          obligacion_id: ob ? ob.id : null,
+          numero_obligacion: ob ? ob.numero : novedad.referencia,
+          fecha: novedad.fecha_gestion,
+          motivo: novedad.motivo_eliminacion ?? { codigo: '14', descripcion: 'Por error entidad' },
+          numero_transaccion_tu: novedad.numero_transaccion_tu,
+          bloqueada: true,
+          fecha_activacion: null,
+          numero_activacion_tu: null,
+        })
+      }
     }
 
     persistir()
@@ -210,12 +179,29 @@ export const novedadesHandlers = [
     return HttpResponse.json(novedad)
   }),
 
-  // Listar eliminaciones (RF50)
-  http.get(url(ENDPOINTS.eliminaciones), async () => {
+  // Listar eliminaciones (RF50): página { total, resultados } con `limite` y `desplazamiento`.
+  http.get(url(ENDPOINTS.eliminaciones), async ({ request }) => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
-    return HttpResponse.json(db.eliminaciones)
+
+    const params = new URL(request.url).searchParams
+    const errores = {}
+    let limite = 20
+    let desplazamiento = 0
+    if (params.has('limite')) {
+      const n = aEntero(params.get('limite'))
+      if (n === null || n < 1) errores.limite = ['Debe ser un entero mayor o igual a 1.']
+      else limite = Math.min(n, LIMITE_MAXIMO)
+    }
+    if (params.has('desplazamiento')) {
+      const n = aEntero(params.get('desplazamiento'))
+      if (n === null || n < 0) errores.desplazamiento = ['Debe ser un entero mayor o igual a 0.']
+      else desplazamiento = n
+    }
+    if (Object.keys(errores).length) return error(400, errores)
+
+    return HttpResponse.json({ total: db.eliminaciones.length, resultados: db.eliminaciones.slice(desplazamiento, desplazamiento + limite) })
   }),
 
   // Reactivar eliminación (RF50)
@@ -232,12 +218,13 @@ export const novedadesHandlers = [
     }
 
     const cuerpo = await leerCuerpo(request)
-    if (!cuerpo.numero_activacion_tu?.trim()) {
-      return error(400, { numero_activacion_tu: ['Ingresa el número de confirmación de activación de TransUnion.'] })
-    }
+    const errores = {}
+    if (!cuerpo.numero_activacion_tu?.trim()) errores.numero_activacion_tu = ['Ingresa el número de la activación en TransUnion.']
+    if (!fechaValida(cuerpo.fecha_activacion)) errores.fecha_activacion = [MSG_AUDIT.fechaInvalida]
+    if (Object.keys(errores).length) return error(400, errores)
 
     elim.bloqueada = false
-    elim.fecha_activacion = hoyLocalISO()
+    elim.fecha_activacion = cuerpo.fecha_activacion.trim()
     elim.numero_activacion_tu = cuerpo.numero_activacion_tu.trim()
 
     // Desbloquear la obligación
@@ -279,6 +266,9 @@ export const novedadesHandlers = [
       errores.medio = ['Selecciona el medio (Actualización en Línea o Proceso especial masivo).']
     }
 
+    const novedadId = aEntero(cuerpo.novedad_id)
+    if (cuerpo.novedad_id != null && !db.novedades.some((n) => n.id === novedadId)) errores.novedad_id = ['Novedad no encontrada.']
+
     if (Object.keys(errores).length) return error(400, errores)
 
     const ob = db.obligaciones.find((o) => o.id === obId)
@@ -293,13 +283,14 @@ export const novedadesHandlers = [
     const rectId = db.rectificaciones.reduce((max, r) => Math.max(max, r.id), 0) + 1
     const rect = {
       id: rectId,
-      novedad_id: cuerpo.novedad_id ?? null,
+      novedad_id: novedadId,
       obligacion_id: ob.id,
       numero_obligacion: ob.numero,
       corte_id: corte.id,
       fecha_corte: corte.fecha_corte,
       campo: cuerpo.campo.trim(),
-      valor_anterior: cuerpo.valor_anterior ?? String(ob.cuota || 0),
+      // El backend toma el valor anterior del corte afectado; el mock no guarda el detalle por corte.
+      valor_anterior: null,
       valor_corregido: String(cuerpo.valor_corregido).trim(),
       justificacion: cuerpo.justificacion.trim(),
       medio: cuerpo.medio,

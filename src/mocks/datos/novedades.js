@@ -1,5 +1,6 @@
 // Novedades urgentes, eliminaciones y rectificaciones (RF24, RF50, RF55) de la Iteración 2.
 // Datos FICTICIOS tomados del mockup v3 (docs/iteracion2/NexoVolt_Mockups_Iteracion2_v3.html).
+// La corrección n2 guarda su corte, medio y valores en la rectificación 1 (novedad_id: 2), como el contrato.
 import { CATALOGOS } from './catalogos'
 
 export const novedadesIniciales = () => [
@@ -19,9 +20,6 @@ export const novedadesIniciales = () => [
     fecha_gestion: null,
     motivo_rechazo: null,
     registrada_por: null,
-    corte_id: null,
-    fecha_corte: null,
-    medio: null,
   },
   {
     id: 2,
@@ -39,13 +37,6 @@ export const novedadesIniciales = () => [
     fecha_gestion: null,
     motivo_rechazo: null,
     registrada_por: 'Juan Pérez',
-    corte_id: 1,
-    fecha_corte: '2026-08-31',
-    medio: 'ACTUALIZACION_LINEA',
-    campo: 'valor_mora',
-    valor_anterior: '140000',
-    valor_corregido: '70000',
-    justificacion: 'El corte 31/08/2026 reportó un valor en mora errado.',
   },
   {
     id: 3,
@@ -63,16 +54,15 @@ export const novedadesIniciales = () => [
     fecha_gestion: '2026-09-24',
     motivo_rechazo: null,
     registrada_por: 'Carlos Sánchez',
-    corte_id: null,
-    fecha_corte: null,
-    medio: null,
   },
 ]
 
 export const eliminacionesIniciales = () => [
   {
     id: 1,
-    obligacion_id: 11,
+    // 2249-1180 no está entre las 12 obligaciones del mockup (ya se eliminó): sin obligacion_id, como
+    // el ejemplo del contrato. Motivo 14 de la Tabla 28 («reportada por error» en el mockup v3, L708).
+    obligacion_id: null,
     numero_obligacion: '2249-1180',
     fecha: '2026-09-15',
     motivo: CATALOGOS['motivos-eliminacion']?.find((m) => m.codigo === '14') ?? {

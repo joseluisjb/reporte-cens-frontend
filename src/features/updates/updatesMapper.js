@@ -69,16 +69,11 @@ export function mapNovedad(n) {
     fechaGestion: n.fecha_gestion,
     motivoRechazo: n.motivo_rechazo,
     registradaPor: n.registrada_por,
-    corteId: n.corte_id,
-    fechaCorte: n.fecha_corte,
-    medio: MEDIO_A_UI[n.medio] || n.medio,
-    campo: n.campo,
-    valorAnterior: n.valor_anterior,
-    valorCorregido: n.valor_corregido,
-    justificacion: n.justificacion,
   }
 }
 
+// Cuerpo de `POST /novedades/` (NovedadCreateRequest). Los datos de una corrección van aparte, en
+// `POST /rectificaciones/` (aPeticionRectificacion).
 export function aPeticionNovedad(valores) {
   const payload = {
     tipo: TIPO_A_BACKEND[valores.tipo] || valores.tipo,
@@ -86,25 +81,23 @@ export function aPeticionNovedad(valores) {
     referencia: valores.referencia?.trim(),
     motivo: valores.motivo?.trim(),
   }
+  if (valores.obligacionId) payload.obligacion_id = Number(valores.obligacionId)
+  if (valores.tipo === 'Eliminación') payload.motivo_eliminacion = valores.motivoEliminacion
+  if (valores.valoresEnviados?.trim()) payload.valores_enviados = valores.valoresEnviados.trim()
+  return payload
+}
 
-  if (valores.obligacionId) {
-    payload.obligacion_id = Number(valores.obligacionId)
+// Cuerpo de `POST /rectificaciones/` (RectificacionCreateRequest, contrato 0.9.2 con `novedad_id`).
+export function aPeticionRectificacion(valores) {
+  const payload = {
+    obligacion_id: Number(valores.obligacionId),
+    corte_id: Number(valores.corteId),
+    campo: valores.campo?.trim(),
+    valor_corregido: String(valores.valorCorregido).trim(),
+    justificacion: valores.justificacion?.trim(),
+    medio: MEDIO_A_BACKEND[valores.medio] || valores.medio,
   }
-  if (valores.tipo === 'Eliminación' || valores.tipo === 'ELIMINACION') {
-    payload.motivo_eliminacion = valores.motivoEliminacion
-  }
-  if (valores.tipo === 'Corrección' || valores.tipo === 'CORRECCION') {
-    if (valores.corteId) payload.corte_id = Number(valores.corteId)
-    if (valores.medio) payload.medio = MEDIO_A_BACKEND[valores.medio] || valores.medio
-    if (valores.campo) payload.campo = valores.campo.trim()
-    if (valores.valorAnterior != null) payload.valor_anterior = String(valores.valorAnterior)
-    if (valores.valorCorregido != null) payload.valor_corregido = String(valores.valorCorregido)
-    if (valores.justificacion) payload.justificacion = valores.justificacion.trim()
-  }
-  if (valores.valoresEnviados) {
-    payload.valores_enviados = valores.valoresEnviados.trim()
-  }
-
+  if (valores.novedadId) payload.novedad_id = Number(valores.novedadId)
   return payload
 }
 
@@ -144,4 +137,16 @@ export function mapRectificacion(r) {
     registradaPor: r.registrada_por,
     fechaRegistro: r.fecha_registro,
   }
+}
+
+// Errores por campo del servidor (snake_case) → nombres del formulario de novedad (useFormulario).
+const CAMPOS_FORMULARIO = {
+  obligacion_id: 'referencia',
+  motivo_eliminacion: 'motivoEliminacion',
+  corte_id: 'corteId',
+  valor_corregido: 'valorCorregido',
+}
+
+export function mapNovedadFieldErrors(fieldErrors = {}) {
+  return Object.fromEntries(Object.entries(fieldErrors).map(([campo, mensaje]) => [CAMPOS_FORMULARIO[campo] ?? campo, mensaje]))
 }

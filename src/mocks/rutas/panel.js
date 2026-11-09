@@ -9,10 +9,6 @@ import { corteVigente } from './ciclos'
 import { espera, exigirSesion, SOLO_ANALISTA, url } from '../utilidades'
 import { aEntidad } from './entidad'
 
-// Novedades urgentes pendientes: foto del mockup v3 (n1 y n2) hasta que existan los mocks de
-// novedades (pantalla 14, Angel). Cuando estén, se cuentan de su colección.
-export const NOVEDADES_PENDIENTES_FOTO = 2
-
 export function panelResumen() {
   const cartera = resumenCartera(db.obligaciones, corteVigente())
   const ultimo = [...db.archivos].sort((a, b) => Date.parse(b.fecha_generacion) - Date.parse(a.fecha_generacion))[0] ?? null
@@ -22,7 +18,8 @@ export function panelResumen() {
     distribucion: cartera.por_estado,
     ultimo_archivo: ultimo,
     en_reclamo: db.obligaciones.filter((o) => !o.eliminada && o.en_reclamo).length,
-    novedades_pendientes: NOVEDADES_PENDIENTES_FOTO,
+    // Se cuentan de la colección de la pantalla 14 (al inicio, n1 y n2 del mockup v3).
+    novedades_pendientes: db.novedades.filter((n) => n.estado === 'PENDIENTE').length,
     // Mismo conteo que las tarjetas de la pantalla 9 (solo abiertas).
     con_dos_o_mas_cuotas: cartera.por_cuotas_mora.dos_a_tres + cartera.por_cuotas_mora.cuatro_o_mas,
     entidad_con_marcador: aEntidad(db.entidad).con_marcador,

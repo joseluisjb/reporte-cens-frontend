@@ -33,8 +33,9 @@ export default function ReactivateModal({ open, eliminacion, onClose, onReactiva
       onReactivada?.(actualizada)
       onClose?.()
     } catch (err) {
-      if (err.fieldErrors?.numero_activacion_tu?.[0]) {
-        setErrorActivacion(err.fieldErrors.numero_activacion_tu[0])
+      // ApiError.fieldErrors trae un texto por campo ({ campo: 'mensaje' }).
+      if (err.fieldErrors?.numero_activacion_tu) {
+        setErrorActivacion(err.fieldErrors.numero_activacion_tu)
       } else {
         setErrorServidor(mensajeDeError(err))
       }

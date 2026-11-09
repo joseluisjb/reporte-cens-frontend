@@ -33,8 +33,9 @@ export default function ManageNoveltyModal({ open, novedad, onClose, onGestionad
       onGestionada?.(actualizada)
       onClose?.()
     } catch (err) {
-      if (err.fieldErrors?.numero_transaccion_tu?.[0]) {
-        setErrorTransaccion(err.fieldErrors.numero_transaccion_tu[0])
+      // ApiError.fieldErrors trae un texto por campo ({ campo: 'mensaje' }).
+      if (err.fieldErrors?.numero_transaccion_tu) {
+        setErrorTransaccion(err.fieldErrors.numero_transaccion_tu)
       } else {
         setErrorServidor(mensajeDeError(err))
       }

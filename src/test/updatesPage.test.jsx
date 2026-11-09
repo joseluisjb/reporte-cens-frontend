@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { API_URL } from '../lib/config'
+import { hoyISO } from '../lib/format'
 import { eliminacionesIniciales, novedadesIniciales } from '../mocks/datos/novedades'
 import { db } from '../mocks/db'
 import { server } from '../mocks/server'
@@ -197,7 +198,12 @@ describe('pantalla 14 · registro de novedades (RF24, RF50, RF55)', () => {
     expect(within(modal).getByLabelText(/Campo a corregir/i)).toBeInTheDocument()
     expect(within(modal).getByLabelText(/Valor corregido/i)).toBeInTheDocument()
 
-    await userEvent.type(within(modal).getByLabelText(/Número de obligación o identificación/i), '2270-1122')
+    // El selector lista los cortes enviados con su número de obligaciones (no «undefined»).
+    const opciones = within(within(modal).getByLabelText(/Corte que se rectifica/i)).getAllByRole('option').map((o) => o.textContent)
+    expect(opciones.some((o) => /^Corte 31\/08\/2026 · \d+ obligaciones$/.test(o))).toBe(true)
+    expect(opciones.join(' ')).not.toMatch(/undefined/)
+
+    await userEvent.type(within(modal).getByLabelText(/Número de obligación o identificación/i), '2258-7731')
     await userEvent.type(within(modal).getByLabelText('Motivo'), 'Ajuste de días de mora reportados')
     await userEvent.clear(within(modal).getByLabelText(/Campo a corregir/i))
     await userEvent.type(within(modal).getByLabelText(/Campo a corregir/i), 'dias_mora')
@@ -207,8 +213,76 @@ describe('pantalla 14 · registro de novedades (RF24, RF50, RF55)', () => {
     await userEvent.click(within(modal).getByRole('button', { name: 'Registrar novedad' }))
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(await screen.findByText('2270-1122')).toBeInTheDocument()
     expect(screen.getAllByText('Corrección')).toHaveLength(2)
+    expect(screen.getAllByText(/Rectifica el corte 31\/08\/2026/)).toHaveLength(2)
+
+    // Dos registros enlazados (contrato 0.9.2): la novedad sin datos del corte y su rectificación.
+    const novedad = db.novedades[0]
+    expect(novedad).toMatchObject({ tipo: 'CORRECCION', obligacion_id: 2, referencia: '2258-7731' })
+    expect(novedad).not.toHaveProperty('corte_id')
+    expect(db.rectificaciones[0]).toMatchObject({ novedad_id: novedad.id, obligacion_id: 2, corte_id: 1, campo: 'dias_mora', valor_corregido: '0', medio: 'ACTUALIZACION_LINEA' })
+  })
+
+  test('una corrección sobre un número que no existe marca el campo y no crea nada (RF55)', async () => {
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: /Registrar novedad/i }))
+    const modal = await screen.findByRole('dialog', { name: 'Registrar novedad urgente' })
+    await userEvent.selectOptions(within(modal).getByLabelText('Tipo de novedad'), 'Corrección')
+    await userEvent.type(within(modal).getByLabelText(/Número de obligación o identificación/i), '2270-1122')
+    await userEvent.type(within(modal).getByLabelText('Motivo'), 'Ajuste')
+    await userEvent.type(within(modal).getByLabelText(/Valor corregido/i), '0')
+    await userEvent.type(within(modal).getByLabelText(/Justificación de la corrección/i), 'Prueba')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar novedad' }))
+
+    expect(await within(modal).findByText('Obligación no encontrada.')).toBeInTheDocument()
+    expect(db.novedades).toHaveLength(3)
+    expect(db.rectificaciones).toHaveLength(1)
+  })
+
+  test('si la rectificación falla, el reintento no duplica la novedad (RF55)', async () => {
+    let fallar = true
+    server.use(
+      http.post(`${API_URL}/rectificaciones/`, () =>
+        fallar ? HttpResponse.json({ detail: 'Error de servidor' }, { status: 503 }) : undefined,
+      ),
+    )
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: /Registrar novedad/i }))
+    const modal = await screen.findByRole('dialog', { name: 'Registrar novedad urgente' })
+    await userEvent.selectOptions(within(modal).getByLabelText('Tipo de novedad'), 'Corrección')
+    await userEvent.type(within(modal).getByLabelText(/Número de obligación o identificación/i), '2258-7731')
+    await userEvent.type(within(modal).getByLabelText('Motivo'), 'Ajuste')
+    await userEvent.type(within(modal).getByLabelText(/Valor corregido/i), '0')
+    await userEvent.type(within(modal).getByLabelText(/Justificación de la corrección/i), 'Prueba')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar novedad' }))
+    expect(await within(modal).findByRole('alert')).toBeInTheDocument()
+    expect(db.novedades).toHaveLength(4)
+
+    fallar = false
+    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar novedad' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(db.novedades).toHaveLength(4)
+    expect(db.rectificaciones[0].novedad_id).toBe(db.novedades[0].id)
+    expect(screen.getByRole('button', { name: 'Todas (4)' })).toBeInTheDocument()
+  })
+
+  test('un error por campo del servidor se muestra en su campo (motivo_eliminacion → motivo de la eliminación)', async () => {
+    server.use(
+      http.post(`${API_URL}/novedades/`, () =>
+        HttpResponse.json({ motivo_eliminacion: ['Selecciona el motivo de la eliminación (Tabla 28).'] }, { status: 400 }),
+      ),
+    )
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: /Registrar novedad/i }))
+    const modal = await screen.findByRole('dialog', { name: 'Registrar novedad urgente' })
+    await userEvent.selectOptions(within(modal).getByLabelText('Tipo de novedad'), 'Eliminación')
+    await userEvent.selectOptions(within(modal).getByLabelText(/Motivo de la eliminación/i), '14')
+    await userEvent.type(within(modal).getByLabelText(/Número de obligación o identificación/i), '2299-8800')
+    await userEvent.type(within(modal).getByLabelText('Motivo'), 'Prueba')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar novedad' }))
+    await waitFor(() =>
+      expect(within(modal).getByLabelText(/Motivo de la eliminación/i)).toHaveAccessibleDescription('Selecciona el motivo de la eliminación (Tabla 28).'),
+    )
   })
 })
 
@@ -250,5 +324,82 @@ describe('pantalla 14 · obligaciones eliminadas en TransUnion (RF50)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(within(tablaElim).getByText(/Reactivada/)).toBeInTheDocument()
     expect(within(tablaElim).queryByRole('button', { name: /Reactivar/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('pantalla 14 · arreglos de la revisión', () => {
+  test('gestionar manda la fecha del día y el modal se abre limpio para la siguiente novedad', async () => {
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Gestionar novedad 2260-5543' }))
+    let modal = await screen.findByRole('dialog', { name: /Gestionar en Actualización en Línea/i })
+    await userEvent.type(within(modal).getByLabelText(/Número de confirmación de TransUnion/i), 'TU-AL-001999')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Marcar como gestionada' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(db.novedades.find((n) => n.id === 1).fecha_gestion).toBe(hoyISO())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Gestionar novedad 2258-7731' }))
+    modal = await screen.findByRole('dialog', { name: /Gestionar en Actualización en Línea/i })
+    expect(within(modal).getByLabelText(/Número de confirmación de TransUnion/i)).toHaveValue('')
+
+    // También después de Cancelar
+    await userEvent.type(within(modal).getByLabelText(/Número de confirmación de TransUnion/i), 'TU-AL-000001')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Cancelar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Gestionar novedad 2258-7731' }))
+    modal = await screen.findByRole('dialog', { name: /Gestionar en Actualización en Línea/i })
+    expect(within(modal).getByLabelText(/Número de confirmación de TransUnion/i)).toHaveValue('')
+  })
+
+  test('el error por campo del servidor se ve completo en el campo, no solo su primera letra', async () => {
+    server.use(
+      http.post(`${API_URL}/novedades/:id/gestionar/`, () =>
+        HttpResponse.json({ numero_transaccion_tu: ['Ingresa el número de transacción de TransUnion.'] }, { status: 400 }),
+      ),
+    )
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Gestionar novedad 2260-5543' }))
+    const modal = await screen.findByRole('dialog', { name: /Gestionar en Actualización en Línea/i })
+    await userEvent.type(within(modal).getByLabelText(/Número de confirmación de TransUnion/i), 'X')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Marcar como gestionada' }))
+    expect(await within(modal).findByText('Ingresa el número de transacción de TransUnion.')).toBeInTheDocument()
+  })
+
+  test('una novedad rechazada muestra el motivo del rechazo, no «Gestionada» (RF24, flujo alterno)', async () => {
+    db.novedades[2] = { ...db.novedades[2], estado: 'RECHAZADA', numero_transaccion_tu: null, motivo_rechazo: 'El módulo en línea rechazó la transacción por datos del titular.' }
+    await abrir()
+    const fila = within(screen.getByRole('table', { name: 'Novedades registradas' })).getByText('2262-3318').closest('tr')
+    expect(within(fila).getByText('Rechazada')).toBeInTheDocument()
+    expect(within(fila).getByText('El módulo en línea rechazó la transacción por datos del titular.')).toBeInTheDocument()
+    expect(within(fila).queryByText('Gestionada')).not.toBeInTheDocument()
+  })
+
+  test('gestionar una eliminación agrega la obligación a la tabla de eliminadas (RF50)', async () => {
+    db.novedades.unshift({ ...db.novedades[0], id: 9, tipo: 'ELIMINACION', obligacion_id: 2, referencia: '2258-7731', motivo_eliminacion: { codigo: '14', descripcion: 'Por error entidad' } })
+    await abrir()
+    // Hay dos novedades pendientes con 2258-7731; la primera es la eliminación (id 9).
+    await userEvent.click(screen.getAllByRole('button', { name: 'Gestionar novedad 2258-7731' })[0])
+    const modal = await screen.findByRole('dialog', { name: /Gestionar en Actualización en Línea/i })
+    await userEvent.type(within(modal).getByLabelText(/Número de confirmación de TransUnion/i), 'TU-AL-002000')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Marcar como gestionada' }))
+    // La tabla se vuelve a pedir: se busca de nuevo cuando termine de cargar.
+    await waitFor(() => expect(within(screen.getByRole('table', { name: 'Obligaciones eliminadas' })).getByText('2258-7731')).toBeInTheDocument())
+    expect(within(screen.getByRole('table', { name: 'Obligaciones eliminadas' })).getByText('TU-AL-002000')).toBeInTheDocument()
+  })
+
+  test('la tabla de eliminadas tiene su propio estado de carga y de error, con reintento', async () => {
+    let fallar = true
+    server.use(
+      http.get(`${API_URL}/eliminaciones/`, () =>
+        fallar ? HttpResponse.json({ detail: 'Error de servidor' }, { status: 503 }) : undefined,
+      ),
+    )
+    await abrir()
+    // Las novedades cargan aunque fallen las eliminaciones, y no se dice «No hay obligaciones eliminadas».
+    expect(screen.getByRole('table', { name: 'Novedades registradas' })).toBeInTheDocument()
+    expect(await screen.findByText(/Ocurrió un error en el servidor/i)).toBeInTheDocument()
+    expect(screen.queryByText('No hay obligaciones eliminadas')).not.toBeInTheDocument()
+
+    fallar = false
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar eliminaciones' }))
+    expect(await screen.findByRole('table', { name: 'Obligaciones eliminadas' })).toBeInTheDocument()
   })
 })

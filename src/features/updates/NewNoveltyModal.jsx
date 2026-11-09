@@ -1,17 +1,17 @@
 // Modal para registrar una novedad urgente (RF24, RF50, RF55)
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Button, FieldError, FieldLabel, Input, Modal, Select } from '../../components/ui'
-import { formatearFechaISO } from '../../lib/format'
+import { formatearFechaISO, plural } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
 import { listCuts } from '../extraction/extractionService'
 import { CATALOGOS, getCatalog } from '../transunion/catalogosService'
-import { MEDIOS_RECTIFICACION, SUJETOS_NOVEDAD, TIPOS_NOVEDAD } from './updatesMapper'
-import { createNovelty } from './updatesService'
+import { MEDIOS_RECTIFICACION, mapNovedadFieldErrors, SUJETOS_NOVEDAD, TIPOS_NOVEDAD } from './updatesMapper'
+import { createNovelty, createRectification, findObligationId } from './updatesService'
 import { validarNovedad } from './updatesValidation'
 
-export default function NewNoveltyModal({ open, onClose, onCreada }) {
+export default function NewNoveltyModal({ open, onClose, onCreada, onRectificada }) {
   if (!open) return null
-  return <Formulario onCerrar={onClose} onCreada={onCreada} />
+  return <Formulario onCerrar={onClose} onCreada={onCreada} onRectificada={onRectificada} />
 }
 
 const ORDEN_CAMPOS = [
@@ -27,9 +27,11 @@ const ORDEN_CAMPOS = [
   'motivo',
 ]
 
-function Formulario({ onCerrar, onCreada }) {
+function Formulario({ onCerrar, onCreada, onRectificada }) {
   const [cortes, setCortes] = useState([])
   const [motivosElim, setMotivosElim] = useState([])
+  // Novedad ya creada en este formulario: si la rectificación falla, el reintento no la duplica.
+  const creada = useRef(null)
 
   useEffect(() => {
     let cancelado = false
@@ -72,9 +74,22 @@ function Formulario({ onCerrar, onCreada }) {
     },
     orden: ORDEN_CAMPOS,
     validar: validarNovedad,
+    traducirErrores: mapNovedadFieldErrors,
     onSubmit: async (valores) => {
-      const novedad = await createNovelty(valores)
-      onCreada?.(novedad)
+      // Una corrección (RF55) son dos registros: la novedad y su rectificación, enlazadas por novedad_id.
+      const esCorreccion = valores.tipo === 'Corrección'
+      const obligacionId = esCorreccion ? await findObligationId(valores.referencia) : undefined
+      const previa = creada.current
+      const reutilizable = previa && previa.tipo === valores.tipo && previa.referencia === valores.referencia.trim()
+      const novedad = reutilizable ? previa : await createNovelty({ ...valores, obligacionId })
+      if (!reutilizable) {
+        creada.current = novedad
+        onCreada?.(novedad)
+      }
+      if (esCorreccion) {
+        const rectificacion = await createRectification({ ...valores, obligacionId, novedadId: novedad.id })
+        onRectificada?.(rectificacion)
+      }
       onCerrar?.()
     },
   })
@@ -156,7 +171,7 @@ function Formulario({ onCerrar, onCreada }) {
               <option value="">Selecciona un corte enviado</option>
               {cortes.map((c) => (
                 <option key={c.id} value={String(c.id)}>
-                  Corte {formatearFechaISO(c.fechaCorte)} · {c.totalRegistros} obligaciones
+                  Corte {formatearFechaISO(c.fechaCorte)} · {plural(c.totalObligaciones, 'obligación', 'obligaciones')}
                 </option>
               ))}
             </Select>

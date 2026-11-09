@@ -271,7 +271,9 @@ function Parametros({ corte, validaciones, entidad, accion, yaGenerado, onValida
   const hayCorrectivas = validaciones.resultados.some((r) => r.nivel === 'correctiva')
   const nombre = entidad ? `${entidad.prefijoArchivo}${corte.fechaCorte.replaceAll('-', '')}` : null
   let ayuda = 'Incluye las obligaciones abiertas y las que cerraron en este corte. Las que cerraron antes ya no se reportan.'
-  if (!corte.esBorrador && !corte.esValidado) ayuda = 'Este corte ya se envió a TransUnion y no admite otro archivo. Para el siguiente reporte, genera la extracción del próximo corte.'
+  // Corte enviado: el archivo solo se genera en VALIDADO (contrato, 409 de POST /extracciones/{id}/archivo/)
+  // y las correcciones van por RF55 (mockup v3 L1464, pantalla 14).
+  if (!corte.esBorrador && !corte.esValidado) ayuda = 'Este corte ya se envió a TransUnion y no admite otro archivo. Las correcciones de un corte ya enviado se registran como «Corrección» en Novedades Urgentes (RF55).'
   else if (hayCorrectivas) ayuda = 'Corrige las validaciones en rojo para poder validar el corte y generar el archivo.'
   else if (corte.esBorrador) ayuda = 'El corte está en borrador: valídalo para poder generar el archivo.'
   else if (yaGenerado) ayuda = 'Ya existe un archivo para este corte: se generará una nueva versión.'

@@ -87,6 +87,18 @@ describe('pantalla 11 · registro manual', () => {
     expect(within(dialogo).getByLabelText('Fecha de la refinanciación')).toHaveValue(hoyISO())
   })
 
+  test('pide solo las abiertas al servidor (?abierta=true, contrato 0.9.3)', async () => {
+    const pedidas = []
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url)
+      if (url.pathname.endsWith('/obligaciones/')) pedidas.push(url.searchParams)
+    })
+    await abrir()
+    await abrirModal()
+    expect(pedidas.some((p) => p.get('abierta') === 'true' && p.get('limite') === '100')).toBe(true)
+    server.events.removeAllListeners()
+  })
+
   test('la nota cambia con la obligación: Vigente → 02 y Dudoso recaudo → 07 por confirmar', async () => {
     await abrir()
     const dialogo = await abrirModal()

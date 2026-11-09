@@ -10,11 +10,13 @@ export const LIMITE_OBLIGACIONES = 20
 // Una página de obligaciones → { items, total }, ordenadas por número de obligación.
 //   estado: código de la Tabla 4b · eliminadas: true = solo las eliminadas en TransUnion (RF50)
 //   cuotasMoraMin: al menos esas cuotas en mora · q: número de obligación o nombre del titular
+//   abierta: true = solo las no cerradas ni eliminadas (contrato 0.9.3, formulario de refinanciación)
 //   `limite` de 1 a 100 (por defecto 20); `desplazamiento` desde 0. Los filtros vacíos no se envían.
-export async function listObligations({ estado, eliminadas = false, cuotasMoraMin, q, limite = LIMITE_OBLIGACIONES, desplazamiento = 0 } = {}) {
+export async function listObligations({ estado, eliminadas = false, abierta = false, cuotasMoraMin, q, limite = LIMITE_OBLIGACIONES, desplazamiento = 0 } = {}) {
   const params = { limite, desplazamiento }
   if (hayValor(estado)) params.estado_tu = estado
   if (eliminadas) params.eliminada = 'true'
+  if (abierta) params.abierta = 'true'
   if (hayValor(cuotasMoraMin)) params.cuotas_mora_min = cuotasMoraMin
   if (hayValor(q)) params.q = String(q).trim()
   const { data } = await api.get(ENDPOINTS.obligaciones, { params })

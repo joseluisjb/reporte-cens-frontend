@@ -5,13 +5,13 @@ import { esFechaISO, MSG_AUDIT } from '../../features/audit/auditValidation'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { CATALOGOS } from '../datos/catalogos'
 import { db, persistir } from '../db'
+import { leerPaginacion } from './extracciones'
 import { aEntero, ahoraBogotaISO, error, espera, exigirSesion, hoyLocalISO, leerCuerpo, SOLO_ANALISTA, url } from '../utilidades'
 
 const TIPOS_VALIDOS = ['INCLUSION', 'ACTUALIZACION', 'CORRECCION', 'ELIMINACION']
 const ESTADOS_VALIDOS = ['PENDIENTE', 'GESTIONADA', 'RECHAZADA']
 const SUJETOS_VALIDOS = ['OBLIGACION', 'TITULAR']
 const MEDIOS_VALIDOS = ['ACTUALIZACION_LINEA', 'PROCESO_ESPECIAL']
-const LIMITE_MAXIMO = 100 // contrato, parámetro `Limite`
 
 // `fecha_gestion` y `fecha_activacion` son obligatorias en el contrato (400 por campo si faltan).
 const fechaValida = (valor) => typeof valor === 'string' && esFechaISO(valor.trim())
@@ -179,27 +179,14 @@ export const novedadesHandlers = [
     return HttpResponse.json(novedad)
   }),
 
-  // Listar eliminaciones (RF50): página { total, resultados } con `limite` y `desplazamiento`.
+  // Listar eliminaciones (RF50): página { total, resultados }; paginación inválida → { detail } (0.9.3).
   http.get(url(ENDPOINTS.eliminaciones), async ({ request }) => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
 
-    const params = new URL(request.url).searchParams
-    const errores = {}
-    let limite = 20
-    let desplazamiento = 0
-    if (params.has('limite')) {
-      const n = aEntero(params.get('limite'))
-      if (n === null || n < 1) errores.limite = ['Debe ser un entero mayor o igual a 1.']
-      else limite = Math.min(n, LIMITE_MAXIMO)
-    }
-    if (params.has('desplazamiento')) {
-      const n = aEntero(params.get('desplazamiento'))
-      if (n === null || n < 0) errores.desplazamiento = ['Debe ser un entero mayor o igual a 0.']
-      else desplazamiento = n
-    }
-    if (Object.keys(errores).length) return error(400, errores)
+    const { limite, desplazamiento, error: errorPaginacion } = leerPaginacion(new URL(request.url).searchParams)
+    if (errorPaginacion) return error(400, { detail: errorPaginacion })
 
     return HttpResponse.json({ total: db.eliminaciones.length, resultados: db.eliminaciones.slice(desplazamiento, desplazamiento + limite) })
   }),

@@ -47,6 +47,10 @@ export const ENDPOINTS = {
   archivos: '/archivos/', // propuesto (contrato 0.9) · los dos roles
   archivoDescarga: (id) => `/archivos/${id}/descarga/`, // propuesto (contrato 0.9) · los dos roles (text/plain)
   resultadosArchivo: (id) => `/archivos/${id}/resultados/`, // propuesto (contrato 0.9) · solo Analista (GET ver, POST multipart cargar)
+  // Reclamos Habeas Data (pantalla 13 · RF23) · solo Analista
+  reclamos: '/reclamos/', // propuesto (contrato 0.9)
+  reclamoCerrar: (id) => `/reclamos/${id}/cerrar/`, // propuesto (contrato 0.9)
+  reclamosInsumo: '/reclamos/insumo/', // propuesto (contrato 0.9.4) · text/plain; deja marcados los reclamos incluidos
   // Novedades urgentes, eliminaciones y rectificaciones (pantalla 14 · RF24, RF50, RF55) · solo Analista
   novedades: '/novedades/', // propuesto (contrato 0.9)
   novedadGestionar: (id) => `/novedades/${id}/gestionar/`, // propuesto (contrato 0.9)

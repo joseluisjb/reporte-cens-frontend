@@ -7,7 +7,6 @@
 // `section`: título del grupo del menú (`null` = sin grupo, arriba). El orden sigue a la maqueta v3.
 import { lazy } from 'react'
 import { ROLES } from '../features/auth/roles'
-import * as EnConstruccion from './pantallasEnConstruccion'
 
 export const SOLO_ADMIN = [ROLES.ADMIN]
 export const SOLO_ANALISTA = [ROLES.ANALISTA]
@@ -25,7 +24,7 @@ export const NAV_ITEMS = [
   { path: '/ciclo', label: 'Actualización Mensual', icon: 'refresh', roles: SOLO_ANALISTA, section: 'Ciclo de vida', Page: lazy(() => import('../features/cycle/CyclePage')) },
   { path: '/refinanciaciones', label: 'Refinanciaciones', icon: 'link', roles: SOLO_ANALISTA, section: 'Ciclo de vida', Page: lazy(() => import('../features/refinancing/RefinancingPage')) },
   { path: '/reporte', label: 'Generar Reporte', icon: 'file', roles: SOLO_ANALISTA, section: 'Reporte a TransUnion', Page: lazy(() => import('../features/report/ReportPage')) },
-  { path: '/reclamos', label: 'Reclamos Habeas Data', icon: 'flag', roles: SOLO_ANALISTA, section: 'Reporte a TransUnion', Page: EnConstruccion.Reclamos },
+  { path: '/reclamos', label: 'Reclamos Habeas Data', icon: 'flag', roles: SOLO_ANALISTA, section: 'Reporte a TransUnion', Page: lazy(() => import('../features/claims/ClaimsPage')) },
   { path: '/novedades', label: 'Novedades Urgentes', icon: 'clock', roles: SOLO_ANALISTA, section: 'Reporte a TransUnion', Page: lazy(() => import('../features/updates/UpdatesPage')) },
   { path: '/usuarios', label: 'Gestión de Usuarios', icon: 'user', roles: SOLO_ADMIN, section: 'Administración', Page: lazy(() => import('../features/users/UsersPage')) },
   { path: '/auditoria', label: 'Auditoría', icon: 'shield', roles: SOLO_ADMIN, section: 'Administración', Page: lazy(() => import('../features/audit/AuditPage')) },

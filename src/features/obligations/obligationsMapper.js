@@ -77,9 +77,11 @@ export function mapObligacionDetalle(raw) {
   return {
     ...mapObligacionResumen(raw),
     motivoRevision: raw.motivo_revision ?? null,
-    concepto: { codigo: raw.concepto.codigo, descripcion: raw.concepto.descripcion ?? null },
+    // El contrato los pide siempre, pero el backend de dev (09/11/2026) manda `concepto: null` y puede
+    // mandar nulos `fecha_ingreso` y `valor_inicial`: el detalle muestra «—» en vez de fallar.
+    concepto: raw.concepto ? { codigo: raw.concepto.codigo, descripcion: raw.concepto.descripcion ?? null } : null,
     fechaIngreso: fecha(raw.fecha_ingreso),
-    valorInicial: raw.valor_inicial,
+    valorInicial: raw.valor_inicial ?? null,
     valorCuota: raw.valor_cuota,
     valorCuotaAntesCierre: raw.valor_cuota_antes_cierre ?? null,
     fechaExigibilidad: fecha(raw.fecha_exigibilidad),

@@ -5,6 +5,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { API_URL } from '../lib/config'
+import { aDetalle } from '../mocks/datos/obligacionesIteracion2'
 import { db } from '../mocks/db'
 import { server } from '../mocks/server'
 import { renderConSesion } from './renderApp'
@@ -212,6 +213,18 @@ describe('pantalla 9 · detalle', () => {
     expect(dato(panel, 'Edad de mora (Tabla 9)')).toHaveTextContent('00 - Normal')
     expect(dato(panel, 'Fecha de exigibilidad')).toHaveTextContent('—')
     expect(panel).toHaveTextContent('No tiene cuotas vencidas sin pagar.')
+  })
+
+  test('si el backend manda concepto, fecha de ingreso o valor inicial nulos, muestra «—» (RF52)', async () => {
+    // El backend de dev (09/11/2026) manda `concepto: null` siempre, aunque el contrato lo pide.
+    const conNulos = { ...aDetalle(db.obligaciones.find((o) => o.numero === '2263-9004')), concepto: null, fecha_ingreso: null, valor_inicial: null }
+    server.use(http.get(`${API_URL}/obligaciones/:id/`, () => HttpResponse.json(conNulos)))
+    await abrir()
+    const panel = await abrirDetalle('2263-9004')
+    expect(dato(panel, 'Concepto de la cuota')).toHaveTextContent('—')
+    expect(dato(panel, 'Valor inicial')).toHaveTextContent('—')
+    expect(dato(panel, 'Ingreso al sistema')).toHaveTextContent('—')
+    expect(dato(panel, 'Saldo')).toHaveTextContent('$1.450.000')
   })
 
   test('dos cuotas vencidas de $70.000, exigibilidad y la nota de imputación por confirmar (RF17, RF49)', async () => {

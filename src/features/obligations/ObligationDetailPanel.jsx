@@ -205,7 +205,7 @@ function DatosObligacion({ o, onAbrir }) {
   const edad = o.edadMora?.codigo
   return (
     <dl className="grid grid-cols-1 gap-x-4.5 gap-y-3 sm:grid-cols-2">
-      <Dato etiqueta="Concepto de la cuota">{o.concepto.descripcion ? `${o.concepto.codigo} · ${o.concepto.descripcion}` : o.concepto.codigo}</Dato>
+      <Dato etiqueta="Concepto de la cuota">{codigoYDescripcion(o.concepto)}</Dato>
       <Dato etiqueta="Saldo">{formatearCOP(o.valorSaldo)}</Dato>
       <Dato etiqueta="Valor en mora">{formatearCOP(o.valorMora)}</Dato>
       <Dato etiqueta="Días de mora">{formatearDias(o.diasMora)}</Dato>
@@ -224,7 +224,7 @@ function DatosObligacion({ o, onAbrir }) {
       >
         {formatearCOP(o.valorCuota)}
       </Dato>
-      <Dato etiqueta="Valor inicial">{formatearCOP(o.valorInicial)}</Dato>
+      <Dato etiqueta="Valor inicial">{o.valorInicial == null ? '—' : formatearCOP(o.valorInicial)}</Dato>
       <Dato etiqueta="Primer reporte">{o.primerReporte ? 'Sí: aún no se ha incluido en ningún archivo' : 'No'}</Dato>
       <Dato etiqueta="En el SAC" nota={`Caduca a las ${o.atrasosPermitidos} cuotas atrasadas · lleva ${o.cuotasAtrasadas}`}>
         {o.caducado ? 'Crédito caducado' : 'No caducado'}

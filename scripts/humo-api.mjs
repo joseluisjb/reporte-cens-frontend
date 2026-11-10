@@ -4,6 +4,7 @@
 // Uso (Node 20+, desde la raíz del proyecto):
 //   npm run humo                                   sin credenciales: salud, sesión requerida y autenticación
 //   HUMO_CORREO=... HUMO_CLAVE=... npm run humo    con sesión: además recorre las consultas de negocio
+//                                                  (Iteraciones 1 y 2, según el rol de la cuenta)
 //
 // Variables de entorno (las credenciales NUNCA van en el código ni se imprimen):
 //   HUMO_API_URL  base de la API (por defecto https://reporte-cens-backend.onrender.com/api)
@@ -11,7 +12,8 @@
 //                 (por defecto https://reporte-cens.onrender.com)
 //   HUMO_CORREO / HUMO_CLAVE  opcionales
 //
-// Salida: una línea por comprobación (OK, PENDIENTE o FALLA). Código de salida 1 si hubo alguna FALLA.
+// Salida: una línea por comprobación (OK, PENDIENTE, OMITIDO o FALLA). PENDIENTE = la ruta todavía no
+// existe en el backend (404 en una ruta del contrato 0.9 que el backend no publica). Código de salida 1 si hubo alguna FALLA.
 import { expectCumpleContrato } from '../src/test/contrato.js'
 
 const API = (process.env.HUMO_API_URL || 'https://reporte-cens-backend.onrender.com/api').replace(/\/+$/, '')
@@ -70,12 +72,16 @@ function informar(estado, metodo, ruta, status, nota = '') {
 
 // Hace la petición, exige uno de los estados esperados y valida el cuerpo contra el contrato.
 // `rutaContrato` es la clave de `paths` (por ejemplo '/extracciones/{id}/obligaciones/').
-async function comprobar(metodo, ruta, esperados, { rutaContrato = ruta, cuerpo } = {}) {
+async function comprobar(metodo, ruta, esperados, { rutaContrato = ruta, cuerpo, pendienteSi404 = false } = {}) {
   let r
   try {
     r = await pedir(metodo, ruta, { cuerpo })
   } catch (e) {
     informar('FALLA', metodo, ruta, null, `sin respuesta: ${e.name === 'TimeoutError' ? `más de ${TIEMPO_ESPERA_MS / 1000} s` : e.message}`)
+    return null
+  }
+  if (pendienteSi404 && r.status === 404 && !esperados.includes(404)) {
+    informar('PENDIENTE', metodo, ruta, 404, 'el backend todavía no publica esta ruta (docs/PENDIENTES_BACKEND.md, sección 5)')
     return null
   }
   if (!esperados.includes(r.status)) {
@@ -123,7 +129,7 @@ async function sinCredenciales() {
 async function conSesion() {
   const login = await comprobar('POST', '/auth/login/', [200], { cuerpo: { email: CORREO, password: CLAVE } })
   if (!login) return
-  await comprobar('GET', '/auth/me/', [200])
+  const yo = await comprobar('GET', '/auth/me/', [200])
   await comprobar('GET', '/conceptos/', [200])
   await comprobar('GET', '/grupos-conceptos/', [200])
   const lista = await comprobar('GET', '/extracciones/', [200])
@@ -135,7 +141,57 @@ async function conSesion() {
   } else {
     console.log('OMITIDO   no hay cortes: se salta GET /extracciones/{id}/obligaciones/')
   }
+  await iteracion2(yo?.data?.user?.rol, id)
   await comprobar('POST', '/auth/logout/', [204, 200])
+}
+
+// Iteración 2 (contrato 0.9): solo lecturas. Lo que es solo del Analista debe dar 403 al Administrador y
+// al revés; las rutas que el backend aún no publica salen como PENDIENTE.
+async function iteracion2(rol, corteId) {
+  const analista = rol === 'ANALISTA_CARTERA'
+  const soloAnalista = analista ? [200] : [403]
+  const soloAdmin = analista ? [403] : [200]
+  console.log(`--- Iteración 2 como ${analista ? 'Analista' : 'Administrador'}`)
+
+  // Los dos roles.
+  await comprobar('GET', '/entidad/', [200])
+  await comprobar('GET', '/catalogos/modos-extincion/', [200], { rutaContrato: '/catalogos/{nombre}/', pendienteSi404: true })
+  if (corteId !== undefined) {
+    await comprobar('GET', `/extracciones/${corteId}/validaciones/`, [200], { rutaContrato: '/extracciones/{id}/validaciones/' })
+  }
+  const archivos = await comprobar('GET', '/archivos/', [200])
+  const archivo = Array.isArray(archivos?.data) ? archivos.data[0] : undefined
+  if (archivo) {
+    await comprobar('GET', `/archivos/${archivo.id}/descarga/`, [200], { rutaContrato: '/archivos/{id}/descarga/' })
+    await comprobar('GET', `/archivos/${archivo.id}/resultados/`, analista ? [200, 404] : [403], { rutaContrato: '/archivos/{id}/resultados/' })
+  } else {
+    console.log('OMITIDO   no hay archivos generados: se saltan la descarga y los resultados del cargue')
+  }
+
+  // Solo el Analista (HU-B y HU-C).
+  const lista = await comprobar('GET', '/obligaciones/?limite=5', soloAnalista, { rutaContrato: '/obligaciones/' })
+  await comprobar('GET', '/obligaciones/resumen/', soloAnalista)
+  const obligacion = lista?.data?.resultados?.[0]
+  if (analista && obligacion) {
+    await comprobar('GET', `/obligaciones/${obligacion.obligacion_id}/`, [200], { rutaContrato: '/obligaciones/{id}/' })
+    await comprobar('GET', `/obligaciones/${obligacion.obligacion_id}/linea-tiempo/`, [200], { rutaContrato: '/obligaciones/{id}/linea-tiempo/', pendienteSi404: true })
+  } else if (analista) {
+    console.log('OMITIDO   no hay obligaciones: se saltan el detalle y la línea de tiempo')
+  }
+  await comprobar('GET', '/matriz-estados/', soloAnalista)
+  const ciclos = await comprobar('GET', '/ciclos/', soloAnalista)
+  const ciclo = Array.isArray(ciclos?.data) ? ciclos.data[0] : undefined
+  if (analista && ciclo) await comprobar('GET', `/ciclos/${ciclo.corte_id}/`, [200], { rutaContrato: '/ciclos/{corte_id}/' })
+  await comprobar('GET', '/refinanciaciones/', soloAnalista, { pendienteSi404: true })
+  await comprobar('GET', '/reclamos/', soloAnalista)
+  await comprobar('GET', '/novedades/', soloAnalista)
+  await comprobar('GET', '/eliminaciones/?limite=5', soloAnalista, { rutaContrato: '/eliminaciones/' })
+  await comprobar('GET', '/rectificaciones/', soloAnalista)
+  await comprobar('GET', '/panel/resumen/', soloAnalista, { pendienteSi404: true })
+
+  // Solo el Administrador (RF48).
+  await comprobar('GET', '/estados/', soloAdmin)
+  await comprobar('GET', '/homologacion-estados/', soloAdmin)
 }
 
 console.log(`Prueba de humo: ${API} (origen ${ORIGEN})`)

@@ -722,6 +722,7 @@ describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): vali
     expect(saldada.slice(188, 191)).toBe('000') // cuotas en mora
     expect(saldada.slice(191, 203)).toBe('000000001020') // valor inicial en miles (.020.000)
     expect(saldada.slice(203, 239)).toBe('0'.repeat(36)) // mora, saldo y cuota en cero
+    expect(saldada.slice(917, 929)).toBe('000000000170') // valor real pagado en miles ($170.000 del corte), 918-929
     expect(lineas.at(-1)).toBe('900000013000000110000000000000000')
     expect(lineas.at(-1)).toHaveLength(33)
     expect(await verifica('get', '/archivos/{id}/descarga/', 404, { url: '/archivos/99/descarga/' })).toEqual({ detail: 'Archivo no encontrado.' })

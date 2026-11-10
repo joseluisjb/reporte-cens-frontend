@@ -234,7 +234,7 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 
 El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **propuesta**. Mientras el backend no publique estos endpoints, el frontend los usa con datos simulados (MSW), armados con los ejemplos del contrato. A medida que cada pantalla los usa, los marca como «propuesto (contrato 0.9)» en `src/lib/api/endpoints.js`. Cada PR de pantalla agrega aquí sus criterios de aceptación para el backend (los «Listo cuando» de la ficha).
 
-La columna «En `dev`» es el cotejo del 09/11/2026 contra `dev` del backend (`fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Nada de esto está en `main` ni en Render** (allí `/api/obligaciones/` da 404). El contrato 0.9.3 ya está copiado en el backend (PR #55 del backend).
+La columna «En `dev`» es el cotejo del 10/11/2026 contra `dev` del backend (`d41aa13`; el anterior fue el 09/11 sobre `fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Nada de esto está en `main` ni en Render** (allí `/api/obligaciones/` da 404). El contrato 0.9.3 está copiado en el backend (PR #55 del backend); la copia del **0.9.5** va en el PR #66 del backend.
 
 | Módulo | Endpoints | RF | Backend | Rol (permiso) | En `dev` (09/11) |
 |---|---|---|---|---|---|
@@ -242,15 +242,17 @@ La columna «En `dev`» es el cotejo del 09/11/2026 contra `dev` del backend (`f
 | Ciclo mensual | `GET /matriz-estados/`, `GET` y `POST /ciclos/`, `GET /ciclos/{corte_id}/` | RF10–RF17, RF19, RF45–RF49 | José Luis | Analista | Sí, igual al contrato |
 | Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista | No |
 | Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador | No |
-| Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador | No (PR #57 del backend, abierto) |
+| Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador | Sí, igual al contrato (PR #57 del backend) |
 | Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) | No. `validar` y `registrar-envio` siguen como en la 0.8 (5.1) |
 | Resultados del cargue | `GET` y `POST /archivos/{id}/resultados/`, con el estado nuevo `ENVIADO_CON_INCONSISTENCIAS` | RF54 | José Luis | Analista | Sí, igual al contrato |
-| Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista | No (rama `feature/RF23-reclamos-habeas-data`; el PR #53 a `main` se revirtió con el #59) |
-| Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista | Novedades y eliminaciones sí; `/rectificaciones/` no (rama `feature/RF55-rectificaciones`) |
+| Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista | Sí (PR #60 del backend), con las diferencias del contrato 0.9.4 (5.1) |
+| Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista | Sí; rectificaciones igual al contrato 0.9.5 (PR #62 del backend) |
 | Entidad | `GET /entidad/` (ambos roles) y `PUT /entidad/` | RF57 | Santiago | Administrador para escribir | Sí, igual al contrato |
 | Panel | `GET /panel/resumen/` | RF6, RF19, RF23, RF24, RF57 | José Luis | Analista | No |
 
-### 5.1 Diferencias del backend `dev` con el contrato 0.9.3 (cotejo del 09/11/2026)
+### 5.1 Diferencias del backend `dev` con el contrato (cotejo del 09/11/2026 sobre `fa26721`, actualizado el 10/11/2026 sobre `d41aa13` y el contrato 0.9.5)
+
+Del 09/11 al 10/11 el backend no tocó ciclo, obligaciones ni cartera: los puntos 1 a 5 siguen abiertos.
 
 Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el contrato:
 
@@ -265,9 +267,16 @@ Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el c
 3. **`POST /extracciones/{id}/validar/` (0.9.3).** No exige la actualización mensual: falta la correctiva `ACTUALIZACION_MENSUAL` en `errores` (409).
 4. **`POST /extracciones/{id}/registrar-envio/` (0.9).** No responde 409 `sin_archivo` ni `archivo_no_apto`. Hoy se puede registrar el envío de un corte sin archivo o con un archivo no apto.
 5. **`GET /eliminaciones/`.** `motivo` puede llegar `None`; el contrato lo pide no nulo (`ItemCatalogo`).
-6. **Rutas que faltan** (dan 404): `/obligaciones/{id}/linea-tiempo/`, `/refinanciaciones/`, `/catalogos/{nombre}/`, `/estados/`, `/homologacion-estados/`, `/extracciones/{id}/validaciones/`, `/extracciones/{id}/archivo/`, `GET /archivos/`, `/archivos/{id}/descarga/`, `/reclamos/`, `/rectificaciones/` y `/panel/resumen/`.
+6. **Rutas que faltan** (dan 404): `/obligaciones/{id}/linea-tiempo/`, `/refinanciaciones/`, `/catalogos/{nombre}/`, `/extracciones/{id}/validaciones/`, `/extracciones/{id}/archivo/`, `GET /archivos/`, `/archivos/{id}/descarga/` y `/panel/resumen/`. Desde el 10/11 ya existen `/estados/`, `/homologacion-estados/`, `/reclamos/` y `/rectificaciones/`.
+7. **Reclamos (contrato 0.9.4, Manual p. 57; decisión 28 del README del contrato).**
+   - `Reclamo` sale con `radicado_en_tu` (que en el backend es la columna `MARCACION_GENERADA`) y sin `desmarcacion_generada`. El contrato pide `marcacion_generada` y `desmarcacion_generada`: generar el insumo no es estar radicado.
+   - `cartera/servicios.py` reconoce archivos `radicacion_*` y `cierre_reclamo_*` como resultados del corte. Son respuestas del Reclamos Batch, no del reporte mensual; y esos nombres no salen del Manual.
+   - `POST /reclamos/{id}/cerrar/` rechaza `observacion_cierre` porque `NV_RECLAMO` no tiene esa columna. La ficha del RF23 la pide: hay que agregar la columna.
+   - `nombre_titular` y `fecha_limite_respuesta` pueden llegar `null`; el contrato los pide no nulos.
+   - El `409` del reclamo repetido dice «La obligación ya tiene un reclamo abierto.» sin el número; el contrato lo incluye («La obligación 2260-5543 ya tiene…»).
+   - Una obligación inexistente responde `400` en `obligacion_id` («La obligación no existe.»). El contrato lo admite (400 por campo) y el mock ya responde igual.
 
-Lo que sí coincide campo por campo con el contrato (serializers y vistas): ciclos y matriz, lista y resumen de obligaciones, entidad (con los permisos por método), resultados del cargue (409, 422 y el campo multipart `archivos`), novedades y eliminaciones.
+Lo que sí coincide campo por campo con el contrato (serializers y vistas): ciclos y matriz, lista y resumen de obligaciones, entidad (con los permisos por método), resultados del cargue (409, 422 y el campo multipart `archivos`), novedades y eliminaciones, estados y homologación (las reglas del `PUT` las valida el servicio con `400` por campo) y rectificaciones (incluido el `insumo` del 0.9.5).
 
 **Por definir con el backend:**
 

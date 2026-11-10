@@ -234,13 +234,13 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 
 El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **propuesta**. Mientras el backend no publique estos endpoints, el frontend los usa con datos simulados (MSW), armados con los ejemplos del contrato. A medida que cada pantalla los usa, los marca como «propuesto (contrato 0.9)» en `src/lib/api/endpoints.js`. Cada PR de pantalla agrega aquí sus criterios de aceptación para el backend (los «Listo cuando» de la ficha).
 
-La columna «En `dev`» es el cotejo del 10/11/2026 contra `dev` del backend (`d41aa13`; el anterior fue el 09/11 sobre `fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Nada de esto está en `main` ni en Render** (allí `/api/obligaciones/` da 404). El contrato 0.9.5 está copiado en el backend (PR #66 del backend, fusionado).
+La columna «En `dev`» es el cotejo del 10/11/2026 contra `dev` del backend (`ebba7f2`; los anteriores fueron sobre `d41aa13` y, el 09/11, sobre `fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Nada de esto está en `main` ni en Render** (allí `/api/obligaciones/` da 404). El contrato 0.9.5 está copiado en el backend (PR #66 del backend, fusionado).
 
 El 10/11/2026 por la tarde se cotejaron además dos ramas de Dilan que aún no tienen PR: `feature/RF21-RF22-RF52-RF53-validacion-corte` (`fb75b05`) y `feature/RF20-RF51-archivo-plano` (`70a187e`). Salen de `dev` `d41aa13`, se combinan entre sí sin conflictos y cubren cuatro rutas de la columna «No». Sus diferencias están en el punto 8 de la 5.1.
 
 | Módulo | Endpoints | RF | Backend | Rol (permiso) | En `dev` (09/11) |
 |---|---|---|---|---|---|
-| Obligaciones | `GET /obligaciones/`, `/obligaciones/resumen/`, `/obligaciones/{id}/`, `/obligaciones/{id}/linea-tiempo/` | RF10–RF19, RF45–RF50, RF52 | José Luis | Analista (`EsAnalista`, nuevo) | Sí, menos `linea-tiempo` y el filtro `abierta`. Detalle incompleto (5.1) |
+| Obligaciones | `GET /obligaciones/`, `/obligaciones/resumen/`, `/obligaciones/{id}/`, `/obligaciones/{id}/linea-tiempo/` | RF10–RF19, RF45–RF50, RF52 | José Luis | Analista (`EsAnalista`, nuevo) | Sí, menos `linea-tiempo`. Detalle incompleto (5.1) |
 | Ciclo mensual | `GET /matriz-estados/`, `GET` y `POST /ciclos/`, `GET /ciclos/{corte_id}/` | RF10–RF17, RF19, RF45–RF49 | José Luis | Analista | Sí, igual al contrato |
 | Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista | No |
 | Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador | No |
@@ -252,21 +252,21 @@ El 10/11/2026 por la tarde se cotejaron además dos ramas de Dilan que aún no t
 | Entidad | `GET /entidad/` (ambos roles) y `PUT /entidad/` | RF57 | Santiago | Administrador para escribir | Sí, igual al contrato |
 | Panel | `GET /panel/resumen/` | RF6, RF19, RF23, RF24, RF57 | José Luis | Analista | No |
 
-### 5.1 Diferencias del backend `dev` con el contrato (cotejo del 09/11/2026 sobre `fa26721`, actualizado el 10/11/2026 sobre `d41aa13` y el contrato 0.9.5)
+### 5.1 Diferencias del backend `dev` con el contrato (cotejo del 09/11/2026 sobre `fa26721`, actualizado el 10/11/2026 sobre `d41aa13` y `ebba7f2`, con el contrato 0.9.5)
 
-Del 09/11 al 10/11 el backend no tocó ciclo, obligaciones ni cartera: los puntos 1 a 5 siguen abiertos.
+De `d41aa13` a `ebba7f2` entraron en `dev` el PR #65 del backend (José Luis: `en_reclamo`, `abierta` y `ACTUALIZACION_MENSUAL`) y los PR #68 y #69 (columnas de los scripts SQL 10, 12a, 16, 17 y 18, y de `NV_ESTADO_TU` en la homologación). Con eso se cierran los puntos 2 y 3 y una parte del 1; los puntos 4 y 5 siguen abiertos.
 
 Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el contrato:
 
 1. **Detalle de una obligación (`GET /obligaciones/{id}/`, `ciclo/servicios.py`).**
    - `concepto` llega `None` siempre, y `fecha_ingreso` y `valor_inicial` pueden llegar nulos. El contrato los pide obligatorios y no nulos. El frontend los tolera desde el PR #58 y muestra «—», pero la pantalla 9 necesita el concepto (RF52).
-   - `en_reclamo` llega `False` siempre, también en la lista. Debe salir de los reclamos abiertos (RF23).
+   - ~~`en_reclamo` llega `False` siempre, también en la lista.~~ *Resuelto en `dev` (PR #65 del backend): sale de los reclamos `EN_RECLAMO`.*
    - `posibles_transiciones` y `advertencias` llegan vacíos: la pantalla 9 no muestra «Qué puede pasar con esta obligación».
    - `reestructuracion` y `refinanciada_en` llegan `None` siempre: no se ven las refinanciaciones (RF18).
    - `valor_cuota_antes_cierre` llega `None` siempre: en las cerradas no sale «Antes $X: al cerrar se reporta en $0» (RF52).
    - `pago_mora.tipo_pago` puede llegar `None`; el contrato lo pide no nulo (`CodigoDescripcion`).
-2. **`GET /obligaciones/?abierta=true` (0.9.3).** El backend ignora `abierta` y devuelve también las cerradas y las eliminadas. El formulario de refinanciación las mostraría en la lista de originales.
-3. **`POST /extracciones/{id}/validar/` (0.9.3).** No exige la actualización mensual: falta la correctiva `ACTUALIZACION_MENSUAL` en `errores` (409). *Resuelto en la rama `feature/RF21-RF22-RF52-RF53-validacion-corte` (sin PR).*
+2. **`GET /obligaciones/?abierta=true` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* deja fuera las cerradas (02 y 07) y las eliminadas. Queda un detalle: un valor distinto de `true` o `false` se toma como `false`, y el contrato pide `400` por campo.
+3. **`POST /extracciones/{id}/validar/` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* sin actualización mensual responde `409` con `ACTUALIZACION_MENSUAL` en `errores`. La rama `feature/RF21-RF22-RF52-RF53-validacion-corte` agrega además `obligacion_id`, `numero_obligacion` y `campo` a cada error.
 4. **`POST /extracciones/{id}/registrar-envio/` (0.9).** No responde 409 `sin_archivo` ni `archivo_no_apto`. Hoy se puede registrar el envío de un corte sin archivo o con un archivo no apto. *Resuelto en la rama `feature/RF20-RF51-archivo-plano` (sin PR), con los mismos `detail` y `code` del contrato.*
 5. **`GET /eliminaciones/`.** `motivo` puede llegar `None`; el contrato lo pide no nulo (`ItemCatalogo`).
 6. **Rutas que faltan** (dan 404): `/obligaciones/{id}/linea-tiempo/`, `/refinanciaciones/`, `/catalogos/{nombre}/`, `/extracciones/{id}/validaciones/`, `/extracciones/{id}/archivo/`, `GET /archivos/`, `/archivos/{id}/descarga/` y `/panel/resumen/`. Desde el 10/11 ya existen `/estados/`, `/homologacion-estados/`, `/reclamos/` y `/rectificaciones/`. Las cuatro del reporte (`validaciones`, `archivo`, `GET /archivos/` y `descarga`) están en las ramas de Dilan; las otras cuatro (`linea-tiempo`, `refinanciaciones`, `catalogos` y `panel/resumen`) no están en ninguna rama del backend.

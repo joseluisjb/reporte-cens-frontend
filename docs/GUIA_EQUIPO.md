@@ -11,7 +11,8 @@ La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hec
 - **Lo que depende de CENS o de TransUnion** (corchetes o «por confirmar» en las fichas) no se inventa: llega con `confirmado: false` o `por_confirmar: true` y la pantalla lo marca con `<PorConfirmar />`.
 - **Roles:** las pantallas 9 a 14 son solo del Analista de Cartera; la 15 y la 16, solo del Administrador. El otro rol ve «Acceso restringido» (sección 8).
 - **Estados (Tabla 4b):** el 07 se llama «Castigada recuperada» y el 12 «Ley 1564 de 2012 Insolvencia PNNC». Los textos «Cartera Recuperada» del mockup y de las fichas quedan por corregir.
-- **Pantallas ya fusionadas en `dev`:** 4 (panel), 9 (Obligaciones y Estados), 10 (Actualización Mensual), 11 (Refinanciaciones), 12 (Reporte a TransUnion, con el envío y los resultados del cargue), 15 (Datos de la Entidad) y 16 (Homologación de Estados).
+- **Pantallas ya fusionadas en `dev` (09/11/2026):** 4 (panel), 9 (Obligaciones y Estados), 10 (Actualización Mensual), 11 (Refinanciaciones), 12 (Reporte a TransUnion, con el envío y los resultados del cargue), 14 (Novedades Urgentes), 15 (Datos de la Entidad) y 16 (Homologación de Estados). Falta la 13 (Reclamos).
+- **Límite del mock del ciclo:** `POST /ciclos/` reemplaza `db.obligaciones` con la foto fija del corte 2026-10-31 (`mocks/datos/ciclos.js`), que reutiliza los ids 13 a 15. Una refinanciación (o cualquier obligación) creada a mano antes de ejecutar el ciclo desaparece en el mock. Con el backend real no pasa. Si una prueba lo necesita, registra la refinanciación **después** del ciclo, o escribe lo que pasa hoy y cita este punto.
 
 **Omar · pantalla 13, Reclamos Habeas Data (RF23)**
 - La ruta `/reclamos` ya existe (solo Analista) y muestra `EnConstruccion.Reclamos` (`app/pantallasEnConstruccion.jsx`). Tu página va en `features/claims/` y reemplaza ese placeholder en `navigation.js`.
@@ -26,7 +27,7 @@ La base (layout, rutas, sesión, cliente HTTP, mocks y componentes) ya está hec
   - un corte puede quedar en `ENVIADO_CON_INCONSISTENCIAS` (RF54). `extractionMapper.esEnviado` solo reconoce `ENVIADO`, así que ese corte se ve como no enviado en Extracción y en Inicio;
   - `registrar-envio` (contrato 0.9) responde 409 si el corte no tiene archivo plano (`code: sin_archivo`) o si el último no es apto (`code: archivo_no_apto`). Conviene que «Registrar envío a TransUnion» lo explique. Las pruebas que registran un envío preparan antes un archivo apto con `conArchivoApto(id)` (`src/test/escenarios/envio.js`).
 
-**Backend (José Luis y Dilan):** lo que el frontend espera de la Iteración 2 está en `docs/PENDIENTES_BACKEND.md`, sección 5. Hay que copiar `openapi.yaml` 0.9.3 al backend.
+**Backend (José Luis y Dilan):** lo que el frontend espera de la Iteración 2 está en `docs/PENDIENTES_BACKEND.md`, sección 5. El `openapi.yaml` 0.9.3 ya está copiado en `dev` del backend (PR #55 del backend).
 
 ## Iteración 1: estado al 10/10/2026 (referencia)
 

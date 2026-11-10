@@ -234,27 +234,41 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 
 El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **propuesta**. Mientras el backend no publique estos endpoints, el frontend los usa con datos simulados (MSW), armados con los ejemplos del contrato. A medida que cada pantalla los usa, los marca como «propuesto (contrato 0.9)» en `src/lib/api/endpoints.js`. Cada PR de pantalla agrega aquí sus criterios de aceptación para el backend (los «Listo cuando» de la ficha).
 
-La columna «En `dev`» es el cotejo del 10/11/2026 contra `dev` del backend (`ebba7f2`; los anteriores fueron sobre `d41aa13` y, el 09/11, sobre `fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Nada de esto está en `main` ni en Render** (allí `/api/obligaciones/` da 404). El contrato 0.9.5 está copiado en el backend (PR #66 del backend, fusionado).
+La columna «En `main`» es el cotejo del 10/11/2026 contra el backend (`main` `69ee414`, con el mismo código que `dev` `951e297`; los anteriores fueron sobre `ebba7f2`, `d41aa13` y, el 09/11, `fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Desde el 10/11 todo lo que dice «Sí» está en `main` y desplegado en Render** (PR #67 y #74 del backend): sin sesión, `/api/obligaciones/`, `/api/extracciones/{id}/validaciones/` y `/api/archivos/` responden 401. Falta probarlo con sesión. El contrato 0.9.5 está copiado en el backend (PR #66 del backend).
 
-El 10/11/2026 por la tarde se cotejaron además dos ramas de Dilan que aún no tienen PR: `feature/RF21-RF22-RF52-RF53-validacion-corte` (`fb75b05`) y `feature/RF20-RF51-archivo-plano` (`70a187e`). Salen de `dev` `d41aa13`, se combinan entre sí sin conflictos y cubren cuatro rutas de la columna «No». Sus diferencias están en el punto 8 de la 5.1.
+Las validaciones y el archivo plano de Dilan entraron con los PR #71 y #72 del backend; el #72 lleva además el arreglo de RF49 (fecha de exigibilidad y años en mora en el archivo, `627a852`). Según José Luis, los scripts SQL 17 y 19 ya están aplicados en Oracle.
 
-| Módulo | Endpoints | RF | Backend | Rol (permiso) | En `dev` (09/11) |
+**Lo que falta para conectar la Iteración 2 sin mocks:**
+
+| Qué | Quién | Detalle |
+|---|---|---|
+| `GET /obligaciones/{id}/linea-tiempo/` | José Luis | Ruta nueva (5.1, punto 6) |
+| `GET` y `POST /refinanciaciones/` | Santiago | Ruta nueva (pantalla 11) |
+| `GET /catalogos/{nombre}/` | José Luis (tablas de Clara) | Ruta nueva (Tabla 11, tipologías, motivos) |
+| `GET /panel/resumen/` | José Luis | Ruta nueva (panel del Analista) |
+| Detalle de la obligación incompleto | José Luis | `concepto`, `posibles_transiciones`, `reestructuracion`, `refinanciada_en`, `valor_cuota_antes_cierre` (5.1, punto 1) |
+| Reclamos según el contrato 0.9.4 | Clara | `marcacion_generada` y `desmarcacion_generada`, columna `observacion_cierre` (5.1, punto 7) |
+| Detalles menores | José Luis, Clara y Dilan | `abierta` inválido sin 400, `motivo` nulo en eliminaciones, mensajes y reglas de la vista de validación (5.1, puntos 2, 5 y 8) |
+| Prueba con sesión en Render | Johan | `npm run humo` con `HUMO_API_URL=https://reporte-cens.onrender.com/api` |
+| Pasar el frontend a `main` | Johan | Cuando estén las cuatro rutas: quitar «propuesto» en `endpoints.js`, probar cada pantalla con `VITE_USE_MOCKS=false` y abrir el PR `dev` → `main` |
+
+| Módulo | Endpoints | RF | Backend | Rol (permiso) | En `main` (10/11) |
 |---|---|---|---|---|---|
 | Obligaciones | `GET /obligaciones/`, `/obligaciones/resumen/`, `/obligaciones/{id}/`, `/obligaciones/{id}/linea-tiempo/` | RF10–RF19, RF45–RF50, RF52 | José Luis | Analista (`EsAnalista`, nuevo) | Sí, menos `linea-tiempo`. Detalle incompleto (5.1) |
 | Ciclo mensual | `GET /matriz-estados/`, `GET` y `POST /ciclos/`, `GET /ciclos/{corte_id}/` | RF10–RF17, RF19, RF45–RF49 | José Luis | Analista | Sí, igual al contrato |
 | Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista | No |
 | Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador | No |
 | Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador | Sí, igual al contrato (PR #57 del backend) |
-| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) | No. Sí en las dos ramas de Dilan sin PR, casi igual al contrato (5.1, punto 8) |
+| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) | Sí, casi igual al contrato (PR #71 y #72 del backend; 5.1, punto 8) |
 | Resultados del cargue | `GET` y `POST /archivos/{id}/resultados/`, con el estado nuevo `ENVIADO_CON_INCONSISTENCIAS` | RF54 | José Luis | Analista | Sí, igual al contrato |
 | Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista | Sí (PR #60 del backend), con las diferencias del contrato 0.9.4 (5.1) |
 | Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista | Sí; rectificaciones igual al contrato 0.9.5 (PR #62 del backend) |
 | Entidad | `GET /entidad/` (ambos roles) y `PUT /entidad/` | RF57 | Santiago | Administrador para escribir | Sí, igual al contrato |
 | Panel | `GET /panel/resumen/` | RF6, RF19, RF23, RF24, RF57 | José Luis | Analista | No |
 
-### 5.1 Diferencias del backend `dev` con el contrato (cotejo del 09/11/2026 sobre `fa26721`, actualizado el 10/11/2026 sobre `d41aa13` y `ebba7f2`, con el contrato 0.9.5)
+### 5.1 Diferencias del backend con el contrato (cotejo del 09/11/2026 sobre `fa26721`, actualizado el 10/11/2026 sobre `d41aa13`, `ebba7f2` y `main` `69ee414`, con el contrato 0.9.5)
 
-De `d41aa13` a `ebba7f2` entraron en `dev` el PR #65 del backend (José Luis: `en_reclamo`, `abierta` y `ACTUALIZACION_MENSUAL`) y los PR #68 y #69 (columnas de los scripts SQL 10, 12a, 16, 17 y 18, y de `NV_ESTADO_TU` en la homologación). Con eso se cierran los puntos 2 y 3 y una parte del 1; los puntos 4 y 5 siguen abiertos.
+De `d41aa13` a `ebba7f2` entraron en `dev` el PR #65 del backend (José Luis: `en_reclamo`, `abierta` y `ACTUALIZACION_MENSUAL`) y los PR #68 y #69 (columnas de los scripts SQL 10, 12a, 16, 17 y 18, y de `NV_ESTADO_TU` en la homologación). Con eso se cierran los puntos 2 y 3 y una parte del 1. Después entraron los PR #71 a #73 (Dilan) y todo pasó a `main` con el #74: se cierra el punto 4. Siguen abiertos el 1, el 5, el 7 y los detalles del 8.
 
 Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el contrato:
 
@@ -266,10 +280,10 @@ Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el c
    - `valor_cuota_antes_cierre` llega `None` siempre: en las cerradas no sale «Antes $X: al cerrar se reporta en $0» (RF52).
    - `pago_mora.tipo_pago` puede llegar `None`; el contrato lo pide no nulo (`CodigoDescripcion`).
 2. **`GET /obligaciones/?abierta=true` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* deja fuera las cerradas (02 y 07) y las eliminadas. Queda un detalle: un valor distinto de `true` o `false` se toma como `false`, y el contrato pide `400` por campo.
-3. **`POST /extracciones/{id}/validar/` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* sin actualización mensual responde `409` con `ACTUALIZACION_MENSUAL` en `errores`. La rama `feature/RF21-RF22-RF52-RF53-validacion-corte` agrega además `obligacion_id`, `numero_obligacion` y `campo` a cada error.
-4. **`POST /extracciones/{id}/registrar-envio/` (0.9).** No responde 409 `sin_archivo` ni `archivo_no_apto`. Hoy se puede registrar el envío de un corte sin archivo o con un archivo no apto. *Resuelto en la rama `feature/RF20-RF51-archivo-plano` (sin PR), con los mismos `detail` y `code` del contrato.*
+3. **`POST /extracciones/{id}/validar/` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* sin actualización mensual responde `409` con `ACTUALIZACION_MENSUAL` en `errores`. El PR #71 del backend agrega además `obligacion_id`, `numero_obligacion` y `campo` a cada error.
+4. **`POST /extracciones/{id}/registrar-envio/` (0.9).** *Resuelto (PR #72 del backend):* responde 409 `sin_archivo` y `archivo_no_apto` con los mismos `detail` y `code` del contrato, y marca el archivo como enviado.
 5. **`GET /eliminaciones/`.** `motivo` puede llegar `None`; el contrato lo pide no nulo (`ItemCatalogo`).
-6. **Rutas que faltan** (dan 404): `/obligaciones/{id}/linea-tiempo/`, `/refinanciaciones/`, `/catalogos/{nombre}/`, `/extracciones/{id}/validaciones/`, `/extracciones/{id}/archivo/`, `GET /archivos/`, `/archivos/{id}/descarga/` y `/panel/resumen/`. Desde el 10/11 ya existen `/estados/`, `/homologacion-estados/`, `/reclamos/` y `/rectificaciones/`. Las cuatro del reporte (`validaciones`, `archivo`, `GET /archivos/` y `descarga`) están en las ramas de Dilan; las otras cuatro (`linea-tiempo`, `refinanciaciones`, `catalogos` y `panel/resumen`) no están en ninguna rama del backend.
+6. **Rutas que faltan** (dan 404): `/obligaciones/{id}/linea-tiempo/`, `/refinanciaciones/`, `/catalogos/{nombre}/` y `/panel/resumen/`. No están en ninguna rama del backend. Las cuatro del reporte (`validaciones`, `archivo`, `GET /archivos/` y `descarga`) ya están en `main` (PR #71, #72 y #74).
 7. **Reclamos (contrato 0.9.4, Manual p. 57; decisión 28 del README del contrato).**
    - `Reclamo` sale con `radicado_en_tu` (que en el backend es la columna `MARCACION_GENERADA`) y sin `desmarcacion_generada`. El contrato pide `marcacion_generada` y `desmarcacion_generada`: generar el insumo no es estar radicado.
    - `cartera/servicios.py` reconoce archivos `radicacion_*` y `cierre_reclamo_*` como resultados del corte. Son respuestas del Reclamos Batch, no del reporte mensual; y esos nombres no salen del Manual.
@@ -277,14 +291,15 @@ Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el c
    - `nombre_titular` y `fecha_limite_respuesta` pueden llegar `null`; el contrato los pide no nulos.
    - El `409` del reclamo repetido dice «La obligación ya tiene un reclamo abierto.» sin el número; el contrato lo incluye («La obligación 2260-5543 ya tiene…»).
    - Una obligación inexistente responde `400` en `obligacion_id` («La obligación no existe.»). El contrato lo admite (400 por campo) y el mock ya responde igual.
-8. **Ramas de Dilan del reporte (RF20, RF21, RF22, RF51, RF52, RF53; cotejo del 10/11/2026).** Coinciden con el contrato 0.9.5 en rutas, roles (validaciones, archivo, lista y descarga para los dos roles; resultados solo Analista), forma de `ValidacionesCorte`, `Archivo`, `CorteValidado` y `ErrorCorrectivo`, y en los `detail` y `code` de los 409. Lo que falta o cambia:
+8. **Validaciones y archivo plano de Dilan (PR #71 y #72 del backend; RF20, RF21, RF22, RF51, RF52, RF53; cotejo del 10/11/2026).** Coinciden con el contrato 0.9.5 en rutas, roles (validaciones, archivo, lista y descarga para los dos roles; resultados solo Analista), forma de `ValidacionesCorte`, `Archivo`, `CorteValidado` y `ErrorCorrectivo`, y en los `detail` y `code` de los 409. Lo que falta o cambia:
    - **`SIN_NUMERO_OBLIGACION`** (vista `V_VALIDACION_CORTE`) trae `obligacion_id` pero `numero_obligacion` llega `null`, y el contrato lo pide no nulo en `ObligacionReferida`. Su mensaje muestra el id interno («Obligacion ID 5 sin numero…»). Propuesta: `numero_obligacion` con el número del SAC o `"(sin número)"`, y el mensaje sin el id.
    - **Mensajes de la vista** sin tildes («Obligacion», «numero», «identificacion») y con el número al principio («Obligacion 2262-3318: …»). La pantalla 12 ya pone el número antes del mensaje, así que se ve dos veces. Los ejemplos del contrato traen el mensaje sin el número y con tildes («Falta la fecha de pago del cierre.»).
    - **Valores fuera de rango (RF51).** `informativa` es correcto (Manual p. 19 y ficha RF53); el mock se corrigió para dar lo mismo. Pero el Manual revisa saldo, cuota, mora y cupo, y la vista solo revisa `VALOR_SALDO`.
    - **Dos informativas de la ficha RF53 que faltan en la vista:** pago de la mora sin fecha de pago, modo o tipo (Manual pp. 26-27; en el mock, `PAGO_MORA_INCOMPLETO`) y valor real pagado no reportado (alerta 968, Manual pp. 5 y 131; en el mock, `VALOR_REAL_PAGADO_NO_REPORTADO`). La pantalla no depende de los identificadores de regla, solo del `nivel`.
-   - **`tipo_reporte`** del `Archivo` se lee de `NV_PARAMETRO.TIPO_REPORTE`; si la clave no existe llega `null` y el contrato lo pide no nulo. Hay que sembrar el parámetro (`01`) junto con el script 19 (`LONGITUD_REGISTRO_TIPO2`).
+   - **Parámetros del archivo.** `tipo_reporte` se lee de `NV_PARAMETRO.TIPO_REPORTE`; si la clave no existe llega `null` y el contrato lo pide no nulo. La distribución de la Iteración 2 dice que la base ya trae `TIPO_REPORTE=01`, `CODIGO_PAQUETE=11` y `DIVISOR_VALORES=1000`: falta confirmarlo en Oracle. `CATEGORIA_SERVICIO` (campo 49, opcional) no aparece ahí y sale vacía; en la Tabla del Manual, `04` es «Servicio energía».
+   - **Valor real pagado.** Si `VALOR_REAL_PAGADO` es nulo, el campo sale en espacios y TransUnion genera la alerta 968; el detalle de la API ya lo toma como 0.
+   - *Resuelto en el #72 (`627a852`):* el campo 18 «Fecha de exigibilidad» salía vacío (RF49); ahora lleva la fecha límite de pago cuando hay mora y edad mayor a 00. Los años en mora solo salen con edad 14 (Manual p. 13).
    - **Exclusiones del archivo.** `n_excluidas` cuenta solo las eliminadas. El contrato también excluye las cerradas en cortes anteriores (RF13, RF16): falta confirmar que no llegan a `NV_REPORTE_DETALLE` del corte; si llegan, hoy salen en el archivo.
-   - **Orden de fusión.** Las dos ramas tocan `cartera/servicios.py`, `cartera/tests.py` y `docs/API.md`, pero Git las combina sin conflictos. La de validaciones cambia `config/sql/17_v_validacion_corte_v2.sql` y la de archivo agrega el `19`: los dos scripts deben aplicarse en Oracle antes de desplegar.
 
 Lo que sí coincide campo por campo con el contrato (serializers y vistas): ciclos y matriz, lista y resumen de obligaciones, entidad (con los permisos por método), resultados del cargue (409, 422 y el campo multipart `archivos`), novedades y eliminaciones, estados y homologación (las reglas del `PUT` las valida el servicio con `400` por campo) y rectificaciones (incluido el `insumo` del 0.9.5).
 

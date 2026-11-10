@@ -210,7 +210,7 @@ describe('pantalla 13 · insumo del Reclamos Batch (Manual, p. 57)', () => {
     await abrir()
     await userEvent.click(screen.getByRole('button', { name: 'Archivo de marcación (1)' }))
     expect(await screen.findByText('Archivo de marcación generado con 1 reclamo.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Archivo de marcación (0)' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Archivo de marcación (0)' })).toBeDisabled()
     expect(filaDe('2260-5543')).toHaveTextContent('Marcación generada')
     expect(click).toHaveBeenCalled()
     const [archivo] = guardado.mock.calls[0]
@@ -221,7 +221,7 @@ describe('pantalla 13 · insumo del Reclamos Batch (Manual, p. 57)', () => {
     await abrir()
     await userEvent.click(screen.getByRole('button', { name: 'Archivo de desmarcación (1)' }))
     expect(await screen.findByText('Archivo de desmarcación generado con 1 reclamo.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Archivo de desmarcación (0)' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Archivo de desmarcación (0)' })).toBeDisabled()
     expect(filaDe('2241-3302')).toHaveTextContent('Desmarcación generada')
     const [archivo] = guardado.mock.calls[0]
     expect(await archivo.text()).toBe('2241-3302|03|20260920\r\n')

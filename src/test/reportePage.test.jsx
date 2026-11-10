@@ -80,14 +80,39 @@ describe('pantalla 12 · validaciones (RF53)', () => {
     expect(boton('Validar corte')).toBeDisabled()
   })
 
-  test('valores de $9.000 y de $120 millones dan advertencia (RF51)', async () => {
+  test('valores de $9.000 y de $120 millones son informativos, como en TransUnion (RF51, Manual p. 19)', async () => {
     editar('2257-4156', { cuota: 9000, saldo: 120000000, valor_inicial: 150000000 })
     await abrir()
     const rango = item('Valores fuera de rango')
-    expect(rango).toHaveTextContent('(Advertencia)')
+    expect(rango).toHaveTextContent('(Informativa)')
     expect(rango).toHaveTextContent('La cuota es de $9.000: está fuera de $10.000 a $99.000.000.')
     expect(rango).toHaveTextContent('El saldo es de $120.000.000')
     expect(boton('Validar corte')).toBeEnabled()
+  })
+
+  test('un pago de la mora sin fecha de pago es informativo (RF47, Manual pp. 26-27)', async () => {
+    const pagoMora = { fecha_pago: null, modo_extincion: { codigo: '01', descripcion: 'Voluntario' }, tipo_pago: { codigo: '01', descripcion: 'Voluntario' }, valor_real_pagado: 98000 }
+    editar('2258-7731', { pago_mora: pagoMora })
+    await abrir()
+    const pago = item('Campos del pago de la mora (RF47)')
+    expect(pago).toHaveTextContent('(Informativa)')
+    expect(within(pago).getByRole('link', { name: '2258-7731' }).closest('li')).toHaveTextContent('fecha_pago · Falta la fecha de pago de la mora.')
+    expect(boton('Validar corte')).toBeEnabled()
+  })
+
+  test('un cierre pagado en el corte sin pagos extraídos avisa del valor real pagado (alerta 968)', async () => {
+    editar('2259-1092', { pagos: [] })
+    await abrir()
+    const valor = item('Valor real pagado')
+    expect(valor).toHaveTextContent('(Informativa)RF53Pagaron en este corte, pero la extracción no trajo el valor pagado: 2259-1092.')
+    expect(boton('Validar corte')).toBeEnabled()
+  })
+
+  test('sin cambios, el pago de la mora y el valor real pagado pasan', async () => {
+    await abrir()
+    expect(item('Campos del pago de la mora (RF47)')).toHaveTextContent('(Pasó)')
+    expect(item('Valor real pagado')).toHaveTextContent('(Pasó)RF53Se reporta con los pagos del corte (0 si no hubo).')
+    expect(screen.queryByText('Mora de más de 18 meses')).not.toBeInTheDocument()
   })
 
   test('identificación faltante y número de 21 caracteres bloquean; saldo mayor que el inicial informa (RF53)', async () => {

@@ -7,14 +7,13 @@
 import { esEstadoDeCierre } from '../../features/transunion/catalogosTU'
 import { formatearCOP, formatearFechaHora, plural } from '../../lib/format'
 import { db } from '../db'
-import { aDetalle } from './obligacionesIteracion2'
+import { aDetalle, VOLUNTARIO } from './obligacionesIteracion2'
 
 // Número de obligación: máximo 20 caracteres y solo los especiales que admite el Manual.
 const NUMERO_VALIDO = /^[A-Za-z0-9()*,\-./\\_¯·]{1,20}$/
 const LARGO_NOMBRE = 60
 const VALOR_MINIMO = 10000
 const VALOR_MAXIMO = 99000000
-const DIAS_18_MESES = 540
 
 const resultado = (regla, titulo, nivel, detalle, rf, { porConfirmar = false, obligaciones = [] } = {}) => ({
   regla,
@@ -44,6 +43,14 @@ export function obligacionesDelCorte(fechaCorte) {
       return { ...aDetalle(o, fechaCorte), estado_tu: estado, cerrada: esEstadoDeCierre(estado), registro: o }
     })
 }
+
+// Valor real pagado (Manual p. 14): lo que la obligación pagó en el corte, según los pagos que trajo la
+// extracción. 0 si no hubo pagos.
+const valorRealPagado = (registro, fechaCorte) =>
+  (registro.pagos ?? []).filter((p) => p.fecha_corte === fechaCorte).reduce((total, p) => total + p.valor, 0)
+
+// El pago de la mora que ya había ocurrido en la fecha del corte (el mock guarda solo el último).
+const pagoMoraAlCorte = (o, fechaCorte) => (o.pago_mora && (!o.pago_mora.fecha_pago || o.pago_mora.fecha_pago <= fechaCorte) ? o.pago_mora : null)
 
 // Las obligaciones que ya existían en la fecha del corte (las que no entran cuentan como excluidas).
 export const obligacionesExistentes = (fechaCorte) => db.obligaciones.filter((o) => o.ingreso <= fechaCorte)
@@ -123,6 +130,40 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
       : resultado('CIERRE_INCOMPLETO', 'Campos de cierre (RF22)', 'ok', `${plural(cierres.length, 'cierre', 'cierres')} con saldo, mora y cuota en cero, fecha de pago, modo de extinción y tipo de pago.`, ['RF22']),
   )
 
+  // RF47: un pago de la mora lleva fecha de pago, modo de extinción y tipo de pago. Si falta alguno,
+  // TransUnion toma la fecha de corte como fecha de pago y genera una inconsistencia informativa
+  // (Manual pp. 26-27).
+  const fallasPagoMora = abiertas.flatMap((o) => {
+    const p = pagoMoraAlCorte(o, corte.fecha_corte)
+    if (!p) return []
+    const fallas = []
+    if (!p.fecha_pago) fallas.push(referida(o, 'fecha_pago', 'Falta la fecha de pago de la mora.'))
+    if (!p.modo_extincion) fallas.push(referida(o, 'modo_extincion', 'Falta el modo de extinción del pago de la mora.'))
+    if (!p.tipo_pago) fallas.push(referida(o, 'tipo_pago', 'Falta el tipo de pago del pago de la mora.'))
+    return fallas
+  })
+  resultados.push(
+    fallasPagoMora.length
+      ? resultado('PAGO_MORA_INCOMPLETO', 'Campos del pago de la mora (RF47)', 'informativa', `Hay pagos de la mora sin todos sus campos: ${[...new Set(fallasPagoMora.map((f) => f.numero_obligacion))].join(', ')}. TransUnion tomaría la fecha de corte como fecha de pago.`, ['RF47', 'RF53'], { obligaciones: fallasPagoMora })
+      : resultado('PAGO_MORA_INCOMPLETO', 'Campos del pago de la mora (RF47)', 'ok', 'Los pagos de la mora tienen fecha de pago, modo de extinción y tipo de pago.', ['RF47', 'RF53']),
+  )
+
+  // Valor real pagado (alerta informativa 968 de TransUnion, Manual pp. 5 y 131). El archivo lo llena con
+  // los pagos del corte; si la obligación pagó en este corte (cierre o pago de la mora voluntarios) y la
+  // extracción no trajo pagos, el valor no se conoce.
+  const pagoDelMes = (o) => {
+    const extincion = o.cerrada ? o.cierre : pagoMoraAlCorte(o, corte.fecha_corte)
+    return extincion?.tipo_pago?.codigo === VOLUNTARIO.codigo && extincion.fecha_pago?.slice(0, 7) === corte.fecha_corte.slice(0, 7)
+  }
+  const sinValorPagado = incluidas.filter((o) => pagoDelMes(o) && valorRealPagado(o.registro, corte.fecha_corte) === 0)
+  resultados.push(
+    sinValorPagado.length
+      ? resultado('VALOR_REAL_PAGADO_NO_REPORTADO', 'Valor real pagado', 'informativa', `Pagaron en este corte, pero la extracción no trajo el valor pagado: ${lista(sinValorPagado)}.`, ['RF53'], {
+          obligaciones: sinValorPagado.map((o) => referida(o, 'valor_real_pagado', 'Pagó en este corte y no hay pagos extraídos del sistema comercial.')),
+        })
+      : resultado('VALOR_REAL_PAGADO_NO_REPORTADO', 'Valor real pagado', 'ok', 'Se reporta con los pagos del corte (0 si no hubo).', ['RF53']),
+  )
+
   // Campos obligatorios de Servicios. Las pruebas pueden forzar el error (mocks/datos/validaciones.js).
   resultados.push(
     db.cortesConErrorForzado.includes(corte.id)
@@ -154,7 +195,7 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
   )
   resultados.push(
     fueraDeRango.length
-      ? resultado('VALORES_FUERA_DE_RANGO', 'Valores fuera de rango', 'advertencia', `${plural(fueraDeRango.length, 'valor está', 'valores están')} fuera de $10.000 a $99.000.000. TransUnion lo acepta, pero lo informa.`, ['RF51', 'RF53'], { obligaciones: fueraDeRango })
+      ? resultado('VALORES_FUERA_DE_RANGO', 'Valores fuera de rango', 'informativa', `${plural(fueraDeRango.length, 'valor está', 'valores están')} fuera de $10.000 a $99.000.000. TransUnion lo acepta, pero lo informa.`, ['RF51', 'RF53'], { obligaciones: fueraDeRango })
       : resultado('VALORES_FUERA_DE_RANGO', 'Valores fuera de rango', 'ok', 'Todos los valores están entre $10.000 y $99.000.000.', ['RF51', 'RF53']),
   )
 
@@ -171,16 +212,6 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
     entidadConMarcador
       ? resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad (RF57)', 'advertencia', 'Llevan relleno mientras TransUnion no los asigne: el archivo saldrá no apto para envío.', ['RF57'])
       : resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad (RF57)', 'ok', 'Tipo de entidad, código de entidad y sucursal asignados por TransUnion.', ['RF57']),
-  )
-
-  const largas = abiertas.filter((o) => o.dias_mora >= DIAS_18_MESES)
-  resultados.push(
-    largas.length
-      ? resultado('MORA_MAS_18_MESES', 'Mora de más de 18 meses', 'advertencia', `${plural(largas.length, 'obligación lleva', 'obligaciones llevan')} 540 días o más en mora. Qué hacer con ellas depende del concepto de jurídica (Ley 2157).`, ['RF49'], {
-          porConfirmar: true,
-          obligaciones: largas.map((o) => referida(o, 'dias_mora', `${o.dias_mora} días de mora.`)),
-        })
-      : resultado('MORA_MAS_18_MESES', 'Mora de más de 18 meses', 'ok', 'Ninguna obligación supera 540 días de mora.', ['RF49']),
   )
 
   const hayCorrectivas = resultados.some((r) => r.nivel === 'correctiva')
@@ -252,6 +283,7 @@ const R2 = {
   valorMora: [204, 12],
   valorSaldo: [216, 12],
   valorCuota: [228, 12],
+  valorRealPagado: [918, 12], // en miles (Manual p. 51)
   naturalezaReestructuracion: [292, 2], // Tabla 11
   numeroReestructuraciones: [294, 3],
 }
@@ -273,16 +305,20 @@ function registro2(o, { fechaCorte, sucursal, longitud }) {
   if (o.anios_mora != null) poner(R2.aniosMora, ceros(o.anios_mora, 2))
   poner(R2.fechaCorte, sinGuiones(fechaCorte))
   if (o.fecha_exigibilidad) poner(R2.fechaExigibilidad, sinGuiones(o.fecha_exigibilidad))
-  if (o.cerrada && cierre) {
-    if (cierre.fecha_pago) poner(R2.fechaPago, sinGuiones(cierre.fecha_pago))
-    if (cierre.modo_extincion) poner(R2.modoExtincion, cierre.modo_extincion.codigo)
-    if (cierre.tipo_pago) poner(R2.tipoPago, cierre.tipo_pago.codigo)
+  // Fecha de pago, modo y tipo: los del cierre o, si sigue abierta y sin mora, los del pago de la mora
+  // (RF47, Manual pp. 26-27; con mora, TransUnion no refleja la fecha de pago).
+  const extincion = o.cerrada ? cierre : o.valor_mora === 0 ? pagoMoraAlCorte(o.registro, fechaCorte) : null
+  if (extincion) {
+    if (extincion.fecha_pago) poner(R2.fechaPago, sinGuiones(extincion.fecha_pago))
+    if (extincion.modo_extincion) poner(R2.modoExtincion, extincion.modo_extincion.codigo)
+    if (extincion.tipo_pago) poner(R2.tipoPago, extincion.tipo_pago.codigo)
   }
   poner(R2.cuotasMora, ceros(o.cuotas_mora, 3))
   poner(R2.valorInicial, ceros(miles(o.valor_inicial), 12))
   poner(R2.valorMora, ceros(miles(o.valor_mora), 12))
   poner(R2.valorSaldo, ceros(miles(o.valor_saldo), 12))
   poner(R2.valorCuota, ceros(miles(o.valor_cuota), 12))
+  if (longitud >= 929) poner(R2.valorRealPagado, ceros(miles(valorRealPagado(o.registro, fechaCorte)), 12))
   if (reestructuracion) {
     poner(R2.naturalezaReestructuracion, reestructuracion.naturaleza.codigo)
     poner(R2.numeroReestructuraciones, ceros(reestructuracion.numero_reestructuraciones, 3))

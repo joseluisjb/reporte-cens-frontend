@@ -1,4 +1,5 @@
-// Mappers para Reclamos Habeas Data (RF23, pantalla 13).
+// Mappers de Reclamos Habeas Data (RF23, pantalla 13), contrato 0.9.4.
+// Resultados del cierre: los del mockup v3 (`resultado` es texto libre de hasta 30 caracteres en el contrato).
 export const RESOLUCIONES = ['Procedente', 'No procedente', 'Desistido por el titular']
 
 export function mapReclamo(r) {
@@ -21,13 +22,14 @@ export function mapReclamo(r) {
     observacion: r.observacion || '',
     estado: r.estado === 'EN_RECLAMO' ? 'En reclamo' : 'Cerrado',
     estadoCodigo: r.estado,
-    radicadoEnTu: Boolean(r.radicado_en_tu),
+    // Ya salió en un archivo de marcación / desmarcación (no quiere decir que TransUnion lo aplicó).
+    marcacionGenerada: r.marcacion_generada,
+    desmarcacionGenerada: r.desmarcacion_generada,
     fechaLimiteRespuesta: r.fecha_limite_respuesta,
     vencido: Boolean(r.vencido),
     resultado: r.resultado || '',
     fechaCierre: r.fecha_cierre || null,
     observacionCierre: r.observacion_cierre || '',
-    cerradoEnArchivo: Boolean(r.cerrado_en_archivo),
     registradoPor: r.registrado_por,
     fechaRegistro: r.fecha_registro,
   }

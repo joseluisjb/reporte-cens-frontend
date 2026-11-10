@@ -7,10 +7,13 @@ import {
   FieldLabel,
   Input,
   Modal,
+  PorConfirmar,
   Select,
+  Spinner,
   Tag,
 } from '../../components/ui'
 import { CONTROL } from '../../components/ui/Field'
+import { mensajeDeError } from '../../lib/api'
 import { hoyISO } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
 import { mapReclamoFieldErrors } from './claimsMapper'
@@ -31,27 +34,24 @@ export default function RegisterClaimModal({ open, onClose, onCreado, initialObl
 const ORDEN_CAMPOS = ['obligacionId', 'tipologia', 'fechaRadicacion', 'observacion']
 
 function Formulario({ onCerrar, onCreado, initialObligacionId }) {
-  const [obligaciones, setObligaciones] = useState([])
-  const [tipologias, setTipologias] = useState([])
+  const [opciones, setOpciones] = useState(null) // { obligaciones, tipologias } | null
+  const [errorCarga, setErrorCarga] = useState('')
+  const [intento, setIntento] = useState(0)
 
   useEffect(() => {
     let cancelado = false
-    Promise.all([listEligibleObligations(), getClaimTipologias()])
-      .then(([obls, tips]) => {
-        if (cancelado) return
-        setObligaciones(obls)
-        setTipologias(tips)
-      })
-      .catch(() => {
-        if (!cancelado) {
-          setObligaciones([])
-          setTipologias([])
-        }
-      })
+    Promise.all([listEligibleObligations(), getClaimTipologias()]).then(
+      ([obligaciones, tipologias]) => !cancelado && setOpciones({ obligaciones, tipologias }),
+      (err) => !cancelado && setErrorCarga(mensajeDeError(err)),
+    )
     return () => {
       cancelado = true
     }
-  }, [])
+  }, [intento])
+
+  const obligaciones = opciones?.obligaciones ?? []
+  const tipologias = opciones?.tipologias ?? []
+  const algunaPorConfirmar = tipologias.some((t) => !t.confirmado)
 
   const form = useFormulario({
     valoresIniciales: {
@@ -86,68 +86,92 @@ function Formulario({ onCerrar, onCreado, initialObligacionId }) {
             form="form-registrar-reclamo"
             variant="primary"
             loading={form.enviando}
+            disabled={!opciones}
           >
             Registrar reclamo
           </Button>
         </>
       }
     >
-      <form id="form-registrar-reclamo" {...form.formProps} className="flex flex-col gap-4">
-        {form.errorGeneral && <Alert tone="error">{form.errorGeneral}</Alert>}
-
-        <Select
-          label="Obligación"
-          id="cl-obl"
-          {...form.campo('obligacionId')}
-        >
-          <option value="">Selecciona una obligación…</option>
-          {obligaciones.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.numeroObligacion} · {o.titular?.nombre ?? o.nombreTitular ?? 'Titular'}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          label={
-            <span className="flex items-center gap-1.5">
-              <span>Tipología del reclamo</span>
-              <Tag tone="info" className="text-xs">
-                usar la lista de TransUnion
-              </Tag>
-            </span>
-          }
-          id="cl-tip"
-          {...form.campo('tipologia')}
-        >
-          <option value="">Selecciona la tipología…</option>
-          {tipologias.map((t) => (
-            <option key={t.codigo} value={t.codigo}>
-              {t.descripcion}
-            </option>
-          ))}
-        </Select>
-
-        <Input
-          type="date"
-          label="Fecha del reclamo"
-          id="cl-fecha"
-          {...form.campo('fechaRadicacion')}
-        />
-
-        <div>
-          <FieldLabel htmlFor="cl-obs">Observación (opcional)</FieldLabel>
-          <textarea
-            id="cl-obs"
-            className={CONTROL}
-            rows={3}
-            maxLength={500}
-            placeholder="Describe brevemente el reclamo del titular"
-            {...form.campo('observacion')}
-          />
-          <FieldError id="cl-obs-err">{form.errores.observacion}</FieldError>
+      {errorCarga && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <Alert>No se pudieron cargar las obligaciones y las tipologías. {errorCarga}</Alert>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setErrorCarga('')
+              setIntento((n) => n + 1)
+            }}
+          >
+            Reintentar
+          </Button>
         </div>
-      </form>
+      )}
+      {!opciones && !errorCarga && (
+        <div role="status" aria-label="Cargando las obligaciones y las tipologías" className="flex justify-center p-8">
+          <Spinner className="size-6" />
+        </div>
+      )}
+      {opciones && (
+        <form id="form-registrar-reclamo" {...form.formProps} className="flex flex-col gap-4">
+          {form.errorGeneral && <Alert tone="error">{form.errorGeneral}</Alert>}
+
+          <Select
+            label="Obligación"
+            id="cl-obl"
+            {...form.campo('obligacionId')}
+          >
+            <option value="">Selecciona una obligación…</option>
+            {obligaciones.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.numeroObligacion} · {o.nombreTitular}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            label={
+              <span className="flex items-center gap-1.5">
+                <span>Tipología del reclamo</span>
+                <Tag tone="info" className="text-xs">
+                  usar la lista de TransUnion
+                </Tag>
+                {algunaPorConfirmar && <PorConfirmar />}
+              </span>
+            }
+            id="cl-tip"
+            {...form.campo('tipologia')}
+          >
+            <option value="">Selecciona la tipología…</option>
+            {tipologias.map((t) => (
+              <option key={t.codigo} value={t.codigo}>
+                {t.descripcion}
+              </option>
+            ))}
+          </Select>
+
+          <Input
+            type="date"
+            label="Fecha del reclamo"
+            id="cl-fecha"
+            {...form.campo('fechaRadicacion')}
+          />
+
+          <div>
+            <FieldLabel htmlFor="cl-obs">Observación (opcional)</FieldLabel>
+            <textarea
+              id="cl-obs"
+              className={CONTROL}
+              rows={3}
+              maxLength={500}
+              placeholder="Describe brevemente el reclamo del titular"
+              {...form.campo('observacion')}
+            />
+            <FieldError id="cl-obs-err">{form.errores.observacion}</FieldError>
+          </div>
+        </form>
+      )}
     </Modal>
   )
 }

@@ -1,264 +1,164 @@
-// Reclamos Habeas Data (pantalla 13, RF23) del backend simulado.
-// SOLO Analista de Cartera.
+// Reclamos Habeas Data (pantalla 13, RF23) del backend simulado. Solo Analista de Cartera.
+// Contrato 0.9.4: la marca ante TransUnion se pide con el proceso «Marcación de obligaciones
+// (Reclamos Batch)» (Manual, p. 57). Generar el insumo deja `marcacion_generada` o
+// `desmarcacion_generada` en true; que TransUnion lo aplique lo dicen sus archivos de radicación y
+// de cierre, que todavía no se cargan.
 import { http, HttpResponse } from 'msw'
 import { esFechaISO } from '../../features/audit/auditValidation'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { CATALOGOS } from '../datos/catalogos'
 import { db, persistir } from '../db'
-import {
-  aEntero,
-  ahoraBogotaISO,
-  error,
-  espera,
-  exigirSesion,
-  idDeRuta,
-  SOLO_ANALISTA,
-  url,
-} from '../utilidades'
+import { aEntero, ahoraBogotaISO, error, espera, exigirSesion, hoyLocalISO, idDeRuta, leerCuerpo, SOLO_ANALISTA, url } from '../utilidades'
 
 const ESTADOS_VALIDOS = ['EN_RECLAMO', 'CERRADO']
+const DIAS_HABILES_RESPUESTA = 15
 
-// Aproximación de 15 días hábiles (~22 días calendario)
-function calcularFechaLimite(fechaISO) {
-  try {
-    const [y, m, d] = fechaISO.split('-').map(Number)
-    const fecha = new Date(Date.UTC(y, m - 1, d))
-    let habiles = 0
-    while (habiles < 15) {
-      fecha.setUTCDate(fecha.getUTCDate() + 1)
-      const diaSemana = fecha.getUTCDay()
-      if (diaSemana !== 0 && diaSemana !== 6) {
-        habiles += 1
-      }
-    }
-    const yy = fecha.getUTCFullYear()
-    const mm = String(fecha.getUTCMonth() + 1).padStart(2, '0')
-    const dd = String(fecha.getUTCDate()).padStart(2, '0')
-    return `${yy}-${mm}-${dd}`
-  } catch {
-    return null
+// 15 días hábiles desde la radicación, sin sábados ni domingos. POR CONFIRMAR con jurídica (contrato,
+// `fecha_limite_respuesta`): no descuenta los festivos de Colombia ni dice desde qué día se cuenta.
+function fechaLimite(fechaISO) {
+  const [a, m, d] = fechaISO.split('-').map(Number)
+  const fecha = new Date(Date.UTC(a, m - 1, d))
+  for (let habiles = 0; habiles < DIAS_HABILES_RESPUESTA; ) {
+    fecha.setUTCDate(fecha.getUTCDate() + 1)
+    const dia = fecha.getUTCDay()
+    if (dia !== 0 && dia !== 6) habiles += 1
   }
+  return fecha.toISOString().slice(0, 10)
+}
+
+// `vencido` se calcula al responder: sigue EN_RECLAMO después de la fecha límite.
+const conVencido = (r) => ({ ...r, vencido: r.estado === 'EN_RECLAMO' && hoyLocalISO() > r.fecha_limite_respuesta })
+
+const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '')
+
+// Línea del insumo: número|tipología|fecha. POR CONFIRMAR con TransUnion: el Manual (p. 57)
+// describe el proceso, no la estructura del archivo.
+const lineaInsumo = (r, fecha) => `${r.numero_obligacion}|${r.tipologia.codigo}|${fecha.replace(/-/g, '')}\r\n`
+
+const INSUMOS = {
+  marcacion: {
+    incluye: (r) => r.estado === 'EN_RECLAMO' && !r.marcacion_generada,
+    marcar: (r) => (r.marcacion_generada = true),
+    fecha: (r) => r.fecha_radicacion,
+    archivo: 'Reclamos_Marcacion_TransUnion.txt',
+  },
+  desmarcacion: {
+    incluye: (r) => r.estado === 'CERRADO' && !r.desmarcacion_generada,
+    marcar: (r) => (r.desmarcacion_generada = true),
+    fecha: (r) => r.fecha_cierre,
+    archivo: 'Reclamos_Desmarcacion_TransUnion.txt',
+  },
 }
 
 export const reclamosHandlers = [
-  // Listar reclamos (filtro opcional: ?estado=EN_RECLAMO|CERRADO)
   http.get(url(ENDPOINTS.reclamos), async ({ request }) => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
-
-    const reqUrl = new URL(request.url)
-    const estado = reqUrl.searchParams.get('estado')
-
-    if (estado && !ESTADOS_VALIDOS.includes(estado)) {
-      return error(400, { estado: ['Estado no válido.'] })
-    }
-
-    let lista = [...db.reclamos]
-    if (estado) {
-      lista = lista.filter((r) => r.estado === estado)
-    }
-
-    lista.sort((a, b) => b.id - a.id)
-    return HttpResponse.json(lista)
+    const estado = new URL(request.url).searchParams.get('estado')
+    if (estado && !ESTADOS_VALIDOS.includes(estado)) return error(400, { estado: ['Estado no válido.'] })
+    const lista = db.reclamos.filter((r) => !estado || r.estado === estado).sort((a, b) => b.id - a.id)
+    return HttpResponse.json(lista.map(conVencido))
   }),
 
-  // Registrar un reclamo
   http.post(url(ENDPOINTS.reclamos), async ({ request }) => {
     await espera()
     const { respuesta, usuario } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
-
-    const cuerpo = await request.json().catch(() => ({}))
+    const cuerpo = await leerCuerpo(request)
     const obligacionId = aEntero(cuerpo.obligacion_id)
-    const tipologiaCodigo = typeof cuerpo.tipologia === 'string' ? cuerpo.tipologia.trim() : null
-    const fechaRadicacion = typeof cuerpo.fecha_radicacion === 'string' ? cuerpo.fecha_radicacion.trim() : null
-    const observacion = typeof cuerpo.observacion === 'string' ? cuerpo.observacion.trim() : ''
+    const tipologia = CATALOGOS['tipologias-reclamo'].find((t) => t.codigo === texto(cuerpo.tipologia))
+    const fechaRadicacion = texto(cuerpo.fecha_radicacion)
+    const observacion = texto(cuerpo.observacion)
 
     const errores = {}
-    if (!obligacionId) {
-      errores.obligacion_id = ['Selecciona la obligación en reclamo.']
+    if (!obligacionId) errores.obligacion_id = ['Selecciona la obligación en reclamo.']
+    if (!tipologia) errores.tipologia = ['Selecciona una tipología válida de la Ley 1266.']
+    if (!esFechaISO(fechaRadicacion)) errores.fecha_radicacion = ['Selecciona la fecha del reclamo.']
+    else if (fechaRadicacion > hoyLocalISO()) errores.fecha_radicacion = ['La fecha de radicación no puede ser futura.']
+    if (observacion.length > 500) errores.observacion = ['La observación no puede pasar de 500 caracteres.']
+    if (Object.keys(errores).length) return error(400, errores)
+
+    const obligacion = db.obligaciones.find((o) => o.id === obligacionId)
+    if (!obligacion) return error(400, { obligacion_id: ['La obligación no existe.'] }) // como el backend
+    if (db.reclamos.some((r) => r.obligacion_id === obligacion.id && r.estado === 'EN_RECLAMO')) {
+      return error(409, { detail: `La obligación ${obligacion.numero} ya tiene un reclamo abierto.` })
     }
 
-    const tipologiaObj = CATALOGOS['tipologias-reclamo']?.find((t) => t.codigo === tipologiaCodigo)
-    if (!tipologiaObj) {
-      errores.tipologia = ['Selecciona una tipología válida de la Ley 1266.']
-    }
-
-    if (!fechaRadicacion || !esFechaISO(fechaRadicacion)) {
-      errores.fecha_radicacion = ['Selecciona la fecha del reclamo.']
-    }
-
-    if (Object.keys(errores).length > 0) {
-      return error(400, errores)
-    }
-
-    // Buscar obligación para número y titular
-    const obligacion = db.obligaciones.find(
-      (o) => o.id === obligacionId || o.obligacion_id === obligacionId
-    )
-    if (!obligacion) {
-      return error(404, { detail: 'Obligación no encontrada.' })
-    }
-
-    const numeroObligacion = obligacion.numero_obligacion ?? obligacion.numeroObligacion ?? `OBL-${obligacionId}`
-
-    // Segundo reclamo abierto sobre la misma obligación -> 409
-    const tieneReclamoAbierto = db.reclamos.some(
-      (r) => r.obligacion_id === obligacionId && r.estado === 'EN_RECLAMO'
-    )
-    if (tieneReclamoAbierto) {
-      return error(409, {
-        detail: `La obligación ${numeroObligacion} ya tiene un reclamo abierto.`,
-      })
-    }
-
-    const siguienteId = db.reclamos.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1
-    const nombreTitular =
-      obligacion.nombre_titular ??
-      obligacion.titular?.nombre ??
-      obligacion.nombre ??
-      'TITULAR'
-
-    const nuevoReclamo = {
-      id: siguienteId,
-      obligacion_id: obligacionId,
-      numero_obligacion: numeroObligacion,
-      nombre_titular: nombreTitular,
-      tipologia: tipologiaObj,
+    const reclamo = {
+      id: Math.max(0, ...db.reclamos.map((r) => r.id)) + 1,
+      obligacion_id: obligacion.id,
+      numero_obligacion: obligacion.numero,
+      nombre_titular: obligacion.titular,
+      tipologia,
       fecha_radicacion: fechaRadicacion,
       observacion: observacion || null,
       estado: 'EN_RECLAMO',
-      radicado_en_tu: false,
-      fecha_limite_respuesta: calcularFechaLimite(fechaRadicacion),
+      marcacion_generada: false,
+      desmarcacion_generada: false,
+      fecha_limite_respuesta: fechaLimite(fechaRadicacion),
       vencido: false,
       resultado: null,
       fecha_cierre: null,
       observacion_cierre: null,
-      cerrado_en_archivo: false,
-      registrado_por: usuario?.nombre ?? 'Analista',
+      registrado_por: usuario.nombre,
       fecha_registro: ahoraBogotaISO(),
     }
-
-    db.reclamos.unshift(nuevoReclamo)
-    obligacion.en_reclamo = true
-    obligacion.enReclamo = true
+    db.reclamos.unshift(reclamo)
+    obligacion.en_reclamo = true // se sigue reportando; solo cambia la marca (RF23)
     persistir()
-
-    return HttpResponse.json(nuevoReclamo, { status: 201 })
+    return HttpResponse.json(conVencido(reclamo), { status: 201 })
   }),
 
-  // Cerrar reclamo: POST /reclamos/{id}/cerrar/
   http.post(url(ENDPOINTS.reclamoCerrar(':id')), async ({ params, request }) => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
+    const reclamo = db.reclamos.find((r) => r.id === idDeRuta(params.id))
+    if (!reclamo) return error(404, { detail: 'Reclamo no encontrado.' })
+    if (reclamo.estado === 'CERRADO') return error(409, { detail: 'El reclamo ya está cerrado.' })
 
-    const id = idDeRuta(params.id)
-    const reclamo = db.reclamos.find((r) => r.id === id)
-    if (!reclamo) {
-      return error(404, { detail: 'Reclamo no encontrado.' })
-    }
-
-    if (reclamo.estado === 'CERRADO') {
-      return error(409, { detail: 'El reclamo ya está cerrado.' })
-    }
-
-    const cuerpo = await request.json().catch(() => ({}))
-    const resultado = typeof cuerpo.resultado === 'string' ? cuerpo.resultado.trim() : ''
-    const fechaCierre = typeof cuerpo.fecha_cierre === 'string' ? cuerpo.fecha_cierre.trim() : ''
-    const observacionCierre = typeof cuerpo.observacion_cierre === 'string' ? cuerpo.observacion_cierre.trim() : ''
-
+    const cuerpo = await leerCuerpo(request)
+    const resultado = texto(cuerpo.resultado)
+    const fechaCierre = texto(cuerpo.fecha_cierre)
+    const observacionCierre = texto(cuerpo.observacion_cierre)
     const errores = {}
-    if (!resultado) {
-      errores.resultado = ['Selecciona el resultado del reclamo.']
-    }
+    if (!resultado) errores.resultado = ['Selecciona el resultado del reclamo.']
+    else if (resultado.length > 30) errores.resultado = ['El resultado no puede pasar de 30 caracteres.']
+    if (!esFechaISO(fechaCierre)) errores.fecha_cierre = ['Selecciona la fecha de cierre.']
+    else if (fechaCierre < reclamo.fecha_radicacion) errores.fecha_cierre = ['La fecha de cierre no puede ser anterior a la de radicación.']
+    if (observacionCierre.length > 500) errores.observacion_cierre = ['La observación no puede pasar de 500 caracteres.']
+    if (Object.keys(errores).length) return error(400, errores)
 
-    if (!fechaCierre || !esFechaISO(fechaCierre)) {
-      errores.fecha_cierre = ['Selecciona la fecha de cierre.']
-    } else if (fechaCierre < reclamo.fecha_radicacion) {
-      errores.fecha_cierre = ['La fecha de cierre no puede ser anterior a la de radicación.']
-    }
-
-    if (Object.keys(errores).length > 0) {
-      return error(400, errores)
-    }
-
-    reclamo.estado = 'CERRADO'
-    reclamo.resultado = resultado
-    reclamo.fecha_cierre = fechaCierre
-    reclamo.observacion_cierre = observacionCierre || null
-    reclamo.cerrado_en_archivo = false
-
-    // Si no quedan otros reclamos abiertos para esta obligación, se desmarca
-    const otrosAbiertos = db.reclamos.some(
-      (r) => r.id !== reclamo.id && r.obligacion_id === reclamo.obligacion_id && r.estado === 'EN_RECLAMO'
-    )
-    if (!otrosAbiertos) {
-      const obligacion = db.obligaciones.find(
-        (o) => o.id === reclamo.obligacion_id || o.obligacion_id === reclamo.obligacion_id
-      )
-      if (obligacion) {
-        obligacion.en_reclamo = false
-        obligacion.enReclamo = false
-      }
-    }
-
+    Object.assign(reclamo, {
+      estado: 'CERRADO',
+      resultado,
+      fecha_cierre: fechaCierre,
+      observacion_cierre: observacionCierre || null,
+      desmarcacion_generada: false, // entra en el siguiente archivo de desmarcación
+    })
+    const sigueEnReclamo = db.reclamos.some((r) => r.obligacion_id === reclamo.obligacion_id && r.estado === 'EN_RECLAMO')
+    const obligacion = db.obligaciones.find((o) => o.id === reclamo.obligacion_id)
+    if (obligacion && !sigueEnReclamo) obligacion.en_reclamo = false
     persistir()
-    return HttpResponse.json(reclamo, { status: 200 })
+    return HttpResponse.json(conVencido(reclamo))
   }),
 
-  // Generar insumo batch para TransUnion: GET /reclamos/insumo/?tipo=marcacion|desmarcacion
   http.get(url(ENDPOINTS.reclamosInsumo), async ({ request }) => {
     await espera()
     const { respuesta } = exigirSesion(SOLO_ANALISTA)
     if (respuesta) return respuesta
+    const insumo = INSUMOS[new URL(request.url).searchParams.get('tipo')]
+    if (!insumo) return error(400, { tipo: ['Usa marcacion o desmarcacion.'] })
 
-    const reqUrl = new URL(request.url)
-    const tipo = reqUrl.searchParams.get('tipo')
-
-    if (!['marcacion', 'desmarcacion'].includes(tipo)) {
-      return error(400, { tipo: ['Usa marcacion o desmarcacion.'] })
-    }
-
-    if (tipo === 'marcacion') {
-      const pendientes = db.reclamos.filter((r) => r.estado === 'EN_RECLAMO' && !r.radicado_en_tu)
-      pendientes.sort((a, b) => a.id - b.id)
-
-      let texto = ''
-      for (const r of pendientes) {
-        const f = r.fecha_radicacion.replace(/-/g, '')
-        const tipCodigo = r.tipologia?.codigo ?? '01'
-        texto += `${r.numero_obligacion}|${tipCodigo}|${f}\r\n`
-        r.radicado_en_tu = true
-      }
-
-      persistir()
-      return new HttpResponse(texto, {
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Content-Disposition': 'attachment; filename="Reclamos_Marcacion_TransUnion.txt"',
-        },
-      })
-    }
-
-    // desmarcacion
-    const pendientes = db.reclamos.filter((r) => r.estado === 'CERRADO' && !r.cerrado_en_archivo)
-    pendientes.sort((a, b) => a.id - b.id)
-
-    let texto = ''
-    for (const r of pendientes) {
-      const f = (r.fecha_cierre ?? r.fecha_radicacion).replace(/-/g, '')
-      const tipCodigo = r.tipologia?.codigo ?? '01'
-      texto += `${r.numero_obligacion}|${tipCodigo}|${f}\r\n`
-      r.cerrado_en_archivo = true
-    }
-
+    const incluidos = db.reclamos.filter(insumo.incluye).sort((a, b) => a.id - b.id)
+    const contenido = incluidos.map((r) => lineaInsumo(r, insumo.fecha(r))).join('')
+    incluidos.forEach(insumo.marcar)
     persistir()
-    return new HttpResponse(texto, {
+    return new HttpResponse(contenido, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="Reclamos_Desmarcacion_TransUnion.txt"',
+        'Content-Disposition': `attachment; filename="${insumo.archivo}"`,
       },
     })
   }),

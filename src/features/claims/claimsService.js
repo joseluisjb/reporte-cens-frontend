@@ -1,19 +1,19 @@
-// Servicio para Reclamos Habeas Data (RF23, pantalla 13).
-// SOLO Analista de Cartera. Endpoints:
-//   GET /api/reclamos/
-//   POST /api/reclamos/
-//   POST /api/reclamos/{id}/cerrar/
-//   GET /api/reclamos/insumo/?tipo=marcacion|desmarcacion
-//   GET /api/catalogos/tipologias-reclamo/
+// Servicio de Reclamos Habeas Data (RF23, pantalla 13). Solo Analista de Cartera (contrato 0.9.4):
+//   GET  /reclamos/?estado=EN_RECLAMO|CERRADO
+//   POST /reclamos/
+//   POST /reclamos/{id}/cerrar/
+//   GET  /reclamos/insumo/?tipo=marcacion|desmarcacion  (text/plain; deja marcados los que incluye)
+//   GET  /catalogos/tipologias-reclamo/
 import { api, ENDPOINTS } from '../../lib/api'
+import { guardarArchivo, nombreDeDescarga } from '../../lib/descarga'
 import { listObligations } from '../obligations/obligationsService'
 import { CATALOGOS, getCatalog } from '../transunion/catalogosService'
 import { aPeticionCerrarReclamo, aPeticionReclamo, mapReclamo } from './claimsMapper'
 
-export async function listClaims(params = {}) {
-  const query = {}
-  if (params.estado) query.estado = params.estado
-  const { data } = await api.get(ENDPOINTS.reclamos, { params: query })
+const NOMBRE_INSUMO = { marcacion: 'Reclamos_Marcacion_TransUnion.txt', desmarcacion: 'Reclamos_Desmarcacion_TransUnion.txt' }
+
+export async function listClaims({ estado } = {}) {
+  const { data } = await api.get(ENDPOINTS.reclamos, { params: estado ? { estado } : {} })
   return data.map(mapReclamo)
 }
 
@@ -27,45 +27,25 @@ export async function closeClaim(id, valores) {
   return mapReclamo(data)
 }
 
-export async function getClaimTipologias() {
-  return getCatalog(CATALOGOS.tipologiasReclamo)
-}
+export const getClaimTipologias = () => getCatalog(CATALOGOS.tipologiasReclamo)
 
+// Obligaciones que pueden recibir un reclamo: sin otro reclamo abierto y no eliminadas en TransUnion.
+// Las cerradas sí: su información negativa sigue en TransUnion durante la permanencia (Manual, cap. 4).
 export async function listEligibleObligations() {
   const { items } = await listObligations({ limite: 100 })
   return items.filter((o) => !o.enReclamo && !o.eliminada)
 }
 
-// Descarga el insumo batch de marcación o desmarcación y devuelve el texto plano
+// Genera el insumo del Reclamos Batch (Manual, p. 57) y lo guarda en el equipo. El backend deja
+// marcados los reclamos que incluye (`marcacion_generada` o `desmarcacion_generada`); 409 si otro
+// usuario los cambió mientras se generaba.
 export async function downloadClaimBatch(tipo) {
   const { data, headers } = await api.get(ENDPOINTS.reclamosInsumo, {
     params: { tipo },
     responseType: 'blob',
     headers: { Accept: 'text/plain, */*' },
   })
-
-  // Disparar descarga en el navegador si estamos en entorno DOM
-  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    const filenameHeader = headers?.['content-disposition']
-    let filename = tipo === 'marcacion' ? 'Reclamos_Marcacion_TransUnion.txt' : 'Reclamos_Desmarcacion_TransUnion.txt'
-    if (filenameHeader) {
-      const match = filenameHeader.match(/filename="?([^";]+)"?/)
-      if (match?.[1]) filename = match[1]
-    }
-    try {
-      const blob = new Blob([data], { type: 'text/plain;charset=utf-8' })
-      const url = typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : ''
-      const link = document.createElement('a')
-      if (url) link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      if (url && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(url)
-    } catch {
-      // Ignorar errores de jsdom cuando createObjectURL o click no están implementados
-    }
-  }
-
-  return data
+  const nombre = nombreDeDescarga(headers?.['content-disposition']) ?? NOMBRE_INSUMO[tipo]
+  guardarArchivo(data, nombre)
+  return nombre
 }

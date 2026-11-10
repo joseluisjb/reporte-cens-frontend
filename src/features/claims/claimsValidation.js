@@ -1,4 +1,5 @@
 // Validaciones para Reclamos Habeas Data (RF23, pantalla 13).
+import { hoyISO } from '../../lib/format'
 import { esFechaISO } from '../audit/auditValidation'
 
 export const MSG_CLAIMS = {
@@ -6,6 +7,7 @@ export const MSG_CLAIMS = {
   tipologia: 'Selecciona la tipología del reclamo.',
   fechaRadicacion: 'Selecciona la fecha del reclamo.',
   fechaInvalida: 'Fecha no válida.',
+  fechaFutura: 'La fecha de radicación no puede ser futura.', // mismo texto que el backend
   resultado: 'Selecciona el resultado del reclamo.',
   fechaCierre: 'Selecciona la fecha de cierre.',
   fechaCierreAnterior: 'La fecha de cierre no puede ser anterior a la de radicación.',
@@ -26,6 +28,8 @@ export function validarReclamo(valores) {
     errores.fechaRadicacion = MSG_CLAIMS.fechaRadicacion
   } else if (!esFechaISO(valores.fechaRadicacion.trim())) {
     errores.fechaRadicacion = MSG_CLAIMS.fechaInvalida
+  } else if (valores.fechaRadicacion.trim() > hoyISO()) {
+    errores.fechaRadicacion = MSG_CLAIMS.fechaFutura
   }
 
   return errores

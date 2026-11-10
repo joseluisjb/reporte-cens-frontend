@@ -1,5 +1,6 @@
-// Pantalla 13 · Reclamos Habeas Data (RF23).
-// Solo Analista de Cartera. Mockup v3: vReclamos.
+// Pantalla 13 · Reclamos Habeas Data (RF23). Solo Analista de Cartera.
+// Prepara el insumo del proceso «Marcación de obligaciones (Reclamos Batch)» de TransUnion (Manual, p. 57).
+// «Marcación generada» = ya salió en un archivo; que TransUnion la aplicó lo dice su archivo de radicación.
 import { useEffect, useState } from 'react'
 import {
   Alert,
@@ -9,6 +10,7 @@ import {
   EmptyState,
   Icon,
   PageHeader,
+  PorConfirmar,
   Spinner,
   Table,
   useToast,
@@ -44,7 +46,7 @@ export default function ClaimsPage() {
       })
       .catch((err) => {
         if (cancelado) return
-        setError(mensajeDeError(err, 'No se pudieron cargar los reclamos.'))
+        setError(mensajeDeError(err))
       })
     return () => {
       cancelado = true
@@ -53,9 +55,9 @@ export default function ClaimsPage() {
 
   const lista = reclamos || []
   const enReclamoList = lista.filter((r) => r.estadoCodigo === 'EN_RECLAMO')
-  const pendientesMarcacion = enReclamoList.filter((r) => !r.radicadoEnTu).length
+  const pendientesMarcacion = enReclamoList.filter((r) => !r.marcacionGenerada).length
   const pendientesDesmarcacion = lista.filter(
-    (r) => r.estadoCodigo === 'CERRADO' && !r.cerradoEnArchivo
+    (r) => r.estadoCodigo === 'CERRADO' && !r.desmarcacionGenerada
   ).length
 
   const handleDescargarInsumo = async (tipo) => {
@@ -73,7 +75,7 @@ export default function ClaimsPage() {
       const datos = await listClaims()
       setReclamos(datos)
     } catch (err) {
-      toast.error(mensajeDeError(err, 'Error al generar el archivo.'))
+      toast.error(`No se pudo generar el archivo. ${mensajeDeError(err)}`)
     } finally {
       setDescargando(false)
     }
@@ -145,7 +147,7 @@ export default function ClaimsPage() {
       {error && (
         <Alert tone="error">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>{error}</span>
+            <span>No se pudieron cargar los reclamos. {error}</span>
             <Button size="sm" variant="ghost" onClick={() => setIntento((i) => i + 1)}>
               Reintentar
             </Button>
@@ -183,7 +185,10 @@ export default function ClaimsPage() {
                         <div className="text-xs text-muted">{c.nombreTitular}</div>
                       </td>
                       <td className="min-w-[220px]">
-                        <div className="font-medium text-ink">{c.tipologiaDescripcion}</div>
+                        <div className="font-medium text-ink">
+                          {c.tipologiaDescripcion}
+                          {c.tipologia?.confirmado === false && <PorConfirmar />}
+                        </div>
                         {c.observacion && (
                           <div className="text-xs text-muted">{c.observacion}</div>
                         )}
@@ -199,12 +204,12 @@ export default function ClaimsPage() {
                       </td>
                       <td className="whitespace-nowrap">
                         {enReclamo ? (
-                          c.radicadoEnTu ? (
+                          c.marcacionGenerada ? (
                             <Badge tone="ok">Marcación generada</Badge>
                           ) : (
                             <Badge tone="aviso">Pendiente de marcación</Badge>
                           )
-                        ) : c.cerradoEnArchivo ? (
+                        ) : c.desmarcacionGenerada ? (
                           <Badge tone="ok">Desmarcación generada</Badge>
                         ) : (
                           <Badge tone="aviso">Pendiente de desmarcación</Badge>

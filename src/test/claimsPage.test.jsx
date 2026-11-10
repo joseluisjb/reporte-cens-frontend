@@ -1,52 +1,76 @@
-// Pantalla 13 · Reclamos Habeas Data (RF23).
+// Pantalla 13 · Reclamos Habeas Data (RF23), contrato 0.9.4. Los 3 reclamos iniciales del mock:
+// 2260-5543 en reclamo sin marcación generada, 2262-3318 en reclamo con marcación generada y
+// 2241-3302 cerrado, pendiente de desmarcación.
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { API_URL } from '../lib/config'
-import { hoyISO } from '../lib/format'
-import { reclamosIniciales } from '../mocks/datos/reclamos'
 import { db } from '../mocks/db'
 import { server } from '../mocks/server'
 import { ADMIN, renderApp, renderConSesion } from './renderApp'
 
+const TABLA = 'Reclamos de Habeas Data registrados'
+
 const abrir = async () => {
   await renderConSesion('/reclamos', 'jperez@example.com', 'Analista123')
   await screen.findByRole('heading', { name: 'Reclamos Habeas Data', level: 1 })
-  await screen.findByRole('table', { name: 'Reclamos de Habeas Data registrados' })
+  await screen.findByRole('table', { name: TABLA })
+}
+const filaDe = (numero) => within(screen.getByRole('table', { name: TABLA })).getByText(numero).closest('tr')
+
+const abrirRegistro = async () => {
+  await userEvent.click(screen.getByRole('button', { name: 'Registrar reclamo' }))
+  const modal = screen.getByRole('dialog', { name: 'Registrar reclamo' })
+  await within(modal).findByRole('option', { name: /^2258-7731 · / })
+  return modal
+}
+async function llenarRegistro(modal, { numero = '2258-7731', tipologia = '02', fecha, observacion } = {}) {
+  await userEvent.selectOptions(within(modal).getByLabelText('Obligación'), within(modal).getByRole('option', { name: new RegExp(`^${numero} · `) }))
+  await userEvent.selectOptions(within(modal).getByLabelText(/Tipología del reclamo/), tipologia)
+  if (fecha !== undefined) {
+    const campo = within(modal).getByLabelText('Fecha del reclamo')
+    await userEvent.clear(campo)
+    await userEvent.type(campo, fecha)
+  }
+  if (observacion) await userEvent.type(within(modal).getByLabelText(/Observación/), observacion)
+  await userEvent.click(within(modal).getByRole('button', { name: 'Registrar reclamo' }))
 }
 
-describe('pantalla 13 · Reclamos Habeas Data (RF23)', () => {
-  beforeEach(() => {
-    db.reclamos = reclamosIniciales()
+describe('pantalla 13 · lista', () => {
+  test('tarjetas, botones con su contador, aviso y la tabla con las columnas del mockup', async () => {
+    await abrir()
+    expect(screen.getByRole('button', { name: 'Archivo de marcación (1)' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Archivo de desmarcación (1)' })).toBeEnabled()
+    expect(screen.getByText('Obligaciones en reclamo').previousSibling).toHaveTextContent('2')
+    expect(screen.getByText(/Una obligación en reclamo/)).toHaveTextContent('se sigue reportando')
+    const tabla = screen.getByRole('table', { name: TABLA })
+    expect(within(tabla).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Obligación', 'Tipología y observación', 'Fecha del reclamo', 'Estado', 'Archivo', 'Acciones'])
+    expect(filaDe('2260-5543')).toHaveTextContent('Pendiente de marcación')
+    expect(filaDe('2262-3318')).toHaveTextContent('Marcación generada')
+    expect(filaDe('2241-3302')).toHaveTextContent('CerradoProcedente · 20/09/2026')
+    expect(filaDe('2241-3302')).toHaveTextContent('Pendiente de desmarcación')
   })
 
-  test('muestra el encabezado, tarjetas de conteo, aviso informativo y la tabla inicial', async () => {
+  test('la tipología del catálogo sin confirmar lleva «por confirmar»', async () => {
     await abrir()
+    expect(filaDe('2260-5543')).toHaveTextContent('Pago no reflejadopor confirmar')
+  })
 
-    // Encabezado
-    expect(screen.getByRole('heading', { name: 'Reclamos Habeas Data', level: 1 })).toBeInTheDocument()
+  test('sin reclamos muestra el estado vacío', async () => {
+    db.reclamos = []
+    await renderConSesion('/reclamos', 'jperez@example.com', 'Analista123')
+    expect(await screen.findByText('No hay reclamos registrados.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archivo de marcación (0)' })).toBeDisabled()
+  })
 
-    // Botones de acción principales
-    expect(screen.getByRole('button', { name: /Archivo de marcación/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Archivo de desmarcación/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Registrar reclamo/i })).toBeInTheDocument()
-
-    // Tarjetas de conteo: 2 en reclamo, 1 pendiente de marcación (r1), 1 cerrado pendiente de desmarcación (r3)
-    expect(screen.getByText('Obligaciones en reclamo')).toBeInTheDocument()
-    expect(screen.getByText('Pendientes de marcación')).toBeInTheDocument()
-    expect(screen.getByText('Cerrados pendientes de desmarcación')).toBeInTheDocument()
-
-    // Aviso informativo
-    expect(
-      screen.getByText(/Una obligación en reclamo/i)
-    ).toBeInTheDocument()
-
-    // Tabla con 3 registros
-    const tabla = screen.getByRole('table', { name: 'Reclamos de Habeas Data registrados' })
-    expect(within(tabla).getAllByRole('row')).toHaveLength(4) // 1 thead + 3 tbody
-    expect(within(tabla).getByText('2260-5543')).toBeInTheDocument()
-    expect(within(tabla).getByText('2262-3318')).toBeInTheDocument()
-    expect(within(tabla).getByText('2241-3302')).toBeInTheDocument()
+  test('si falla la carga muestra el error y «Reintentar» vuelve a pedirla', async () => {
+    let fallar = true
+    server.use(http.get(`${API_URL}/reclamos/`, () => (fallar ? HttpResponse.json({ detail: 'Servicio no disponible.' }, { status: 503 }) : undefined)))
+    await renderConSesion('/reclamos', 'jperez@example.com', 'Analista123')
+    expect(await screen.findByText(/^No se pudieron cargar los reclamos\. /)).toBeInTheDocument()
+    fallar = false
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(await screen.findByRole('table', { name: TABLA })).toBeInTheDocument()
   })
 
   test('el Administrador ve «Acceso restringido» en /reclamos', async () => {
@@ -54,163 +78,160 @@ describe('pantalla 13 · Reclamos Habeas Data (RF23)', () => {
     expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
     expect(screen.getByText(/exclusiva del rol Analista de Cartera/i)).toBeInTheDocument()
   })
+})
 
-  test('registrar un reclamo «Pago no reflejado» deja la obligación EN_RECLAMO', async () => {
+describe('pantalla 13 · registrar un reclamo', () => {
+  test('«Pago no reflejado» sobre 2258-7731: queda en reclamo con su número y titular, y sigue reportándose', async () => {
     await abrir()
-
-    await userEvent.click(screen.getByRole('button', { name: /Registrar reclamo/i }))
-
-    const modal = screen.getByRole('dialog', { name: 'Registrar reclamo' })
-    expect(modal).toBeInTheDocument()
-
-    // Esperar a que carguen las obligaciones en el select
-    await within(modal).findByRole('option', { name: /2258-7731/ })
-
-    // Seleccionar obligación 2 (2258-7731)
-    const selectObl = within(modal).getByLabelText('Obligación')
-    await userEvent.selectOptions(selectObl, '2')
-
-    // Seleccionar tipología «Pago no reflejado» (código 02)
-    const selectTip = within(modal).getByLabelText(/Tipología del reclamo/i)
-    await userEvent.selectOptions(selectTip, '02')
-
-    // Observación opcional
-    const obsInput = within(modal).getByLabelText(/Observación/i)
-    await userEvent.type(obsInput, 'Comprobante de pago 98765 del 12/09')
-
-    // Enviar formulario
-    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar reclamo' }))
-
-    // El modal se cierra y el reclamo aparece en la tabla
+    const modal = await abrirRegistro()
+    await llenarRegistro(modal, { observacion: 'Comprobante de pago 98765 del 12/09' })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(screen.getByText('Comprobante de pago 98765 del 12/09')).toBeInTheDocument()
+
+    const fila = filaDe('2258-7731')
+    expect(fila).toHaveTextContent('María Fernanda Ortiz')
+    expect(fila).toHaveTextContent('Pago no reflejado')
+    expect(fila).toHaveTextContent('Comprobante de pago 98765 del 12/09')
+    expect(fila).toHaveTextContent('En reclamo')
+    expect(fila).toHaveTextContent('Pendiente de marcación')
+    expect(screen.getByRole('button', { name: 'Archivo de marcación (2)' })).toBeEnabled()
     expect(screen.getByText('Reclamo registrado: queda pendiente el archivo de marcación.')).toBeInTheDocument()
+    // La obligación queda marcada en reclamo para las pantallas 9 y 4; no sale del reporte.
+    const obligacion = db.obligaciones.find((o) => o.numero === '2258-7731')
+    expect(obligacion).toMatchObject({ en_reclamo: true, eliminada: false })
   })
 
-  test('segundo reclamo abierto sobre la misma obligación da 409 en español', async () => {
+  test('no ofrece obligaciones que ya tienen un reclamo abierto ni eliminadas', async () => {
     await abrir()
+    const modal = await abrirRegistro()
+    const opciones = within(modal).getAllByRole('option').map((o) => o.textContent)
+    expect(opciones.some((t) => t.startsWith('2260-5543'))).toBe(false)
+    expect(opciones.some((t) => t.startsWith('2262-3318'))).toBe(false)
+  })
 
-    await userEvent.click(screen.getByRole('button', { name: /Registrar reclamo/i }))
+  test('si otro usuario la reclamó mientras tanto, muestra el 409 del servidor y no cierra el registro', async () => {
+    server.use(http.post(`${API_URL}/reclamos/`, () => HttpResponse.json({ detail: 'La obligación 2258-7731 ya tiene un reclamo abierto.' }, { status: 409 })))
+    await abrir()
+    const modal = await abrirRegistro()
+    await llenarRegistro(modal)
+    expect(await within(modal).findByText('La obligación 2258-7731 ya tiene un reclamo abierto.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Registrar reclamo' })).toBeInTheDocument()
+  })
 
+  test('una tipología que el servidor rechaza (400) se muestra en su campo', async () => {
+    server.use(http.post(`${API_URL}/reclamos/`, () => HttpResponse.json({ tipologia: ['Selecciona una tipología válida de la Ley 1266.'] }, { status: 400 })))
+    await abrir()
+    const modal = await abrirRegistro()
+    await llenarRegistro(modal, { tipologia: '01' })
+    expect(await within(modal).findByText('Selecciona una tipología válida de la Ley 1266.')).toBeInTheDocument()
+    expect(within(modal).getByLabelText(/Tipología del reclamo/)).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  test('una fecha futura se rechaza en el cliente, sin llamar al servidor', async () => {
+    const pedido = vi.fn()
+    server.use(http.post(`${API_URL}/reclamos/`, () => pedido()))
+    await abrir()
+    const modal = await abrirRegistro()
+    await llenarRegistro(modal, { fecha: '2999-01-01' })
+    expect(within(modal).getByText('La fecha de radicación no puede ser futura.')).toBeInTheDocument()
+    expect(pedido).not.toHaveBeenCalled()
+  })
+
+  test('la tipología lleva «por confirmar» mientras CENS no apruebe la lista', async () => {
+    await abrir()
+    const modal = await abrirRegistro()
+    expect(within(modal).getByText('Tipología del reclamo').parentElement).toHaveTextContent('por confirmar')
+  })
+
+  test('si no cargan las obligaciones lo dice y «Reintentar» las vuelve a pedir', async () => {
+    let fallar = true
+    server.use(http.get(`${API_URL}/obligaciones/`, () => (fallar ? HttpResponse.json({ detail: 'Servicio no disponible.' }, { status: 503 }) : undefined)))
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar reclamo' }))
     const modal = screen.getByRole('dialog', { name: 'Registrar reclamo' })
-
-    // Seleccionar obligación 4 (2260-5543) que ya tiene reclamo abierto
-    const selectObl = within(modal).getByLabelText('Obligación')
-    // Agregamos la opción 4 si no está en las elegibles
-    if (!within(selectObl).queryByDisplayValue(/2260-5543/)) {
-      const opt = document.createElement('option')
-      opt.value = '4'
-      opt.textContent = '2260-5543 · Diana Patricia Niño'
-      selectObl.appendChild(opt)
-    }
-    await userEvent.selectOptions(selectObl, '4')
-
-    const selectTip = within(modal).getByLabelText(/Tipología del reclamo/i)
-    await userEvent.selectOptions(selectTip, '01')
-
-    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar reclamo' }))
-
-    // Debe mostrar error 409 en español
-    expect(
-      await within(modal).findByText(/ya tiene un reclamo abierto/i)
-    ).toBeInTheDocument()
+    expect(await within(modal).findByText(/No se pudieron cargar las obligaciones y las tipologías/)).toBeInTheDocument()
+    expect(within(modal).getByRole('button', { name: 'Registrar reclamo' })).toBeDisabled()
+    fallar = false
+    await userEvent.click(within(modal).getByRole('button', { name: 'Reintentar' }))
+    expect(await within(modal).findByRole('option', { name: /^2258-7731 · María Fernanda Ortiz$/ })).toBeInTheDocument()
   })
+})
 
-  test('tipología fuera del catálogo da 400', async () => {
-    // Forzamos al servidor MSW a responder 400 por tipología inválida
-    server.use(
-      http.post(`${API_URL}/reclamos/`, () => {
-        return HttpResponse.json(
-          { tipologia: ['Selecciona una tipología válida de la Ley 1266.'] },
-          { status: 400 }
-        )
-      })
-    )
-
-    await abrir()
-    await userEvent.click(screen.getByRole('button', { name: /Registrar reclamo/i }))
-
-    const modal = screen.getByRole('dialog', { name: 'Registrar reclamo' })
-    await within(modal).findByRole('option', { name: /2258-7731/ })
-
-    const selectObl = within(modal).getByLabelText('Obligación')
-    await userEvent.selectOptions(selectObl, '2')
-
-    const selectTip = within(modal).getByLabelText(/Tipología del reclamo/i)
-    await userEvent.selectOptions(selectTip, '01')
-
-    await userEvent.click(within(modal).getByRole('button', { name: 'Registrar reclamo' }))
-
-    expect(
-      await within(modal).findByText('Selecciona una tipología válida de la Ley 1266.')
-    ).toBeInTheDocument()
-  })
-
-  test('cerrar con fecha anterior a la radicación da 400 en el campo fecha_cierre', async () => {
-    await abrir()
-
-    // Clic en "Cerrar reclamo" de la fila abierta (2260-5543, radicado el 2026-09-22)
-    const fila = screen.getByText('2260-5543').closest('tr')
-    const botonCerrar = within(fila).getByRole('button', { name: 'Cerrar reclamo' })
-    await userEvent.click(botonCerrar)
-
-    const modal = screen.getByRole('dialog', { name: 'Cerrar reclamo' })
-    expect(modal).toBeInTheDocument()
-
-    // Seleccionar resultado
-    const selectRes = within(modal).getByLabelText('Resultado del reclamo')
-    await userEvent.selectOptions(selectRes, 'Procedente')
-
-    // Fecha anterior a 2026-09-22, por ejemplo 2026-09-10
-    const fechaInput = within(modal).getByLabelText('Fecha de cierre')
-    await userEvent.clear(fechaInput)
-    await userEvent.type(fechaInput, '2026-09-10')
-
-    await userEvent.click(within(modal).getByRole('button', { name: 'Cerrar reclamo' }))
-
-    // Error de validación en el campo fecha_cierre
-    expect(
-      within(modal).getByText('La fecha de cierre no puede ser anterior a la de radicación.')
-    ).toBeInTheDocument()
-  })
-
-  test('cerrar reclamo exitosamente actualiza la fila a Cerrado', async () => {
-    await abrir()
-
-    const fila = screen.getByText('2260-5543').closest('tr')
-    const botonCerrar = within(fila).getByRole('button', { name: 'Cerrar reclamo' })
-    await userEvent.click(botonCerrar)
-
-    const modal = screen.getByRole('dialog', { name: 'Cerrar reclamo' })
+describe('pantalla 13 · cerrar un reclamo', () => {
+  const abrirCierre = async (numero) => {
+    await userEvent.click(within(filaDe(numero)).getByRole('button', { name: 'Cerrar reclamo' }))
+    return screen.getByRole('dialog', { name: 'Cerrar reclamo' })
+  }
+  async function llenarCierre(modal, fecha) {
     await userEvent.selectOptions(within(modal).getByLabelText('Resultado del reclamo'), 'Procedente')
-    const fechaInput = within(modal).getByLabelText('Fecha de cierre')
-    await userEvent.clear(fechaInput)
-    await userEvent.type(fechaInput, hoyISO())
-
+    const campo = within(modal).getByLabelText('Fecha de cierre')
+    await userEvent.clear(campo)
+    await userEvent.type(campo, fecha)
     await userEvent.click(within(modal).getByRole('button', { name: 'Cerrar reclamo' }))
+  }
 
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    expect(screen.getByText('Reclamo cerrado: queda pendiente el archivo de desmarcación.')).toBeInTheDocument()
+  test('una fecha anterior a la radicación se rechaza en el campo', async () => {
+    await abrir()
+    const modal = await abrirCierre('2260-5543') // radicado el 22/09/2026
+    await llenarCierre(modal, '2026-09-10')
+    expect(within(modal).getByText('La fecha de cierre no puede ser anterior a la de radicación.')).toBeInTheDocument()
+    expect(within(modal).getByLabelText('Fecha de cierre')).toHaveAttribute('aria-invalid', 'true')
   })
 
-  test('generar el insumo de marcación incluye solo reclamos pendientes y deja el botón en 0', async () => {
+  test('al cerrarlo queda pendiente de desmarcación y la obligación deja de estar en reclamo', async () => {
     await abrir()
+    const modal = await abrirCierre('2260-5543')
+    await llenarCierre(modal, '2026-10-01')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(filaDe('2260-5543')).toHaveTextContent('CerradoProcedente · 01/10/2026')
+    expect(filaDe('2260-5543')).toHaveTextContent('Pendiente de desmarcación')
+    expect(screen.getByRole('button', { name: 'Archivo de desmarcación (2)' })).toBeEnabled()
+    expect(screen.getByText('Reclamo cerrado: queda pendiente el archivo de desmarcación.')).toBeInTheDocument()
+    expect(db.obligaciones.find((o) => o.numero === '2260-5543').en_reclamo).toBe(false)
+  })
+})
 
-    // El botón inicialmente tiene 1 pendiente (Archivo de marcación (1))
-    const btnMarcacion = screen.getByRole('button', { name: /Archivo de marcación \(1\)/i })
-    expect(btnMarcacion).toBeEnabled()
-
-    await userEvent.click(btnMarcacion)
-
-    // Después de descargarlo, el botón de marcación queda en 0 y deshabilitado
-    await waitFor(() => {
-      const btnActualizado = screen.getByRole('button', { name: /Archivo de marcación \(0\)/i })
-      expect(btnActualizado).toBeDisabled()
+describe('pantalla 13 · insumo del Reclamos Batch (Manual, p. 57)', () => {
+  let guardado, click
+  beforeEach(() => {
+    guardado = vi.fn(() => 'blob:insumo')
+    // jsdom no trae createObjectURL: se usa una subclase de URL que sí lo tiene, sin tocar la global.
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = guardado
+      static revokeObjectURL = vi.fn()
     })
+    click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
 
-    // Y muestra el toast de éxito
-    expect(
-      screen.getByText(/Archivo de marcación generado con 1 reclamo\./i)
-    ).toBeInTheDocument()
+  test('marcación: incluye solo los reclamos sin marcación generada y deja el botón en 0', async () => {
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Archivo de marcación (1)' }))
+    expect(await screen.findByText('Archivo de marcación generado con 1 reclamo.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archivo de marcación (0)' })).toBeDisabled()
+    expect(filaDe('2260-5543')).toHaveTextContent('Marcación generada')
+    expect(click).toHaveBeenCalled()
+    const [archivo] = guardado.mock.calls[0]
+    expect(await archivo.text()).toBe('2260-5543|02|20260922\r\n')
+  })
+
+  test('desmarcación: incluye los cerrados pendientes con su fecha de cierre', async () => {
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Archivo de desmarcación (1)' }))
+    expect(await screen.findByText('Archivo de desmarcación generado con 1 reclamo.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archivo de desmarcación (0)' })).toBeDisabled()
+    expect(filaDe('2241-3302')).toHaveTextContent('Desmarcación generada')
+    const [archivo] = guardado.mock.calls[0]
+    expect(await archivo.text()).toBe('2241-3302|03|20260920\r\n')
+  })
+
+  test('si otro usuario cambió los reclamos (409), muestra el mensaje del servidor', async () => {
+    server.use(http.get(`${API_URL}/reclamos/insumo/`, () => HttpResponse.json({ detail: 'El insumo cambió mientras se generaba. Intenta de nuevo.' }, { status: 409 })))
+    await abrir()
+    await userEvent.click(screen.getByRole('button', { name: 'Archivo de marcación (1)' }))
+    expect(await screen.findByText('No se pudo generar el archivo. El insumo cambió mientras se generaba. Intenta de nuevo.')).toBeInTheDocument()
+    expect(guardado).not.toHaveBeenCalled()
   })
 })

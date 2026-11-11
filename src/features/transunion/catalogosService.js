@@ -1,5 +1,5 @@
 // Catálogos del Manual de TransUnion guardados en la base (`GET /catalogos/{nombre}/`, contrato 0.9,
-// propuesto). Lectura para los dos roles. Cada código trae `confirmado`: si es `false`, la pantalla lo
+// implementado en el backend). Lectura para los dos roles. Cada código trae `confirmado`: si es `false`, la pantalla lo
 // marca «por confirmar» (Tabla 11 y tipologías de reclamo, mientras CENS o TransUnion no respondan).
 import { api, ENDPOINTS } from '../../lib/api'
 import { mapItemCatalogo } from './catalogosMapper'

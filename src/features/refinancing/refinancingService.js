@@ -1,4 +1,4 @@
-// Refinanciaciones (pantalla 11, RF18). SOLO Analista de Cartera. Propuesto en el contrato 0.9; hoy
+// Refinanciaciones (pantalla 11, RF18). SOLO Analista de Cartera. Implementado en el backend (contrato 0.9.5); con VITE_USE_MOCKS=true
 // responden los mocks. Los errores llegan como ApiError: 400 por campo (usa
 // `mapRefinanciacionFieldErrors`), 404 si la original no existe y 409 si no se puede cerrar.
 import { api, ENDPOINTS } from '../../lib/api'

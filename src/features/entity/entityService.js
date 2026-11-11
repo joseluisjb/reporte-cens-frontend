@@ -1,4 +1,4 @@
-// Datos de la entidad ante TransUnion (RF57, pantalla 15). Propuesto en el contrato 0.9; hoy responden
+// Datos de la entidad ante TransUnion (RF57, pantalla 15). Implementado en el backend (contrato 0.9.5); con VITE_USE_MOCKS=true responden
 // los mocks. Lectura para los dos roles (el Analista ve el aviso de marcador en el panel y en la
 // pantalla 12); escritura solo del Administrador (el Analista recibe 403).
 // Los errores llegan como ApiError; usa `mapEntidadFieldErrors` (entityMapper) para llevarlos a cada campo.

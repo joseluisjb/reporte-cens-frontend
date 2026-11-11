@@ -1,5 +1,5 @@
 // Actualización mensual de estados (pantalla 10, RF10–RF17, RF19, RF45–RF49). SOLO Analista de Cartera.
-// Propuesto en el contrato 0.9; hoy responden los mocks (el backend no lo tiene).
+// Implementado en el backend (contrato 0.9.5); con VITE_USE_MOCKS=true responden los mocks.
 // Los errores llegan como ApiError (`message` en español y `fieldErrors`; usa `mapCicloFieldErrors`).
 import { api, ENDPOINTS } from '../../lib/api'
 import { TIEMPO_ESPERA_CORTE_MS } from '../../lib/config'

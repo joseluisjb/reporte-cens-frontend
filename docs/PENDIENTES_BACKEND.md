@@ -230,23 +230,78 @@ Revisado el 14/10/2026 contra la asignación de la iteración 1 (backend `main` 
 
 ---
 
-## 5. Iteración 2: endpoints propuestos en el contrato 0.9, 0.9.1, 0.9.2 y 0.9.3 (todavía no existen en el backend)
+## 5. Iteración 2: endpoints del contrato 0.9 a 0.9.3 y su estado en el backend
 
 El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **propuesta**. Mientras el backend no publique estos endpoints, el frontend los usa con datos simulados (MSW), armados con los ejemplos del contrato. A medida que cada pantalla los usa, los marca como «propuesto (contrato 0.9)» en `src/lib/api/endpoints.js`. Cada PR de pantalla agrega aquí sus criterios de aceptación para el backend (los «Listo cuando» de la ficha).
 
-| Módulo | Endpoints | RF | Backend | Rol (permiso) |
-|---|---|---|---|---|
-| Obligaciones | `GET /obligaciones/`, `/obligaciones/resumen/`, `/obligaciones/{id}/`, `/obligaciones/{id}/linea-tiempo/` | RF10–RF19, RF45–RF50, RF52 | José Luis | Analista (`EsAnalista`, nuevo) |
-| Ciclo mensual | `GET /matriz-estados/`, `GET` y `POST /ciclos/`, `GET /ciclos/{corte_id}/` | RF10–RF17, RF19, RF45–RF49 | José Luis | Analista |
-| Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista |
-| Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador |
-| Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador |
-| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) | Dilan y José Luis | Analista y Administrador (como `validar`) |
-| Resultados del cargue | `GET` y `POST /archivos/{id}/resultados/`, con el estado nuevo `ENVIADO_CON_INCONSISTENCIAS` | RF54 | José Luis | Analista |
-| Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista |
-| Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista |
-| Entidad | `GET /entidad/` (ambos roles) y `PUT /entidad/` | RF57 | Santiago | Administrador para escribir |
-| Panel | `GET /panel/resumen/` | RF6, RF19, RF23, RF24, RF57 | José Luis | Analista |
+La columna «En `main`» es el cotejo del 10/11/2026 contra el backend (`main` `69ee414`, con el mismo código que `dev` `951e297`; los anteriores fueron sobre `ebba7f2`, `d41aa13` y, el 09/11, `fa26721`): rutas de `config/api_urls.py`, vistas y serializers. Las diferencias con el contrato están en la sección 5.1. **Desde el 10/11 todo lo que dice «Sí» está en `main` y desplegado en Render** (PR #67 y #74 del backend): sin sesión, `/api/obligaciones/`, `/api/extracciones/{id}/validaciones/` y `/api/archivos/` responden 401. Falta probarlo con sesión. El contrato 0.9.5 está copiado en el backend (PR #66 del backend).
+
+Las validaciones y el archivo plano de Dilan entraron con los PR #71 y #72 del backend; el #72 lleva además el arreglo de RF49 (fecha de exigibilidad y años en mora en el archivo, `627a852`). Según José Luis, los scripts SQL 17 y 19 ya están aplicados en Oracle.
+
+**Lo que falta para conectar la Iteración 2 sin mocks:**
+
+| Qué | Quién | Detalle |
+|---|---|---|
+| `GET /obligaciones/{id}/linea-tiempo/` | José Luis | Ruta nueva (5.1, punto 6) |
+| `GET` y `POST /refinanciaciones/` | Santiago | Ruta nueva (pantalla 11) |
+| `GET /catalogos/{nombre}/` | José Luis (tablas de Clara) | Ruta nueva (Tabla 11, tipologías, motivos) |
+| `GET /panel/resumen/` | José Luis | Ruta nueva (panel del Analista) |
+| Detalle de la obligación incompleto | José Luis | `concepto`, `posibles_transiciones`, `reestructuracion`, `refinanciada_en`, `valor_cuota_antes_cierre` (5.1, punto 1) |
+| Reclamos según el contrato 0.9.4 | Clara | `marcacion_generada` y `desmarcacion_generada`, columna `observacion_cierre` (5.1, punto 7) |
+| Detalles menores | José Luis, Clara y Dilan | `abierta` inválido sin 400, `motivo` nulo en eliminaciones, mensajes y reglas de la vista de validación (5.1, puntos 2, 5 y 8) |
+| Prueba con sesión en Render | Johan | `npm run humo` con `HUMO_API_URL=https://reporte-cens.onrender.com/api` |
+| Pasar el frontend a `main` | Johan | Cuando estén las cuatro rutas: quitar «propuesto» en `endpoints.js`, probar cada pantalla con `VITE_USE_MOCKS=false` y abrir el PR `dev` → `main` |
+
+| Módulo | Endpoints | RF | Backend | Rol (permiso) | En `main` (10/11) |
+|---|---|---|---|---|---|
+| Obligaciones | `GET /obligaciones/`, `/obligaciones/resumen/`, `/obligaciones/{id}/`, `/obligaciones/{id}/linea-tiempo/` | RF10–RF19, RF45–RF50, RF52 | José Luis | Analista (`EsAnalista`, nuevo) | Sí, menos `linea-tiempo`. Detalle incompleto (5.1) |
+| Ciclo mensual | `GET /matriz-estados/`, `GET` y `POST /ciclos/`, `GET /ciclos/{corte_id}/` | RF10–RF17, RF19, RF45–RF49 | José Luis | Analista | Sí, igual al contrato |
+| Refinanciaciones | `GET` y `POST /refinanciaciones/` | RF18 | Santiago | Analista | No |
+| Catálogos | `GET /catalogos/{nombre}/` | RF18, RF23, RF24, RF47, RF50 | José Luis (tablas de Clara) | Analista y Administrador | No |
+| Estados y homologación | `GET /estados/`, `GET /homologacion-estados/`, `PUT /homologacion-estados/{estado_sac}/` | RF48 | Santiago | Administrador | Sí, igual al contrato (PR #57 del backend) |
+| Reporte a TransUnion | `GET /extracciones/{id}/validaciones/`, `POST /extracciones/{id}/archivo/`, `GET /archivos/`, `GET /archivos/{id}/descarga/`, y los ajustes a `validar` y `registrar-envio` | RF20–RF22, RF51, RF53, RF57 | Dilan y José Luis | Analista y Administrador (como `validar`) | Sí, casi igual al contrato (PR #71 y #72 del backend; 5.1, punto 8) |
+| Resultados del cargue | `GET` y `POST /archivos/{id}/resultados/`, con el estado nuevo `ENVIADO_CON_INCONSISTENCIAS` | RF54 | José Luis | Analista | Sí, igual al contrato |
+| Reclamos | `GET` y `POST /reclamos/`, `POST /reclamos/{id}/cerrar/`, `GET /reclamos/insumo/` | RF23 | Clara | Analista | Sí (PR #60 del backend), con las diferencias del contrato 0.9.4 (5.1) |
+| Novedades | `/novedades/`, `/eliminaciones/`, `/rectificaciones/` y sus acciones | RF24, RF50, RF55 | José Luis y Clara | Analista | Sí; rectificaciones igual al contrato 0.9.5 (PR #62 del backend) |
+| Entidad | `GET /entidad/` (ambos roles) y `PUT /entidad/` | RF57 | Santiago | Administrador para escribir | Sí, igual al contrato |
+| Panel | `GET /panel/resumen/` | RF6, RF19, RF23, RF24, RF57 | José Luis | Analista | No |
+
+### 5.1 Diferencias del backend con el contrato (cotejo del 09/11/2026 sobre `fa26721`, actualizado el 10/11/2026 sobre `d41aa13`, `ebba7f2` y `main` `69ee414`, con el contrato 0.9.5)
+
+De `d41aa13` a `ebba7f2` entraron en `dev` el PR #65 del backend (José Luis: `en_reclamo`, `abierta` y `ACTUALIZACION_MENSUAL`) y los PR #68 y #69 (columnas de los scripts SQL 10, 12a, 16, 17 y 18, y de `NV_ESTADO_TU` en la homologación). Con eso se cierran los puntos 2 y 3 y una parte del 1. Después entraron los PR #71 a #73 (Dilan) y todo pasó a `main` con el #74: se cierra el punto 4. Siguen abiertos el 1, el 5, el 7 y los detalles del 8.
+
+Lo que hay que corregir en el backend o, si se decide otra cosa, primero en el contrato:
+
+1. **Detalle de una obligación (`GET /obligaciones/{id}/`, `ciclo/servicios.py`).**
+   - `concepto` llega `None` siempre, y `fecha_ingreso` y `valor_inicial` pueden llegar nulos. El contrato los pide obligatorios y no nulos. El frontend los tolera desde el PR #58 y muestra «—», pero la pantalla 9 necesita el concepto (RF52).
+   - ~~`en_reclamo` llega `False` siempre, también en la lista.~~ *Resuelto en `dev` (PR #65 del backend): sale de los reclamos `EN_RECLAMO`.*
+   - `posibles_transiciones` y `advertencias` llegan vacíos: la pantalla 9 no muestra «Qué puede pasar con esta obligación».
+   - `reestructuracion` y `refinanciada_en` llegan `None` siempre: no se ven las refinanciaciones (RF18).
+   - `valor_cuota_antes_cierre` llega `None` siempre: en las cerradas no sale «Antes $X: al cerrar se reporta en $0» (RF52).
+   - `pago_mora.tipo_pago` puede llegar `None`; el contrato lo pide no nulo (`CodigoDescripcion`).
+2. **`GET /obligaciones/?abierta=true` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* deja fuera las cerradas (02 y 07) y las eliminadas. Queda un detalle: un valor distinto de `true` o `false` se toma como `false`, y el contrato pide `400` por campo.
+3. **`POST /extracciones/{id}/validar/` (0.9.3).** *Resuelto en `dev` (PR #65 del backend):* sin actualización mensual responde `409` con `ACTUALIZACION_MENSUAL` en `errores`. El PR #71 del backend agrega además `obligacion_id`, `numero_obligacion` y `campo` a cada error.
+4. **`POST /extracciones/{id}/registrar-envio/` (0.9).** *Resuelto (PR #72 del backend):* responde 409 `sin_archivo` y `archivo_no_apto` con los mismos `detail` y `code` del contrato, y marca el archivo como enviado.
+5. **`GET /eliminaciones/`.** `motivo` puede llegar `None`; el contrato lo pide no nulo (`ItemCatalogo`).
+6. **Rutas que faltan** (dan 404): `/obligaciones/{id}/linea-tiempo/`, `/refinanciaciones/`, `/catalogos/{nombre}/` y `/panel/resumen/`. No están en ninguna rama del backend. Las cuatro del reporte (`validaciones`, `archivo`, `GET /archivos/` y `descarga`) ya están en `main` (PR #71, #72 y #74).
+7. **Reclamos (contrato 0.9.4, Manual p. 57; decisión 28 del README del contrato).**
+   - `Reclamo` sale con `radicado_en_tu` (que en el backend es la columna `MARCACION_GENERADA`) y sin `desmarcacion_generada`. El contrato pide `marcacion_generada` y `desmarcacion_generada`: generar el insumo no es estar radicado.
+   - `cartera/servicios.py` reconoce archivos `radicacion_*` y `cierre_reclamo_*` como resultados del corte. Son respuestas del Reclamos Batch, no del reporte mensual; y esos nombres no salen del Manual.
+   - `POST /reclamos/{id}/cerrar/` rechaza `observacion_cierre` porque `NV_RECLAMO` no tiene esa columna. La ficha del RF23 la pide: hay que agregar la columna.
+   - `nombre_titular` y `fecha_limite_respuesta` pueden llegar `null`; el contrato los pide no nulos.
+   - El `409` del reclamo repetido dice «La obligación ya tiene un reclamo abierto.» sin el número; el contrato lo incluye («La obligación 2260-5543 ya tiene…»).
+   - Una obligación inexistente responde `400` en `obligacion_id` («La obligación no existe.»). El contrato lo admite (400 por campo) y el mock ya responde igual.
+8. **Validaciones y archivo plano de Dilan (PR #71 y #72 del backend; RF20, RF21, RF22, RF51, RF52, RF53; cotejo del 10/11/2026).** Coinciden con el contrato 0.9.5 en rutas, roles (validaciones, archivo, lista y descarga para los dos roles; resultados solo Analista), forma de `ValidacionesCorte`, `Archivo`, `CorteValidado` y `ErrorCorrectivo`, y en los `detail` y `code` de los 409. Lo que falta o cambia:
+   - **`SIN_NUMERO_OBLIGACION`** (vista `V_VALIDACION_CORTE`) trae `obligacion_id` pero `numero_obligacion` llega `null`, y el contrato lo pide no nulo en `ObligacionReferida`. Su mensaje muestra el id interno («Obligacion ID 5 sin numero…»). Propuesta: `numero_obligacion` con el número del SAC o `"(sin número)"`, y el mensaje sin el id.
+   - **Mensajes de la vista** sin tildes («Obligacion», «numero», «identificacion») y con el número al principio («Obligacion 2262-3318: …»). La pantalla 12 ya pone el número antes del mensaje, así que se ve dos veces. Los ejemplos del contrato traen el mensaje sin el número y con tildes («Falta la fecha de pago del cierre.»).
+   - **Valores fuera de rango (RF51).** `informativa` es correcto (Manual p. 19 y ficha RF53); el mock se corrigió para dar lo mismo. Pero el Manual revisa saldo, cuota, mora y cupo, y la vista solo revisa `VALOR_SALDO`.
+   - **Dos informativas de la ficha RF53 que faltan en la vista:** pago de la mora sin fecha de pago, modo o tipo (Manual pp. 26-27; en el mock, `PAGO_MORA_INCOMPLETO`) y valor real pagado no reportado (alerta 968, Manual pp. 5 y 131; en el mock, `VALOR_REAL_PAGADO_NO_REPORTADO`). La pantalla no depende de los identificadores de regla, solo del `nivel`.
+   - **Parámetros del archivo.** `tipo_reporte` se lee de `NV_PARAMETRO.TIPO_REPORTE`; si la clave no existe llega `null` y el contrato lo pide no nulo. La distribución de la Iteración 2 dice que la base ya trae `TIPO_REPORTE=01`, `CODIGO_PAQUETE=11` y `DIVISOR_VALORES=1000`: falta confirmarlo en Oracle. `CATEGORIA_SERVICIO` (campo 49, opcional) no aparece ahí y sale vacía; en la Tabla del Manual, `04` es «Servicio energía».
+   - **Valor real pagado.** Si `VALOR_REAL_PAGADO` es nulo, el campo sale en espacios y TransUnion genera la alerta 968; el detalle de la API ya lo toma como 0.
+   - *Resuelto en el #72 (`627a852`):* el campo 18 «Fecha de exigibilidad» salía vacío (RF49); ahora lleva la fecha límite de pago cuando hay mora y edad mayor a 00. Los años en mora solo salen con edad 14 (Manual p. 13).
+   - **Exclusiones del archivo.** `n_excluidas` cuenta solo las eliminadas. El contrato también excluye las cerradas en cortes anteriores (RF13, RF16): falta confirmar que no llegan a `NV_REPORTE_DETALLE` del corte; si llegan, hoy salen en el archivo.
+
+Lo que sí coincide campo por campo con el contrato (serializers y vistas): ciclos y matriz, lista y resumen de obligaciones, entidad (con los permisos por método), resultados del cargue (409, 422 y el campo multipart `archivos`), novedades y eliminaciones, estados y homologación (las reglas del `PUT` las valida el servicio con `400` por campo) y rectificaciones (incluido el `insumo` del 0.9.5).
 
 **Por definir con el backend:**
 
@@ -266,8 +321,8 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
 - **Refinanciaciones: más reglas del mock.** La fecha no puede ser anterior al ingreso de la obligación ni a un corte ya enviado (400 en `fecha`), y la nueva obligación conserva la identificación del titular. **Contrato 0.9.3:** `GET /obligaciones/?abierta=true` deja solo las abiertas (estado distinto de 02 y 07 **y** no eliminadas, como `abiertas` en el resumen); el formulario lo pide para no gastar la página de 100 en cerradas. `abierta` inválido responde 400 por campo.
 - **Reporte a TransUnion (pantalla 12, parte 1).** `GET /extracciones/{id}/validaciones/` es de los dos roles y no cambia el corte. Cada ítem trae su `nivel` y, si falla en obligaciones concretas, la lista con `obligacion_id`, `numero_obligacion`, `campo` y `mensaje`. `puede_generar` es `false` con alguna correctiva o si el corte no está `VALIDADO`. Reglas que el mock ya aplica:
   - correctivas: actualización mensual sin ejecutar, rechazos 713 u 881 del ciclo, número de obligación inválido, cierre incompleto (RF22: fecha de pago, modo, tipo, y saldo, mora y cuota en 0) y campos obligatorios;
-  - advertencias: valores fuera de $10.000 a $99 millones, entidad con marcador y mora de 540 días o más (Ley 2157, por confirmar);
-  - informativas: miles de pesos (por confirmar) y saldo mayor que el valor inicial;
+  - advertencia: entidad con marcador (RF57; el nivel `advertencia` es nuestro: el Manual solo tiene correctivas e informativas);
+  - informativas: miles de pesos (por confirmar), saldo mayor que el valor inicial, valores fuera de $10.000 a $99 millones en valor inicial, saldo, mora y cuota (Manual p. 19), pago de la mora sin fecha de pago, modo o tipo (pp. 26-27) y valor real pagado desconocido en una obligación que pagó en el corte (alerta 968);
   - la omisión frente al último corte (RF21) solo se cuenta en el mock; el backend debe bloquearla.
 
   `POST /extracciones/{id}/validar/` aplica las mismas correctivas y las devuelve con la obligación. En el mock eso solo pasa en cortes con actualización mensual, para no cambiar el flujo de la Iteración 1; el backend real debe exigir siempre el ciclo (contrato 0.9.3: sin actualización mensual, `409` con `{ regla: ACTUALIZACION_MENSUAL, mensaje: 'Falta ejecutar la actualización mensual de este corte.' }` en `errores`; no es un 409 aparte). `POST /extracciones/{id}/archivo/` exige `VALIDADO` (409) y, si un campo no cabe (por ejemplo, un nombre de más de 60 caracteres), responde 409 con `errores` y no genera nada. Con los datos de ejemplo, el corte del 30/09/2026 da 11 registros 2, 13 en total y 1 excluida. El nombre es `SSR` + tipo + código + fecha, y con marcador sale `apto_envio: false`. `GET /archivos/{id}/descarga/` devuelve `text/plain` en Windows-1252 con `Content-Disposition: attachment; filename="….txt"`, CRLF, registro 1 de 29 caracteres, registro 2 de la longitud del parámetro y registro 9 de 33. En el mock el registro 2 es ilustrativo (solo los primeros campos).
@@ -280,10 +335,7 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
   - la estructura de los estadísticos no está en el Manual: el mock solo cuenta sus filas (**por confirmar**);
   - `recibidos` son los registros 2 del archivo, `cargados` los que no tienen correctivas, y `con_inconsistencias` y `no_reportadas` cuentan obligaciones;
   - el corte pasa a `ENVIADO_CON_INCONSISTENCIAS` si hay correctivas y a `ENVIADO` si no; volver a cargar reemplaza los resultados del archivo. Los archivos de radicación y cierre de reclamos (RF23) son de la pantalla 13.
-
-  El contrato cambió solo en los ejemplos de RF54 (nombres del Manual en vez de `correctivas_SSR…`): **hay que copiar `openapi.yaml` al backend**.
-
-- **Archivo plano (RF20, Manual pp. 44-52).** El mock arma el registro tipo 2 con las posiciones de la Tabla 2: número de obligación en 89-108 (a la derecha), sucursal en 109-114, calidad P, estado, edad y años de mora, fecha de corte, exigibilidad, fecha de pago, modo de extinción y tipo de pago del cierre, cuotas en mora, y valor inicial, mora, saldo y cuota en miles con 12 dígitos; lo demás va en espacios. El backend debe llenar además los campos que el mock no guarda, empezando por el tipo y el número de identificación (obligatorios). Los campos de la Tabla 2 suman 929 caracteres y el Manual declara 930 (**por confirmar**).
+- **Archivo plano (RF20, Manual pp. 44-52).** El mock arma el registro tipo 2 con las posiciones de la Tabla 2: número de obligación en 89-108 (a la derecha), sucursal en 109-114, calidad P, estado, edad y años de mora, fecha de corte, exigibilidad, fecha de pago, modo de extinción y tipo de pago (del cierre o, si sigue abierta, del pago de la mora, RF47), cuotas en mora, valor inicial, mora, saldo y cuota en miles con 12 dígitos, y el valor real pagado en 918-929 (los pagos extraídos del corte, en miles; 0 si no hubo, para no disparar la alerta 968, **por confirmar** con TransUnion que el 0 la evita); lo demás va en espacios. El backend debe llenar además los campos que el mock no guarda, empezando por el tipo y el número de identificación (obligatorios). Los campos de la Tabla 2 suman 929 caracteres y el Manual declara 930 (**por confirmar**).
 
 - **Homologación de estados (pantalla 16, RF48, contrato 0.9.1).** `GET /estados/`, `GET /homologacion-estados/` y `PUT /homologacion-estados/{estado_sac}/` son solo del Administrador (el Analista recibe 403). Lo que el frontend espera y lo que hay que resolver en la base (`01_nexovolt_bd.sql`):
   - **F se guarda como `ESTADO_TU '02'` y la tabla no tiene columna de acción** (`NV_HOMOLOGA_ESTADO`, carga 3.5). El contrato la expone como `accion: CIERRE` con `estado_tu: null`: al cerrar, el estado sale de `NV_ESTADO_TU.CIERRE_AL_PAGAR` según el estado anterior (01 → 02; 03 y 06 → 07; RF12, RF15). Hace falta una columna `ACCION` (`ESTADO`/`CIERRE`) o una regla equivalente;
@@ -292,5 +344,4 @@ El contrato 0.9 (`docs/contrato/openapi.yaml`) define la Iteración 2 como **pro
   - `prioridad` sale de `NV_HOMOLOGA_ESTADO.PRIORIDAD` (A 1, C 2, D 3, B 4, F 5) y no se cambia por la API; `descripcion`, de `DESCRIPCION_SAC`;
   - el nombre del estado 12 en la Tabla 4b es «Ley 1564 de 2012 Insolvencia PNNC» (Manual, p. 64), como ya lo tiene la base.
 
-  El contrato subió a **0.9.1** (`prioridad` y el 400 de los estados de cierre): **hay que copiar `openapi.yaml` al backend**.
-- **Novedades, eliminaciones y rectificaciones (pantalla 14, RF24, RF50, RF55, contrato 0.9.2).** Solo el Analista. `GET /novedades/` es un arreglo plano, el más reciente primero, con filtros `estado` y `tipo` (400 por campo si no son válidos). `POST /novedades/` exige `motivo_eliminacion` (Tabla 28) en una eliminación. `POST /novedades/{id}/gestionar/` exige `numero_transaccion_tu` y `fecha_gestion` (la pantalla manda la fecha del día, como el mockup v3), responde 409 si la novedad no está pendiente y, si es una eliminación, crea la eliminación bloqueada (RF50) sin repetirla si la obligación ya estaba eliminada. `GET /eliminaciones/` pagina `{ total, resultados }` y la pantalla pide `limite=100`. `POST /eliminaciones/{id}/reactivar/` exige `numero_activacion_tu` y `fecha_activacion`, y responde 409 si ya se reactivó. Una corrección son dos registros: la pantalla crea la novedad `CORRECCION` y luego `POST /rectificaciones/` con su `novedad_id` (**0.9.2**; 400 en `novedad_id` si no existe); «Rectifica el corte…» sale de `GET /rectificaciones/`. La pantalla busca el `obligacion_id` de la rectificación con `GET /obligaciones/?q=` y exige coincidencia exacta del número. `valor_anterior` lo pone el backend desde el corte afectado (en el mock queda `null`). **Hay que copiar `openapi.yaml` 0.9.3 al backend.**
+- **Novedades, eliminaciones y rectificaciones (pantalla 14, RF24, RF50, RF55, contrato 0.9.2).** Solo el Analista. `GET /novedades/` es un arreglo plano, el más reciente primero, con filtros `estado` y `tipo` (400 por campo si no son válidos). `POST /novedades/` exige `motivo_eliminacion` (Tabla 28) en una eliminación. `POST /novedades/{id}/gestionar/` exige `numero_transaccion_tu` y `fecha_gestion` (la pantalla manda la fecha del día, como el mockup v3), responde 409 si la novedad no está pendiente y, si es una eliminación, crea la eliminación bloqueada (RF50) sin repetirla si la obligación ya estaba eliminada. `GET /eliminaciones/` pagina `{ total, resultados }` y la pantalla pide `limite=100`. `POST /eliminaciones/{id}/reactivar/` exige `numero_activacion_tu` y `fecha_activacion`, y responde 409 si ya se reactivó. Una corrección son dos registros: la pantalla crea la novedad `CORRECCION` y luego `POST /rectificaciones/` con su `novedad_id` (**0.9.2**; 400 en `novedad_id` si no existe); «Rectifica el corte…» sale de `GET /rectificaciones/`. La pantalla busca el `obligacion_id` de la rectificación con `GET /obligaciones/?q=` y exige coincidencia exacta del número. `valor_anterior` lo pone el backend desde el corte afectado (en el mock queda `null`).

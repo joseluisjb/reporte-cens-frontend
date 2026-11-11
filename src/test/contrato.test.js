@@ -722,6 +722,7 @@ describe('conformidad de los mocks del reporte a TransUnion (contrato 0.9): vali
     expect(saldada.slice(188, 191)).toBe('000') // cuotas en mora
     expect(saldada.slice(191, 203)).toBe('000000001020') // valor inicial en miles (.020.000)
     expect(saldada.slice(203, 239)).toBe('0'.repeat(36)) // mora, saldo y cuota en cero
+    expect(saldada.slice(917, 929)).toBe('000000000170') // valor real pagado en miles ($170.000 del corte), 918-929
     expect(lineas.at(-1)).toBe('900000013000000110000000000000000')
     expect(lineas.at(-1)).toHaveLength(33)
     expect(await verifica('get', '/archivos/{id}/descarga/', 404, { url: '/archivos/99/descarga/' })).toEqual({ detail: 'Archivo no encontrado.' })
@@ -994,5 +995,72 @@ describe('conformidad de los mocks de novedades, eliminaciones y rectificaciones
     expect(rect).toMatchObject({ novedad_id: novedad.id, corte_id: 1, estado: 'REGISTRADA' })
     expect(await verifica('post', '/rectificaciones/', 400, { datos: { ...peticion, novedad_id: 999 } })).toEqual({ novedad_id: ['Novedad no encontrada.'] })
     expect(await verifica('post', '/rectificaciones/', 409, { datos: { ...peticion, corte_id: 2 } })).toEqual({ detail: 'Solo se rectifican cortes ya enviados a TransUnion.' })
+  })
+})
+
+describe('conformidad de los mocks de reclamos (contrato 0.9.4, RF23)', () => {
+  const pedido = { obligacion_id: 2, tipologia: '02', fecha_radicacion: '2026-10-01', observacion: 'Pago del 12/09.' }
+
+  test('GET /reclamos/ 200 cumple la lista de Reclamo; 400 con filtro inválido; 403 al Administrador y 401', async () => {
+    await verifica('get', '/reclamos/', 401)
+    await entrar(ADMIN)
+    await verifica('get', '/reclamos/', 403)
+    await entrar(ANALISTA)
+    const lista = await verifica('get', '/reclamos/', 200)
+    expect(lista.map((r) => r.numero_obligacion)).toEqual(['2241-3302', '2262-3318', '2260-5543'])
+    expect(lista[0]).toMatchObject({ estado: 'CERRADO', marcacion_generada: true, desmarcacion_generada: false })
+    expect(await verifica('get', '/reclamos/', 200, { url: '/reclamos/?estado=CERRADO' })).toHaveLength(1)
+    expect(await verifica('get', '/reclamos/', 400, { url: '/reclamos/?estado=ABIERTO' })).toEqual({ estado: ['Estado no válido.'] })
+  })
+
+  test('POST /reclamos/ 201 con el número y el titular de la obligación; 409 si ya tiene uno abierto; 400 por campo (también si la obligación no existe)', async () => {
+    await entrar(ANALISTA)
+    expect(() => expectPeticionCumpleContrato('post', '/reclamos/', pedido)).not.toThrow()
+    const r = await verifica('post', '/reclamos/', 201, { datos: pedido })
+    expect(r).toMatchObject({
+      obligacion_id: 2,
+      numero_obligacion: '2258-7731',
+      nombre_titular: 'María Fernanda Ortiz',
+      tipologia: { codigo: '02', descripcion: 'Pago no reflejado', confirmado: false },
+      estado: 'EN_RECLAMO',
+      marcacion_generada: false,
+      desmarcacion_generada: false,
+      fecha_limite_respuesta: '2026-10-22',
+      registrado_por: 'Juan Pérez',
+    })
+    expect(db.obligaciones.find((o) => o.id === 2).en_reclamo).toBe(true)
+    expect(await verifica('post', '/reclamos/', 409, { datos: pedido })).toEqual({ detail: 'La obligación 2258-7731 ya tiene un reclamo abierto.' })
+    expect(await verifica('post', '/reclamos/', 400, { datos: { ...pedido, obligacion_id: 3, tipologia: '99', fecha_radicacion: '2999-01-01' } })).toEqual({
+      tipologia: ['Selecciona una tipología válida de la Ley 1266.'],
+      fecha_radicacion: ['La fecha de radicación no puede ser futura.'],
+    })
+    expect(await verifica('post', '/reclamos/', 400, { datos: { ...pedido, obligacion_id: 999 } })).toEqual({ obligacion_id: ['La obligación no existe.'] })
+  })
+
+  test('POST /reclamos/{id}/cerrar/ 200 deja el reclamo pendiente de desmarcación; 400, 404 y 409', async () => {
+    await entrar(ANALISTA)
+    const url = '/reclamos/1/cerrar/'
+    expect(await verifica('post', '/reclamos/{id}/cerrar/', 400, { url, datos: { resultado: 'Procedente', fecha_cierre: '2026-09-10' } })).toEqual({
+      fecha_cierre: ['La fecha de cierre no puede ser anterior a la de radicación.'],
+    })
+    const cerrado = await verifica('post', '/reclamos/{id}/cerrar/', 200, { url, datos: { resultado: 'Procedente', fecha_cierre: '2026-10-01', observacion_cierre: 'Se aplicó el pago.' } })
+    expect(cerrado).toMatchObject({ estado: 'CERRADO', resultado: 'Procedente', fecha_cierre: '2026-10-01', desmarcacion_generada: false, vencido: false })
+    expect(db.obligaciones.find((o) => o.id === 4).en_reclamo).toBe(false)
+    expect(await verifica('post', '/reclamos/{id}/cerrar/', 409, { url, datos: { resultado: 'Procedente', fecha_cierre: '2026-10-01' } })).toEqual({ detail: 'El reclamo ya está cerrado.' })
+    expect(await verifica('post', '/reclamos/{id}/cerrar/', 404, { url: '/reclamos/99/cerrar/', datos: { resultado: 'Procedente', fecha_cierre: '2026-10-01' } })).toEqual({ detail: 'Reclamo no encontrado.' })
+  })
+
+  test('GET /reclamos/insumo/ es texto plano, deja marcados los incluidos y la segunda llamada sale vacía; 400 con tipo inválido', async () => {
+    await entrar(ANALISTA)
+    const pedir = (tipo) => api.request({ method: 'get', url: '/reclamos/insumo/', params: { tipo }, responseType: 'text', validateStatus: () => true })
+    const primera = await pedir('marcacion')
+    expect(primera.status).toBe(200)
+    expectCumpleContrato('get', '/reclamos/insumo/', 200, primera.data)
+    expect(primera.data).toBe('2260-5543|02|20260922\r\n')
+    expect(primera.headers['content-disposition']).toBe('attachment; filename="Reclamos_Marcacion_TransUnion.txt"')
+    expect(db.reclamos.find((r) => r.id === 1).marcacion_generada).toBe(true)
+    expect((await pedir('marcacion')).data).toBe('')
+    expect((await pedir('desmarcacion')).data).toBe('2241-3302|03|20260920\r\n')
+    expect(await verifica('get', '/reclamos/insumo/', 400, { url: '/reclamos/insumo/?tipo=otro' })).toEqual({ tipo: ['Usa marcacion o desmarcacion.'] })
   })
 })

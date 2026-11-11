@@ -14,6 +14,7 @@ import { archivosIniciales } from './datos/archivos'
 import { cicloInicial } from './datos/ciclos'
 import { homologacionesIniciales } from './datos/homologacion'
 import { eliminacionesIniciales, novedadesIniciales, rectificacionesIniciales } from './datos/novedades'
+import { reclamosIniciales } from './datos/reclamos'
 import { obligacionesIniciales } from './datos/obligacionesIteracion2'
 import { refinanciacionesIniciales } from './datos/refinanciaciones'
 import { resultadosIniciales } from './datos/resultadosCargue'
@@ -85,6 +86,7 @@ const COLECCIONES = [
   'novedades',
   'eliminaciones',
   'rectificaciones',
+  'reclamos',
 ]
 
 const inicial = () => ({
@@ -111,6 +113,7 @@ const inicial = () => ({
   novedades: novedadesIniciales(),
   eliminaciones: eliminacionesIniciales(),
   rectificaciones: rectificacionesIniciales(),
+  reclamos: reclamosIniciales(),
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

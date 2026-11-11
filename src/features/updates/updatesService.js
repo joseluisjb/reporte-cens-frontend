@@ -1,6 +1,6 @@
 // Servicio para Novedades Urgentes, Eliminaciones y Rectificaciones (RF24, RF50, RF55).
-// SOLO Analista de Cartera. Propuesto en el contrato 0.9 (0.9.2 para `novedad_id` en la
-// rectificación); hoy responden los mocks.
+// SOLO Analista de Cartera. Implementado en el backend (contrato 0.9.5; 0.9.2 para `novedad_id` en la
+// rectificación); con VITE_USE_MOCKS=true responden los mocks.
 import { api, ApiError, ENDPOINTS } from '../../lib/api'
 import { mapPagina } from '../../lib/api/pagina'
 import { hoyISO } from '../../lib/format'

@@ -106,7 +106,7 @@ export function mapResumenCartera(raw) {
     fechaUltimoCiclo: fecha(raw.fecha_ultimo_ciclo),
     total: raw.total,
     abiertas: raw.abiertas,
-    porEstado: raw.por_estado.map(mapConteoEstado),
+    porEstado: ordenarConteosEstado(raw.por_estado.map(mapConteoEstado)),
     eliminadas: raw.eliminadas,
     porCuotasMora: { alDia: cuotas.al_dia, una: cuotas.una, dosATres: cuotas.dos_a_tres, cuatroOMas: cuotas.cuatro_o_mas },
     financiacionesNuevas: raw.financiaciones_nuevas.map((f) => ({ numeroObligacion: f.numero_obligacion, nombreTitular: f.nombre_titular })),
@@ -129,3 +129,16 @@ export const mapObligacionesFieldErrors = (fe = {}) => ({
 
 // ConteoEstado { estado_tu, cantidad } → { estado: { codigo, descripcion }, cantidad } (pantalla 9 y panel).
 export const mapConteoEstado = (c) => ({ estado: estado(c.estado_tu), cantidad: c.cantidad })
+
+// El contrato no fija el orden de `distribucion` ni de `por_estado` y el backend los entrega por código
+// (ORDER BY ESTADO_TU), así que el orden de las tarjetas lo fija el frontend: primero 01, 03, 06, 02 y 07;
+// el resto, por código ascendente.
+const ORDEN_ESTADOS = ['01', '03', '06', '02', '07']
+const posicionEstado = (codigo) => {
+  const posicion = ORDEN_ESTADOS.indexOf(codigo)
+  return posicion === -1 ? ORDEN_ESTADOS.length : posicion
+}
+export const ordenarConteosEstado = (conteos) =>
+  [...conteos].sort(
+    (a, b) => posicionEstado(a.estado.codigo) - posicionEstado(b.estado.codigo) || a.estado.codigo.localeCompare(b.estado.codigo),
+  )

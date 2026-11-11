@@ -1,4 +1,4 @@
-// Reporte a TransUnion (pantalla 12, RF20–RF22, RF51, RF53, RF54, RF57). Propuesto en el contrato 0.9; hoy
+// Reporte a TransUnion (pantalla 12, RF20–RF22, RF51, RF53, RF54, RF57). Implementado en el backend (contrato 0.9.5); con VITE_USE_MOCKS=true
 // responden los mocks. Los errores llegan como ApiError: el 409 de generar trae `datos.errores` (usa
 // `mapErroresCorrectivos`) y el 422 de cargar resultados, el motivo en `message`.
 import { api, ENDPOINTS } from '../../lib/api'

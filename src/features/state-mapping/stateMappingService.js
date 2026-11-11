@@ -1,5 +1,5 @@
 // Catálogo de estados y homologación del SAC (RF48, pantalla 16), solo del Administrador (el Analista
-// recibe 403). Propuesto en el contrato 0.9.1; hoy responden los mocks. Los errores llegan como ApiError;
+// recibe 403). Implementado en el backend (contrato 0.9.5); con VITE_USE_MOCKS=true responden los mocks. Los errores llegan como ApiError;
 // usa `mapHomologacionFieldErrors` para llevar los 400 a cada campo.
 import { api, ENDPOINTS } from '../../lib/api'
 import { mapEstadoTU, mapHomologacion } from './stateMappingMapper'

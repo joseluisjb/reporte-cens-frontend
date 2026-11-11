@@ -26,39 +26,39 @@ export const ENDPOINTS = {
   obligacionesCorte: (id) => `/extracciones/${id}/obligaciones/`,
   // Auditoría (RF30). Implementado en el backend (contrato 0.6). Solo Administrador.
   auditoria: '/auditoria/',
-  // Iteración 2 · propuesto (contrato 0.9): el backend aún no los tiene; hoy responden los mocks.
-  // Pendientes en docs/PENDIENTES_BACKEND.md, sección 5.
-  obligaciones: '/obligaciones/', // propuesto (contrato 0.9) · solo Analista
-  obligacionesResumen: '/obligaciones/resumen/', // propuesto (contrato 0.9) · solo Analista
-  obligacion: (id) => `/obligaciones/${id}/`, // propuesto (contrato 0.9) · solo Analista
-  obligacionLineaTiempo: (id) => `/obligaciones/${id}/linea-tiempo/`, // propuesto (contrato 0.9) · solo Analista
-  catalogo: (nombre) => `/catalogos/${nombre}/`, // propuesto (contrato 0.9) · los dos roles
-  panelResumen: '/panel/resumen/', // propuesto (contrato 0.9) · solo Analista
-  entidad: '/entidad/', // propuesto (contrato 0.9) · GET de los dos roles; PUT solo Administrador
-  estadosTU: '/estados/', // propuesto (contrato 0.9) · solo Administrador (Tabla 4b con su uso en CENS)
-  homologacionEstados: '/homologacion-estados/', // propuesto (contrato 0.9.1) · solo Administrador
-  homologacionEstado: (estadoSac) => `/homologacion-estados/${estadoSac}/`, // propuesto (contrato 0.9.1) · PUT solo Administrador
-  ciclos: '/ciclos/', // propuesto (contrato 0.9) · solo Analista (GET historial, POST ejecutar)
-  ciclo: (corteId) => `/ciclos/${corteId}/`, // propuesto (contrato 0.9) · solo Analista
-  matrizEstados: '/matriz-estados/', // propuesto (contrato 0.9) · solo Analista
-  refinanciaciones: '/refinanciaciones/', // propuesto (contrato 0.9) · solo Analista (GET y POST)
-  validacionesCorte: (id) => `/extracciones/${id}/validaciones/`, // propuesto (contrato 0.9) · los dos roles
-  generarArchivo: (id) => `/extracciones/${id}/archivo/`, // propuesto (contrato 0.9) · los dos roles
-  archivos: '/archivos/', // propuesto (contrato 0.9) · los dos roles
-  archivoDescarga: (id) => `/archivos/${id}/descarga/`, // propuesto (contrato 0.9) · los dos roles (text/plain)
-  resultadosArchivo: (id) => `/archivos/${id}/resultados/`, // propuesto (contrato 0.9) · solo Analista (GET ver, POST multipart cargar)
+  // Iteración 2 · implementada en el backend (main 8065be8, contrato 0.9.5); las diferencias abiertas están en
+  // docs/PENDIENTES_BACKEND.md §5.1. Con VITE_USE_MOCKS=true siguen respondiendo los mocks.
+  obligaciones: '/obligaciones/', // solo Analista
+  obligacionesResumen: '/obligaciones/resumen/', // solo Analista
+  obligacion: (id) => `/obligaciones/${id}/`, // solo Analista
+  obligacionLineaTiempo: (id) => `/obligaciones/${id}/linea-tiempo/`, // solo Analista
+  catalogo: (nombre) => `/catalogos/${nombre}/`, // los dos roles
+  panelResumen: '/panel/resumen/', // solo Analista
+  entidad: '/entidad/', // GET de los dos roles; PUT solo Administrador
+  estadosTU: '/estados/', // solo Administrador (Tabla 4b con su uso en CENS)
+  homologacionEstados: '/homologacion-estados/', // solo Administrador
+  homologacionEstado: (estadoSac) => `/homologacion-estados/${estadoSac}/`, // PUT solo Administrador
+  ciclos: '/ciclos/', // solo Analista (GET historial, POST ejecutar)
+  ciclo: (corteId) => `/ciclos/${corteId}/`, // solo Analista
+  matrizEstados: '/matriz-estados/', // solo Analista
+  refinanciaciones: '/refinanciaciones/', // solo Analista (GET y POST)
+  validacionesCorte: (id) => `/extracciones/${id}/validaciones/`, // los dos roles
+  generarArchivo: (id) => `/extracciones/${id}/archivo/`, // los dos roles
+  archivos: '/archivos/', // los dos roles
+  archivoDescarga: (id) => `/archivos/${id}/descarga/`, // los dos roles (text/plain)
+  resultadosArchivo: (id) => `/archivos/${id}/resultados/`, // solo Analista (GET ver, POST multipart cargar)
   // Reclamos Habeas Data (pantalla 13 · RF23) · solo Analista
-  reclamos: '/reclamos/', // propuesto (contrato 0.9)
-  reclamoCerrar: (id) => `/reclamos/${id}/cerrar/`, // propuesto (contrato 0.9)
-  reclamosInsumo: '/reclamos/insumo/', // propuesto (contrato 0.9.4) · text/plain; deja marcados los reclamos incluidos
+  reclamos: '/reclamos/',
+  reclamoCerrar: (id) => `/reclamos/${id}/cerrar/`,
+  reclamosInsumo: '/reclamos/insumo/', // 0.9.4 · text/plain; deja marcados los reclamos incluidos
   // Novedades urgentes, eliminaciones y rectificaciones (pantalla 14 · RF24, RF50, RF55) · solo Analista
-  novedades: '/novedades/', // propuesto (contrato 0.9)
-  novedadGestionar: (id) => `/novedades/${id}/gestionar/`, // propuesto (contrato 0.9)
-  novedadRechazar: (id) => `/novedades/${id}/rechazar/`, // propuesto (contrato 0.9)
-  eliminaciones: '/eliminaciones/', // propuesto (contrato 0.9)
-  eliminacionReactivar: (id) => `/eliminaciones/${id}/reactivar/`, // propuesto (contrato 0.9)
-  rectificaciones: '/rectificaciones/', // propuesto (contrato 0.9.2: acepta novedad_id)
-  rectificacionConfirmar: (id) => `/rectificaciones/${id}/confirmar/`, // propuesto (contrato 0.9)
+  novedades: '/novedades/',
+  novedadGestionar: (id) => `/novedades/${id}/gestionar/`,
+  novedadRechazar: (id) => `/novedades/${id}/rechazar/`,
+  eliminaciones: '/eliminaciones/',
+  eliminacionReactivar: (id) => `/eliminaciones/${id}/reactivar/`,
+  rectificaciones: '/rectificaciones/', // 0.9.2: acepta novedad_id
+  rectificacionConfirmar: (id) => `/rectificaciones/${id}/confirmar/`,
   // Solo existe en los mocks (modo demostración). El backend real NO lo tendrá.
   demoSwitchProfile: '/demo/switch-profile/',
 }

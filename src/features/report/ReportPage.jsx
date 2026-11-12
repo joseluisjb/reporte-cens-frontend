@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom'
 import { Alert, Button, Card, EmptyState, Icon, PageHeader, Spinner, TextLink, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaISOLarga, plural } from '../../lib/format'
+import { campoTexto, estadoCorteTexto } from '../../lib/textos'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { getEntity } from '../entity/entityService'
 import { getLatestCut, validateCut } from '../extraction/extractionService'
@@ -26,7 +27,7 @@ const PASOS = [
   <>Elegir las obligaciones: las abiertas y las que cerraron en este corte; sin las cerradas antes ni las eliminadas</>,
   <>Revisar los campos de cierre de Saldadas y Castigadas recuperadas</>,
   <>Convertir los valores a miles de pesos</>,
-  <>Armar el registro 1 (encabezado), un registro 2 por obligación y el registro 9 (totales)</>,
+  <>Armar el archivo: encabezado, una línea por obligación y totales</>,
   <>Nombrar el archivo: SSR + tipo de entidad + código de entidad + fecha de corte</>,
 ]
 
@@ -107,7 +108,7 @@ export default function ReportPage() {
   const validar = () =>
     ejecutar('validar', async () => {
       await validateCut(corte.id)
-      toast.success('Corte validado: ya puedes generar el archivo plano.')
+      toast.success('Corte validado: ya puedes generar el archivo para TransUnion.')
     })
 
   const generar = () =>
@@ -189,7 +190,7 @@ export default function ReportPage() {
       {entidad?.conMarcador && (
         <div className="mb-5">
           <Alert tone="aviso">
-            TransUnion aún no asigna los datos de la entidad. Mientras el tipo de entidad, el código de entidad y la sucursal lleven relleno (
+            TransUnion aún no asigna los datos de la entidad. Mientras el tipo de entidad, el código de entidad y la sucursal lleven datos provisionales (
             <span className="font-mono">XXX</span>), los archivos salen <b>no aptos para envío</b>. Los cambia el Administrador en «Datos de la Entidad».
           </Alert>
         </div>
@@ -281,12 +282,12 @@ function Parametros({ corte, validaciones, entidad, accion, yaGenerado, onValida
         <div>
           <div className="text-xs text-muted">Fecha de corte</div>
           <b>{formatearFechaISOLarga(corte.fechaCorte)}</b>
-          <div className="text-sm text-muted">Último corte · {corte.estado}</div>
+          <div className="text-sm text-muted">Último corte · {estadoCorteTexto(corte.estado)}</div>
         </div>
         <div className="min-w-60 flex-1">
           <div className="text-xs text-muted">Formato del archivo</div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
-            {['TOTAL · toda la cartera', 'ANSI · longitud fija', 'Registros 1, 2 y 9 · Sector Real Servicios (SSR)'].map((t) => (
+            {['Toda la cartera', 'Longitud fija', 'Encabezado, obligaciones y totales'].map((t) => (
               <span key={t} className="rounded-full bg-slate-100 px-2.5 py-0.75 font-semibold text-slate-600">
                 {t}
               </span>
@@ -306,7 +307,7 @@ function Parametros({ corte, validaciones, entidad, accion, yaGenerado, onValida
         ) : (
           <Button onClick={onGenerar} loading={accion === 'generar'} disabled={!validaciones.puedeGenerar || accion !== null}>
             {accion !== 'generar' && <Icon name="file" size={16} />}
-            {accion === 'generar' ? 'Generando…' : 'Generar archivo plano'}
+            {accion === 'generar' ? 'Generando…' : 'Generar archivo para TransUnion'}
           </Button>
         )}
       </div>
@@ -332,7 +333,7 @@ function ErrorAccion({ error }) {
                   ) : (
                     <span className="font-mono font-bold">{e.numeroObligacion}</span>
                   ))}
-                {e.campo && <span className="font-mono"> · {e.campo}</span>}
+                {e.campo && <span> · {campoTexto(e.campo)}</span>}
                 {e.numeroObligacion ? ': ' : ''}
                 {e.mensaje}
               </li>
@@ -357,7 +358,7 @@ function Validaciones({ validaciones }) {
 }
 
 function Progreso({ enCurso }) {
-  const titulo = enCurso ? 'Generando el archivo plano…' : 'Generación del archivo completada'
+  const titulo = enCurso ? 'Generando el archivo para TransUnion…' : 'Generación del archivo completada'
   return (
     <Card as="section" aria-label={titulo} aria-busy={enCurso || undefined} className="mb-5 p-6">
       <div className="mb-3 flex items-center gap-2 font-semibold">

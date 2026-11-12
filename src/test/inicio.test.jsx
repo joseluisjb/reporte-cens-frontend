@@ -62,7 +62,7 @@ describe('tarjeta "Última extracción de cartera"', () => {
     await renderConSesion('/panel')
     const region = await screen.findByRole('region', { name: 'Última extracción de cartera' })
     expect(region).toBeInTheDocument()
-    expect(await within(region).findByText('BORRADOR')).toBeInTheDocument()
+    expect(await within(region).findByText('Borrador')).toBeInTheDocument()
     expect(within(region).getByText(/24 obligaciones/i)).toBeInTheDocument()
     expect(within(region).getByRole('link', { name: 'Ver extracción' })).toHaveAttribute('href', '/extraccion')
   })
@@ -71,7 +71,7 @@ describe('tarjeta "Última extracción de cartera"', () => {
     await renderConSesion('/panel', 'jperez@example.com', 'Analista123')
     const region = await screen.findByRole('region', { name: 'Última extracción de cartera' })
     expect(region).toBeInTheDocument()
-    expect(await within(region).findByText('BORRADOR')).toBeInTheDocument()
+    expect(await within(region).findByText('Borrador')).toBeInTheDocument()
   })
 
   test('si no hay cortes registrados muestra mensaje explicativo', async () => {

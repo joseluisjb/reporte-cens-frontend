@@ -20,7 +20,7 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
 
     // Resumen del corte (el corte 2 está en BORRADOR)
     expect(await screen.findByText('Corte #2 al 30/09/2026')).toBeInTheDocument()
-    expect(screen.getByText('BORRADOR')).toBeInTheDocument()
+    expect(screen.getByText('Borrador')).toBeInTheDocument()
     expect(screen.getByText('24')).toBeInTheDocument() // 24 obligaciones
     expect(screen.getByRole('button', { name: 'Validar corte' })).toBeInTheDocument()
 
@@ -28,9 +28,9 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     expect(await screen.findByText('TITULAR FICTICIO 01')).toBeInTheDocument()
     expect(screen.getByText('******0001')).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Saldo neto (COP)' })).toBeInTheDocument()
-    expect(screen.getAllByText('01 - Vigente').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('00 Normal').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/No incluye el estado individual de consolidación/)).toBeInTheDocument()
+    expect(screen.getAllByText('Vigente').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Normal').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/Muestra el saldo neto, los días de mora y la edad de mora/)).toBeInTheDocument()
     expect(screen.queryByText('Requiere revisión')).not.toBeInTheDocument()
 
     // Ninguna identificación completa debe verse (Habeas Data)
@@ -101,9 +101,9 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     await userEvent.click(boton('Validar corte'))
 
     // Pasa a VALIDADO y muestra advertencia informativa de la factura
-    expect(await screen.findByText('VALIDADO')).toBeInTheDocument()
+    expect(await screen.findByText('Validado')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Registrar envío a TransUnion' })).toBeInTheDocument()
-    expect(screen.getByText(/Validado con observaciones informativas/i)).toBeInTheDocument()
+    expect(screen.getByText(/Validado con advertencias/i)).toBeInTheDocument()
 
     // 2. Registrar envío a TransUnion (contrato 0.9: con un archivo apto del corte)
     conArchivoApto(2)
@@ -114,7 +114,7 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     await userEvent.click(dialog.getByRole('button', { name: 'Confirmar envío' }))
 
     // Pasa a ENVIADO
-    expect(await screen.findByText('ENVIADO')).toBeInTheDocument()
+    expect(await screen.findByText('Enviado')).toBeInTheDocument()
     expect(screen.getByText('Reporte finalizado y enviado a TransUnion')).toBeInTheDocument()
   })
 
@@ -130,12 +130,12 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     const dialog = within(
       await screen.findByRole('dialog', { name: 'Inconsistencias detectadas en la validación' }),
     )
-    expect(dialog.getByText('SIN_IDENTIFICACION')).toBeInTheDocument()
+    expect(dialog.getByText('Falta la identificación')).toBeInTheDocument()
     expect(dialog.getByText('Falta el tipo o el número de identificación')).toBeInTheDocument()
 
     // Cerrar modal
     await userEvent.click(dialog.getByRole('button', { name: 'Entendido' }))
-    expect(screen.getByText('BORRADOR')).toBeInTheDocument()
+    expect(screen.getByText('Borrador')).toBeInTheDocument()
   })
 
   test('formulario valida fecha obligatoria y no futura', async () => {
@@ -173,7 +173,7 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
 
     // Validar y abrir ventana de envío para comprobar fecha formateada con formatearFechaISO
     await userEvent.click(boton('Validar corte'))
-    expect(await screen.findByText('VALIDADO')).toBeInTheDocument()
+    expect(await screen.findByText('Validado')).toBeInTheDocument()
 
     await userEvent.click(boton('Registrar envío a TransUnion'))
     const dialog = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
@@ -201,7 +201,7 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     })
     expect(screen.getByText('Corte #2 al 30/09/2026')).toBeInTheDocument()
-    expect(screen.getByText('BORRADOR')).toBeInTheDocument()
+    expect(screen.getByText('Borrador')).toBeInTheDocument()
   })
 
   test('elimina un corte en borrador y actualiza al corte anterior', async () => {
@@ -221,7 +221,7 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
 
     // Ahora el corte actual es el corte #1 (ENVIADO)
     expect(await screen.findByText('Corte #1 al 31/08/2026')).toBeInTheDocument()
-    expect(screen.getByText('ENVIADO')).toBeInTheDocument()
+    expect(screen.getByText('Enviado')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Eliminar borrador' })).not.toBeInTheDocument()
   })
 

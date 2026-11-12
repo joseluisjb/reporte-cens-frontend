@@ -130,7 +130,7 @@ function ResumenCartera({ estado, onFiltrarEstado }) {
             key={c.estado.codigo}
             valor={c.estado.codigo}
             activo={estado === c.estado.codigo}
-            etiqueta={`${c.estado.codigo} · ${c.estado.descripcion}`}
+            etiqueta={c.estado.descripcion}
             cantidad={c.cantidad}
             onFiltrar={onFiltrarEstado}
           />
@@ -181,7 +181,7 @@ function CuotasEnMora({ resumen }) {
             Cuotas en mora por obligación
           </h2>
           <p className="text-sm text-muted">
-            Se calcula en cada actualización mensual, por financiación · Último corte:{' '}
+            Se calcula en cada actualización mensual, por financiación. Último corte:{' '}
             {resumen.fechaUltimoCiclo ? formatearFechaISO(resumen.fechaUltimoCiclo) : 'aún no se ha ejecutado'}
           </p>
         </div>
@@ -273,7 +273,7 @@ function ListaObligaciones({ estado, cuotasMoraMin, q, desplazamiento, onBuscar,
         {vista && (
           <p className="text-[13px] text-muted">
             <span role="status">{plural(vista.total, 'obligación', 'obligaciones')}</span>
-            {estado && estado !== FILTRO_ELIMINADAS && ` en ${estado} · ${descripcionEstado(estado)}`}
+            {estado && estado !== FILTRO_ELIMINADAS && ` en ${descripcionEstado(estado)}`}
             {estado === FILTRO_ELIMINADAS && ' eliminadas en TransUnion'} · Haz clic en el número para ver el detalle
           </p>
         )}

@@ -17,7 +17,8 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/recuperar" element={<RecoverPasswordPage />} />
       <Route path="/restablecer" element={<ResetPasswordPage />} />
-      <Route path="/catalogo" element={<CatalogPage />} />
+      {/* Galería de componentes: solo en desarrollo; Vite la quita del build de producción. */}
+      {import.meta.env.DEV && <Route path="/catalogo" element={<CatalogPage />} />}
       <Route element={<RequireAuth />}>
         <Route path="/cambio-password" element={<ChangePasswordPage />} />
         <Route element={<AppLayout />}>

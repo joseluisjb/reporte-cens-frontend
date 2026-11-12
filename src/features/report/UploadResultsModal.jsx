@@ -80,8 +80,8 @@ function Formulario({ archivo, onCerrar, onCargados }) {
         />
         <FieldError id={errorId}>{errorCampo}</FieldError>
         <p id={ayudaId} className="mt-2 text-sm text-muted">
-          Los que devuelve TransUnion después del cargue, delimitados por pipes: estadísticos, detalle de correctivas y de alertas, Especiales,
-          953_Detalle y no reportados (norep), con el nombre que les da TransUnion y la fecha de este corte.
+          Sube los archivos .txt que te devolvió TransUnion, sin cambiarles el nombre: estadísticos, detalle de correcciones y alertas,
+          especiales, detalle 953 y no reportados.
         </p>
         {seleccion.length > 0 && (
           <ul aria-label="Archivos seleccionados" className="mt-3 space-y-1 font-mono text-sm">

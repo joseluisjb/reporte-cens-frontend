@@ -44,17 +44,17 @@ describe('pantalla 11 · lista', () => {
   test('explica el flujo en 3 pasos y lista 2255-7788 → 2271-5502 (RF18)', async () => {
     await abrir()
     expect(within(screen.getByRole('list', { name: 'Cómo funciona' })).getAllByRole('listitem').map((li) => li.querySelector('b').textContent)).toEqual([
-      'Se detecta en el SAC',
+      'Se detecta sola',
       'Se cierra la obligación original',
       'Nace la nueva obligación',
     ])
     expect(filas()).toHaveLength(1)
     const [fila] = filas()
     expect(fila).toHaveTextContent('28/09/2026 15:20Juan PérezRefinanciada el 28/09/2026')
-    expect(fila).toHaveTextContent('2255-7788Inversiones Pamplona S.A.S.02 · Saldadamodo de extinción 16 · Refinanciación')
+    expect(fila).toHaveTextContent('2255-7788Inversiones Pamplona S.A.S.Saldadamodo de extinción: Refinanciación')
     expect(fila).toHaveTextContent('$4.380.000')
-    expect(fila).toHaveTextContent('2271-550201 · VigenteReestructurada (1)')
-    expect(fila).toHaveTextContent('07 · Otra36 cuotas')
+    expect(fila).toHaveTextContent('2271-5502VigenteReestructurada (1)')
+    expect(fila).toHaveTextContent('Otra36 cuotas')
   })
 
   test('sin refinanciaciones muestra el estado vacío', async () => {
@@ -76,14 +76,14 @@ describe('pantalla 11 · lista', () => {
 })
 
 describe('pantalla 11 · registro manual', () => {
-  test('solo ofrece obligaciones abiertas y la naturaleza lleva «por confirmar» (Tabla 11)', async () => {
+  test('solo ofrece obligaciones abiertas y la naturaleza no lleva marcas internas', async () => {
     await abrir()
     const dialogo = await abrirModal()
     const numeros = within(within(dialogo).getByLabelText('Obligación original')).getAllByRole('option').slice(1).map((o) => o.textContent.slice(0, 9))
     expect(numeros).not.toContain('2259-1092') // Saldada
     expect(numeros).not.toContain('2241-3302') // Castigada recuperada
     expect(numeros).toHaveLength(9)
-    expect(within(dialogo).getByText(/Naturaleza de la reestructuración \(Tabla 11\)/)).not.toHaveTextContent('por confirmar')
+    expect(within(dialogo).getByText(/Naturaleza de la reestructuración/)).not.toHaveTextContent('por confirmar')
     expect(within(dialogo).getByLabelText('Fecha de la refinanciación')).toHaveValue(hoyISO())
   })
 
@@ -104,9 +104,9 @@ describe('pantalla 11 · registro manual', () => {
     const dialogo = await abrirModal()
     expect(dialogo).toHaveTextContent('Elige la obligación original para ver cómo se cierra.')
     await llenar(dialogo, { numero: '2257-4156', naturaleza: '', cuotas: '' })
-    expect(dialogo).toHaveTextContent('La obligación original pasa de 01 · Vigente a 02 · Saldada con modo de extinción 16 · Refinanciación')
+    expect(dialogo).toHaveTextContent('La obligación original pasa de Vigente a Saldada con modo de extinción Refinanciación')
     await userEvent.selectOptions(within(dialogo).getByLabelText('Obligación original'), opcionDe(dialogo, '2250-0987'))
-    expect(dialogo).toHaveTextContent('pasa de 03 · Dudoso recaudo a 07 · Castigada recuperada con modo de extinción 16')
+    expect(dialogo).toHaveTextContent('pasa de Dudoso recaudo a Castigada recuperada con modo de extinción Refinanciación')
   })
 
   test('valida en el cliente: campos obligatorios y cuotas entre 1 y 120', async () => {
@@ -137,18 +137,18 @@ describe('pantalla 11 · registro manual', () => {
     expect(within(dialogo).getByLabelText('Número de cuotas de la nueva obligación')).toHaveAttribute('aria-invalid', 'true')
   })
 
-  test('Dudoso recaudo → 07 con modo 16 y nace la nueva reestructurada (RF18)', async () => {
+  test('Dudoso recaudo pasa a Castigada recuperada y nace la nueva reestructurada (RF18)', async () => {
     await abrir()
     const dialogo = await abrirModal()
     await llenar(dialogo, { numero: '2250-0987', naturaleza: '06', cuotas: '24' })
     await registrar(dialogo)
-    expect(await screen.findByText(/Refinanciación registrada: 2250-0987 pasa a 07 · Castigada recuperada y nace 2272-6101 en Vigente \(01\)\./)).toBeInTheDocument()
+    expect(await screen.findByText(/Refinanciación registrada: 2250-0987 pasa a Castigada recuperada y nace 2272-6101 en Vigente\./)).toBeInTheDocument()
     await waitFor(() => expect(filas()).toHaveLength(2))
     const [nueva] = filas()
-    expect(nueva).toHaveTextContent('2250-0987Hotel Mirador Cúcuta07 · Castigada recuperadamodo de extinción 16 · Refinanciación')
+    expect(nueva).toHaveTextContent('2250-0987Hotel Mirador CúcutaCastigada recuperadamodo de extinción: Refinanciación')
     expect(nueva).toHaveTextContent('$5.420.000')
-    expect(nueva).toHaveTextContent('2272-610101 · VigenteReestructurada (1)')
-    expect(nueva).toHaveTextContent('06 · Ordinaria24 cuotas')
+    expect(nueva).toHaveTextContent('2272-6101VigenteReestructurada (1)')
+    expect(nueva).toHaveTextContent('Ordinaria24 cuotas')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     // La original queda cerrada con su vínculo y la nueva en primer reporte.
     const original = db.obligaciones.find((o) => o.numero === '2250-0987')
@@ -162,11 +162,11 @@ describe('pantalla 11 · registro manual', () => {
     await abrir()
     const dialogo = await abrirModal()
     await llenar(dialogo, { numero: '2261-8820' })
-    expect(within(dialogo).getByRole('status')).toHaveTextContent('TransUnion no acepta pasar de 04 · Suspendida por la entidad a 02 · Saldada (error 713)')
+    expect(within(dialogo).getByRole('status')).toHaveTextContent('TransUnion no acepta pasar de Suspendida por la entidad a Saldada')
     expect(within(dialogo).getByRole('button', { name: 'Registrar refinanciación' })).toBeDisabled()
     // Al elegir otra obligación, el aviso se quita.
     await userEvent.selectOptions(within(dialogo).getByLabelText('Obligación original'), opcionDe(dialogo, '2257-4156'))
-    expect(within(dialogo).queryByText(/error 713/)).not.toBeInTheDocument()
+    expect(within(dialogo).queryByText(/no acepta pasar/)).not.toBeInTheDocument()
     expect(within(dialogo).getByRole('button', { name: 'Registrar refinanciación' })).toBeEnabled()
   })
 
@@ -212,7 +212,7 @@ describe('pantalla 11 · desde el detalle de la pantalla 9', () => {
     await userEvent.click(within(panel).getByRole('link', { name: 'Registrar refinanciación' }))
     const dialogo = await screen.findByRole('dialog', { name: 'Registrar refinanciación' })
     expect(await within(dialogo).findByLabelText('Obligación original')).toHaveValue('2')
-    expect(dialogo).toHaveTextContent('La obligación original pasa de 01 · Vigente a 02 · Saldada')
+    expect(dialogo).toHaveTextContent('La obligación original pasa de Vigente a Saldada')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })

@@ -302,7 +302,7 @@ describe('grupos de conceptos', () => {
 
   test('un grupo asociado a un corte en BORRADOR no se elimina (409)', async () => {
     await entrarAdmin()
-    await expect(deleteConceptGroup(2)).rejects.toMatchObject({ status: 409, message: 'El grupo está asociado a un corte en estado BORRADOR.' })
+    await expect(deleteConceptGroup(2)).rejects.toMatchObject({ status: 409, message: 'El grupo está asociado a un corte en borrador.' })
     expect(await getConceptGroup(2)).toMatchObject({ id: 2 })
   })
 

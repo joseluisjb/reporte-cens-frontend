@@ -9,7 +9,7 @@ const menu = () => screen.queryByRole('navigation', { name: 'Navegación princip
 describe('un Analista no abre las pantallas de administración, ni escribiendo la dirección', () => {
   test.each([
     ['/usuarios', 'Usuarios del Sistema'],
-    ['/auditoria', 'Log de Auditoría del Sistema'],
+    ['/auditoria', 'Registro de auditoría del sistema'],
     ['/parametrizacion', 'Códigos de Concepto de Energía'],
   ])('%s lleva al inicio y no muestra la pantalla', async (ruta, tituloDePantalla) => {
     renderApp(ruta, ANALISTA)
@@ -36,7 +36,7 @@ describe('un Analista no abre las pantallas de administración, ni escribiendo l
 describe('el Administrador abre todo', () => {
   test.each([
     ['/usuarios', 'Usuarios del Sistema'],
-    ['/auditoria', 'Log de Auditoría del Sistema'],
+    ['/auditoria', 'Registro de auditoría del sistema'],
     ['/parametrizacion', 'Códigos de Concepto de Energía'],
   ])('%s', async (ruta, titulo) => {
     await renderConSesion(ruta)

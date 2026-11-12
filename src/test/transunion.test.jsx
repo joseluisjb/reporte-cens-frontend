@@ -22,8 +22,9 @@ describe('EstadoBadge', () => {
     ['12', 'Ley 1564 de 2012 Insolvencia PNNC', 'bg-slate-100'],
   ])('%s se muestra como «%s» con el color de la maqueta', (codigo, texto, fondo) => {
     render(<EstadoBadge codigo={codigo} />)
-    const insignia = screen.getByText(`${codigo} · ${texto}`)
+    const insignia = screen.getByText(texto)
     expect(insignia).toHaveClass(fondo)
+    expect(insignia).toHaveAttribute('title', `${codigo} · ${texto}`) // el código va en el title, no a la vista
   })
 
   test('cubre los 10 estados de la Tabla 4b', () => {
@@ -32,7 +33,7 @@ describe('EstadoBadge', () => {
 
   test('usa la descripción de la API cuando llega', () => {
     render(<EstadoBadge codigo="03" descripcion="Dudoso Recaudo" />)
-    expect(screen.getByText('03 · Dudoso Recaudo')).toBeInTheDocument()
+    expect(screen.getByText('Dudoso Recaudo')).toBeInTheDocument()
   })
 
   test('sin código muestra «Sin estado»', () => {
@@ -48,14 +49,14 @@ describe('EstadoBadge', () => {
       </>,
     )
     expect(screen.getByText('05')).toHaveClass('bg-slate-100')
-    expect(screen.getByText('01 · Vigente')).toBeInTheDocument()
+    expect(screen.getByText('Vigente')).toBeInTheDocument()
   })
 })
 
 describe('EdadMoraBadge', () => {
-  test('muestra código, descripción y los días de mora', () => {
+  test('muestra la descripción (el código va en el title) y los días de mora', () => {
     const { container } = render(<EdadMoraBadge codigo="01" dias={47} />)
-    expect(container).toHaveTextContent('01 - Mora 30')
+    expect(container).toHaveTextContent('Mora 30')
     expect(screen.getByText('47 días de mora')).toBeInTheDocument()
   })
 
@@ -66,7 +67,7 @@ describe('EdadMoraBadge', () => {
         <EdadMoraBadge codigo="00" dias={0} />
       </>,
     )
-    expect(container).toHaveTextContent('00 - Normal')
+    expect(container).toHaveTextContent('Normal')
     expect(container).not.toHaveTextContent('de mora')
   })
 

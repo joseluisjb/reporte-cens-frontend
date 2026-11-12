@@ -84,7 +84,7 @@ export const refinanciacionesHandlers = [
     ).permitida
     if (!permitida) {
       return error(409, {
-        detail: `TransUnion no acepta pasar de ${estadoTexto(original.estado)} a ${estadoTexto(cierre)} (error 713). Define el tratamiento con CENS.`,
+        detail: `TransUnion no acepta pasar de ${estadoTexto(original.estado)} a ${estadoTexto(cierre)}. Consulta con CENS cómo tratar esta obligación antes de refinanciarla.`,
         code: 'transicion_no_permitida',
       })
     }
@@ -112,7 +112,7 @@ export const refinanciacionesHandlers = [
         naturaleza: { ...naturaleza },
         obligacion_anterior: { obligacion_id: original.id, numero_obligacion: original.numero },
       },
-      eventos: eventos([fecha, '01', `Nueva obligación por la refinanciación de ${original.numero}: primer reporte en Vigente (01), marcada como reestructurada`]),
+      eventos: eventos([fecha, '01', `Nueva obligación por la refinanciación de ${original.numero}: primer reporte en Vigente, marcada como reestructurada`]),
     })
     db.obligaciones = db.obligaciones
       .map((o) =>
@@ -129,7 +129,7 @@ export const refinanciacionesHandlers = [
               refinanciada_en: { obligacion_id: nuevaId, numero_obligacion: numero },
               eventos: [
                 ...o.eventos,
-                ...eventos([fecha, cierre, `Refinanciada: se cierra en ${estadoTexto(cierre)} con modo de extinción 16 Refinanciación (antes ${estadoTexto(o.estado)})`]),
+                ...eventos([fecha, cierre, `Refinanciación: se cierra como ${estadoTexto(cierre)}`]),
               ],
             },
       )

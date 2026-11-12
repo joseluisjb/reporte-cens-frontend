@@ -51,9 +51,9 @@ const homologacion = (estado_sac, prioridad, descripcion, accion, estado_tu) => 
 
 // HomologacionEstado[] (contrato 0.9.1), por prioridad.
 export const homologacionesIniciales = () => [
-  homologacion('A', 1, 'Activo (propuesto)', 'ESTADO', '01'),
-  homologacion('C', 2, 'Caducado (propuesto)', 'ESTADO', '03'),
-  homologacion('D', 3, 'Desconocido: preguntar a CENS', null, null),
-  homologacion('B', 4, 'Desconocido: preguntar a CENS', null, null),
-  homologacion('F', 5, 'Finalizado (propuesto)', 'CIERRE', null),
+  homologacion('A', 1, 'Activo', 'ESTADO', '01'),
+  homologacion('C', 2, 'Caducado', 'ESTADO', '03'),
+  homologacion('D', 3, 'Desconocido', null, null),
+  homologacion('B', 4, 'Desconocido', null, null),
+  homologacion('F', 5, 'Finalizado', 'CIERRE', null),
 ]

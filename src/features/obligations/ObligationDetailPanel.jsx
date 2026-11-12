@@ -15,7 +15,7 @@ import EstadoBadge from '../transunion/EstadoBadge'
 import { getObligation, getObligationTimeline } from './obligationsService'
 import PrimerReporte from './PrimerReporte'
 
-const codigoYDescripcion = (item) => (item ? [item.codigo, item.descripcion].filter(Boolean).join(' · ') : '—')
+const codigoYDescripcion = (item) => (item ? item.descripcion || item.codigo || '—' : '—')
 
 const SIN_CARGA = { id: null, detalle: null, eventos: null, error: null }
 
@@ -162,7 +162,7 @@ function Detalle({ o, eventos, onAbrir }) {
           <p className="text-[13px] text-muted">La última extracción no trajo pagos de esta obligación.</p>
         )}
         <p className="mt-2 text-[13px] text-muted">
-          Los pagos vienen de la extracción del SAC; aquí no se registran a mano. Se aplican de la cuota más antigua a la más reciente y los días de mora se cuentan desde la cuota más antigua que siga sin pagar completa.
+          Los pagos llegan desde el sistema comercial en cada extracción; no se registran a mano. Se aplican de la cuota más antigua a la más reciente y los días de mora se cuentan desde la primera cuota que sigue sin pagarse completa.
         </p>
       </Seccion>
       <Seccion titulo="Línea de tiempo de estados">
@@ -183,7 +183,7 @@ function Avisos({ o }) {
       )}
       {o.movimientoPosteriorCierre && (
         <Alert tone="aviso">
-          El sistema comercial muestra movimiento después del cierre: la obligación no se vuelve a reportar y solo se corrige por rectificación.
+          El sistema comercial muestra movimiento después del cierre: la obligación no se vuelve a reportar y solo se corrige con una novedad de Corrección (en Novedades Urgentes).
         </Alert>
       )}
       {o.advertencias.map((a) => (
@@ -203,8 +203,8 @@ function DatosObligacion({ o, onAbrir }) {
       <Dato etiqueta="Saldo">{formatearCOP(o.valorSaldo)}</Dato>
       <Dato etiqueta="Valor en mora">{formatearCOP(o.valorMora)}</Dato>
       <Dato etiqueta="Días de mora">{formatearDias(o.diasMora)}</Dato>
-      <Dato etiqueta="Edad de mora (Tabla 9)" nota={o.aniosMora != null && `Años en mora: ${o.aniosMora}`}>
-        {!edad ? '—' : Object.hasOwn(TABLA_9, edad) ? `${edad} - ${TABLA_9[edad].descripcion}` : edad}
+      <Dato etiqueta="Edad de mora" nota={o.aniosMora != null && `Años en mora: ${o.aniosMora}`}>
+        {!edad ? '—' : Object.hasOwn(TABLA_9, edad) ? TABLA_9[edad].descripcion : edad}
       </Dato>
       <Dato etiqueta="Fecha de exigibilidad" nota={o.fechaExigibilidad && 'Cuota más antigua sin pagar'}>
         {o.fechaExigibilidad ? formatearFechaISO(o.fechaExigibilidad) : '—'}
@@ -220,7 +220,7 @@ function DatosObligacion({ o, onAbrir }) {
       </Dato>
       <Dato etiqueta="Valor inicial">{o.valorInicial == null ? '—' : formatearCOP(o.valorInicial)}</Dato>
       <Dato etiqueta="Primer reporte">{o.primerReporte ? 'Sí: aún no se ha incluido en ningún archivo' : 'No'}</Dato>
-      <Dato etiqueta="En el SAC" nota={`Caduca a las ${o.atrasosPermitidos} cuotas atrasadas · lleva ${o.cuotasAtrasadas}`}>
+      <Dato etiqueta="Caducidad del crédito" nota={`Caduca a las ${o.atrasosPermitidos} cuotas atrasadas · lleva ${o.cuotasAtrasadas}`}>
         {o.caducado ? 'Crédito caducado' : 'No caducado'}
       </Dato>
       <Dato etiqueta="Ingreso al sistema">{formatearFechaISO(o.fechaIngreso)}</Dato>
@@ -259,7 +259,7 @@ function DatoReestructuracion({ r, onAbrir }) {
         </>
       }
     >
-      01 · Sí ({r.numeroReestructuraciones})
+      Sí ({r.numeroReestructuraciones})
     </Dato>
   )
 }

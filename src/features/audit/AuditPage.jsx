@@ -29,7 +29,7 @@ const pedirPagina = (filtros, desplazamiento) =>
   })
 
 export default function AuditPage() {
-  usePageTitle('Log de Auditoría del Sistema')
+  usePageTitle('Registro de auditoría del sistema')
   const resumenId = useId()
   const [pagina, setPagina] = useState(null) // { items, total } | null (cargando por primera vez)
   const [aplicados, setAplicados] = useState(SIN_FILTROS) // filtros de la consulta que se está mostrando
@@ -105,7 +105,7 @@ export default function AuditPage() {
 
   return (
     <>
-      <PageHeader title="Log de Auditoría del Sistema" />
+      <PageHeader title="Registro de auditoría del sistema" />
 
       <Card className="mb-4 p-5">
         <form {...form.formProps} aria-label="Filtros del log de auditoría">

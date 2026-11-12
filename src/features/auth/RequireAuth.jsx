@@ -21,7 +21,7 @@ function Cargando() {
       <Spinner className="size-7" />
       {lento && (
         <p className="text-sm text-muted">
-          Conectando con el servidor… la primera conexión del día puede tardar hasta un minuto.
+          Estamos conectando con el sistema. Puede tardar hasta un minuto.
         </p>
       )}
     </div>

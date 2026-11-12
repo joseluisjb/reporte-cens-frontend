@@ -1,6 +1,6 @@
 // Modal para gestionar una novedad en línea con TransUnion (RF24, RF50)
 import { useState } from 'react'
-import { Alert, Button, Icon, Input, Modal, useToast } from '../../components/ui'
+import { Alert, Button, Input, Modal, useToast } from '../../components/ui'
 import { mensajeDeError } from '../../lib/api'
 import { manageNovelty } from './updatesService'
 import { validarGestion } from './updatesValidation'
@@ -44,10 +44,6 @@ export default function ManageNoveltyModal({ open, novedad, onClose, onGestionad
     }
   }
 
-  const abrirModuloTransUnion = () => {
-    toast.info('Se abriría el módulo web Actualización en Línea de TransUnion en una pestaña nueva.')
-  }
-
   return (
     <Modal
       open={open}
@@ -81,13 +77,7 @@ export default function ManageNoveltyModal({ open, novedad, onClose, onGestionad
               1
             </span>
             <div>
-              <p>Abre el módulo web <b>Actualización en Línea</b> de TransUnion.</p>
-              <div className="mt-2">
-                <Button type="button" variant="outline" size="sm" onClick={abrirModuloTransUnion}>
-                  <Icon name="link" size={14} />
-                  Abrir Actualización en Línea
-                </Button>
-              </div>
+              <p>Entra al módulo web <b>Actualización en Línea</b> de TransUnion.</p>
             </div>
           </li>
           <li className="flex items-start gap-3">

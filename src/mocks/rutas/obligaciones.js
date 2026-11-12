@@ -11,7 +11,7 @@ import { aEntero, error, espera, exigirSesion, idDeRuta, SOLO_ANALISTA, url } fr
 import { leerPaginacion } from './extracciones'
 
 const MSG = {
-  estado: 'Estado no válido. Usa un código de la Tabla 4b.',
+  estado: 'Estado no válido.',
   eliminada: 'Usa true o false.',
   cuotas: 'Indica un número entero de cuotas, 0 o más.',
   q: 'La búsqueda admite hasta 60 caracteres.',

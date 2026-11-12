@@ -191,7 +191,7 @@ function Formulario({ onCerrar, onCreada, onRectificada }) {
             <Input
               label="Campo a corregir"
               id="nv-campo"
-              placeholder="Ej.: valor_mora"
+              placeholder="Ej.: valor en mora"
               {...form.campo('campo')}
             />
 
@@ -225,14 +225,14 @@ function Formulario({ onCerrar, onCreada, onRectificada }) {
             </Alert>
 
             <Select
-              label="Motivo de la eliminación (Tabla 28)"
+              label="Motivo de la eliminación"
               id="nv-motivo-elim"
               {...form.campo('motivoEliminacion')}
             >
               <option value="">Selecciona un motivo</option>
               {motivosElim.map((m) => (
                 <option key={m.codigo} value={m.codigo}>
-                  {m.codigo} - {m.descripcion}
+                  {m.descripcion}
                 </option>
               ))}
             </Select>

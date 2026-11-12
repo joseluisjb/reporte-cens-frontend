@@ -68,7 +68,7 @@ describe('formularios con useFormulario (RF31): foco en el primer campo inválid
     await renderConSesion('/extraccion')
     await screen.findByText('Corte #2 al 30/09/2026')
     await userEvent.click(boton('Validar corte'))
-    await screen.findByText('VALIDADO')
+    await screen.findByText('Validado')
     await userEvent.click(boton('Registrar envío a TransUnion'))
     const modal = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
     fireEvent.change(modal.getByLabelText('Fecha de reporte o envío'), { target: { value: '2099-01-01' } })

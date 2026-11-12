@@ -10,10 +10,10 @@ export const ACCIONES = Object.freeze({ ESTADO: 'ESTADO', CIERRE: 'CIERRE' })
 export const MSG_HOMOLOGACION = {
   accion: 'Elige cómo se reporta el estado: como estado de TransUnion o como cierre.',
   estadoTu: 'Selecciona el estado de TransUnion.', // mockup v3 (homSave)
-  noExiste: 'Ese estado no está en la Tabla 4b de TransUnion.',
-  noUsado: (codigo) => `El estado ${codigo} · ${descripcionEstado(codigo)} no se usa en CENS: elige un estado en uso.`, // contrato 0.9
+  noExiste: 'Ese estado no existe en TransUnion.',
+  noUsado: (codigo) => `El estado ${descripcionEstado(codigo)} no se usa en CENS: elige un estado en uso.`, // contrato 0.9
   cierreConEstado: 'Un estado que cierra el crédito no lleva estado de TransUnion.', // contrato 0.9
-  estadoDeCierre: 'Saldada (02) y Castigada recuperada (07) se asignan con «Cierre», según el estado anterior.', // contrato 0.9.1
+  estadoDeCierre: 'Saldada y Castigada recuperada se asignan con «Cierre», según el estado anterior.', // contrato 0.9.1
 }
 
 // Los estados que se pueden asignar con «Estado de TransUnion»: los de la Tabla 4b que no son de cierre.

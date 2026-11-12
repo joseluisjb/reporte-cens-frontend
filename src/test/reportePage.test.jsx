@@ -20,19 +20,19 @@ const abrir = async () => {
   await screen.findByRole('table', { name: 'Archivos generados' })
 }
 const editar = (numero, cambios) => Object.assign(db.obligaciones.find((o) => o.numero === numero), cambios)
-const item = (titulo) => within(screen.getByRole('list', { name: 'Validaciones antes de generar' })).getByText(titulo).closest('li')
+const item = (titulo) => within(screen.getByRole('list', { name: 'Validaciones antes de generar' })).getAllByText(titulo)[0].closest('li')
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
 const validarYGenerar = async () => {
   await userEvent.click(boton('Validar corte'))
-  await screen.findByText('Corte validado: ya puedes generar el archivo plano.')
-  await waitFor(() => expect(boton('Generar archivo plano')).toBeEnabled())
-  await userEvent.click(boton('Generar archivo plano'))
+  await screen.findByText('Corte validado: ya puedes generar el archivo para TransUnion.')
+  await waitFor(() => expect(boton('Generar archivo para TransUnion')).toBeEnabled())
+  await userEvent.click(boton('Generar archivo para TransUnion'))
 }
 
 describe('pantalla 12 · validaciones (RF53)', () => {
   test('muestra el corte, el aviso de entidad y el checklist con su nivel', async () => {
     await abrir()
-    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('30 de septiembre de 2026Último corte · BORRADOR')
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('30 de septiembre de 2026Último corte · Borrador')
     expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Nombre: SSRXXXXXX20260930')
     expect(screen.getByText(/TransUnion aún no asigna los datos de la entidad/)).toHaveTextContent('no aptos para envío')
     expect(item('Actualización mensual del corte')).toHaveTextContent('(Pasó)Ejecutada el 30/09/2026 10:02 por Juan Pérez.')
@@ -40,7 +40,7 @@ describe('pantalla 12 · validaciones (RF53)', () => {
     expect(item('Obligaciones del último corte')).toHaveTextContent('9 de 9 obligaciones activas del último corte incluidas.')
     // RF22: los dos cierres del corte están completos.
     expect(item('Campos de cierre')).toHaveTextContent('(Pasó)2 cierres con saldo, mora y cuota en cero')
-    // RF51: informativo y por confirmar. RF57: la entidad con relleno solo advierte.
+    // RF51: informativo y por confirmar. RF57: la entidad con datos provisionales solo advierte.
     expect(item('Valores en miles de pesos')).toHaveTextContent('(Informativa)Saldo, mora, cuota y valor inicial se reportan en miles de pesos, como enteros.')
     expect(item('Datos de la entidad')).toHaveTextContent('(Advertencia)')
     expect(boton('Validar corte')).toBeEnabled()
@@ -75,12 +75,12 @@ describe('pantalla 12 · validaciones (RF53)', () => {
     await abrir()
     const cierre = item('Campos de cierre')
     expect(cierre).toHaveTextContent('(Bloquea)')
-    expect(within(cierre).getByRole('link', { name: '2259-1092' }).closest('li')).toHaveTextContent('2259-1092fecha_pago · Falta la fecha de pago del cierre.')
-    expect(within(cierre).getByRole('link', { name: '2255-7788' }).closest('li')).toHaveTextContent('valor_cuota · La cuota debe ser 0 al cerrar.')
+    expect(within(cierre).getByRole('link', { name: '2259-1092' }).closest('li')).toHaveTextContent('2259-1092Fecha de pago · Falta la fecha de pago del cierre.')
+    expect(within(cierre).getByRole('link', { name: '2255-7788' }).closest('li')).toHaveTextContent('Valor de la cuota · La cuota debe ser 0 al cerrar.')
     expect(boton('Validar corte')).toBeDisabled()
   })
 
-  test('valores de $9.000 y de $120 millones son informativos, como en TransUnion (RF51, Manual p. 19)', async () => {
+  test('valores de $9.000 y de $120 millones son informativos, como en TransUnion (RF51)', async () => {
     editar('2257-4156', { cuota: 9000, saldo: 120000000, valor_inicial: 150000000 })
     await abrir()
     const rango = item('Valores fuera de rango')
@@ -90,13 +90,13 @@ describe('pantalla 12 · validaciones (RF53)', () => {
     expect(boton('Validar corte')).toBeEnabled()
   })
 
-  test('un pago de la mora sin fecha de pago es informativo (RF47, Manual pp. 26-27)', async () => {
+  test('un pago de la mora sin fecha de pago es informativo (RF47)', async () => {
     const pagoMora = { fecha_pago: null, modo_extincion: { codigo: '01', descripcion: 'Voluntario' }, tipo_pago: { codigo: '01', descripcion: 'Voluntario' }, valor_real_pagado: 98000 }
     editar('2258-7731', { pago_mora: pagoMora })
     await abrir()
     const pago = item('Campos del pago de la mora')
     expect(pago).toHaveTextContent('(Informativa)')
-    expect(within(pago).getByRole('link', { name: '2258-7731' }).closest('li')).toHaveTextContent('fecha_pago · Falta la fecha de pago de la mora.')
+    expect(within(pago).getByRole('link', { name: '2258-7731' }).closest('li')).toHaveTextContent('Fecha de pago · Falta la fecha de pago de la mora.')
     expect(boton('Validar corte')).toBeEnabled()
   })
 
@@ -129,21 +129,21 @@ describe('pantalla 12 · validaciones (RF53)', () => {
 })
 
 describe('pantalla 12 · generar y descargar (RF20)', () => {
-  test('valida, genera con los 6 pasos y muestra el archivo no apto con relleno (RF20, RF57)', async () => {
+  test('valida, genera con los 6 pasos y muestra el archivo no apto con datos provisionales (RF20, RF57)', async () => {
     await abrir()
     await validarYGenerar()
     const tarjeta = await screen.findByRole('region', { name: 'Archivo generado' })
     expect(screen.getByRole('region', { name: 'Generación del archivo completada' })).not.toHaveTextContent('por confirmar')
     expect(within(screen.getByRole('region', { name: 'Generación del archivo completada' })).getAllByRole('listitem')).toHaveLength(6)
     expect(tarjeta).toHaveTextContent('SSRXXXXXX20260930No apto para envío')
-    expect(tarjeta).toHaveTextContent('No apto para envío: La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.')
-    expect(tarjeta).toHaveTextContent('Obligaciones (registros 2)1113 registros con el 1 y el 9')
+    expect(tarjeta).toHaveTextContent('No apto para envío: Faltan los datos de la entidad ante TransUnion: el archivo sería rechazado.')
+    expect(tarjeta).toHaveTextContent('Obligaciones incluidas1113 líneas, con encabezado y totales')
     expect(tarjeta).toHaveTextContent('No incluidas1Cerradas antes o eliminadas')
     // Como el mockup v3, con el redondeo de RF51 marcado por confirmar.
     expect(tarjeta).toHaveTextContent('Se reporta en miles: 21.864')
     expect(await screen.findByText('Archivo generado: SSRXXXXXX20260930 (no apto para envío).')).toBeInTheDocument()
     await waitFor(() => expect(within(screen.getByRole('table', { name: 'Archivos generados' })).getAllByRole('row')).toHaveLength(4))
-    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · VALIDADO')
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · Validado')
   })
 
   test('con los datos de la entidad, el archivo se llama SSR001123… y sale apto (RF57)', async () => {
@@ -161,7 +161,7 @@ describe('pantalla 12 · generar y descargar (RF20)', () => {
     await abrir()
     await validarYGenerar()
     const alerta = await screen.findByText(/No se generó el archivo: hay campos que no caben en su posición\./)
-    expect(alerta).toHaveTextContent('2262-3318 · nombre_titular: El nombre del titular tiene 62 caracteres y el campo admite 60.')
+    expect(alerta).toHaveTextContent('2262-3318 · Nombre del titular: El nombre del titular tiene 62 caracteres y el campo admite 60.')
     expect(within(alerta).getByRole('link', { name: '2262-3318' })).toHaveAttribute('href', '/obligaciones?obligacion=6')
     expect(screen.queryByRole('region', { name: 'Archivo generado' })).not.toBeInTheDocument()
   })
@@ -239,9 +239,9 @@ describe('pantalla 12 · estados', () => {
   test('con el corte ya enviado explica que no admite otro archivo y que las correcciones van por RF55', async () => {
     db.cortes = db.cortes.filter((c) => c.id === 1)
     await abrir()
-    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · ENVIADO')
+    expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · Enviado')
     expect(screen.getByText('Este corte ya se envió a TransUnion y no admite otro archivo. Las correcciones de un corte ya enviado se registran como «Corrección» en Novedades Urgentes.')).toBeInTheDocument()
-    expect(boton('Generar archivo plano')).toBeDisabled()
+    expect(boton('Generar archivo para TransUnion')).toBeDisabled()
   })
 
   test('sin cortes lo dice y enlaza a la extracción', async () => {
@@ -308,7 +308,7 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar envío' }))
     expect(await screen.findByText('Envío registrado. Cuando TransUnion responda, carga aquí sus archivos de resultados.')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Cargar los resultados del archivo SSR00112320260930' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · ENVIADO'))
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Parámetros del reporte' })).toHaveTextContent('Último corte · Enviado'))
     expect(within(screen.getByRole('region', { name: 'Archivo generado' })).getByText('Enviado')).toBeInTheDocument()
   })
 
@@ -319,10 +319,10 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     expect(await screen.findByText('Resultados cargados: 9 registros cargados, 1 inconsistencia.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
-    expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos9Cargados1Con inconsistencias0No reportadas (R)')
+    expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos9Cargados1Con inconsistencias0No reportadas')
     const fila = within(vista).getByRole('link', { name: '2258-7731' }).closest('tr')
     expect(within(vista).getByRole('link', { name: '2258-7731' })).toHaveAttribute('href', '/obligaciones?obligacion=2')
-    expect(fila).toHaveTextContent('Correctiva707 · VALOR DE MORA ES REQUERIDO')
+    expect(fila).toHaveTextContent('Debe corregirseVALOR DE MORA ES REQUERIDO707')
     expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO_CON_INCONSISTENCIAS')
     expect(await screen.findByRole('button', { name: 'Ver los resultados del archivo SSR00112320260831' })).toBeInTheDocument()
   })
@@ -333,8 +333,8 @@ describe('pantalla 12 · envío y resultados del cargue (RF54)', () => {
     await abrir()
     await cargar(estadisticos('2026-08-31'), noReportados('2026-08-31', ['2260-5543']))
     const vista = await screen.findByRole('region', { name: 'Resultados del cargue · corte 31/08/2026' })
-    expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos10Cargados1Con inconsistencias1No reportadas (R)')
-    expect(within(vista).getByRole('link', { name: '2260-5543' }).closest('tr')).toHaveTextContent('No reportadaR · Obligación no reportada')
+    expect(within(vista).getByRole('list', { name: 'Resumen del cargue del corte 31/08/2026' })).toHaveTextContent('10Registros recibidos10Cargados1Con inconsistencias1No reportadas')
+    expect(within(vista).getByRole('link', { name: '2260-5543' }).closest('tr')).toHaveTextContent('No reportadaObligación no reportadaR')
     expect(db.cortes.find((c) => c.id === 1).estado).toBe('ENVIADO')
   })
 

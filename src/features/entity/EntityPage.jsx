@@ -2,7 +2,7 @@
 // navigation.js). Mientras TransUnion no asigne los datos llevan el marcador XXX / XXX / XXXXXX y los
 // archivos salen no aptos para envío. Mockup v3: vEntidad.
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Card, ConfirmDialog, Input, PageHeader, PorConfirmar, Spinner, useToast } from '../../components/ui'
+import { Alert, Button, Card, ConfirmDialog, Input, PageHeader, Spinner, useToast } from '../../components/ui'
 import { formatearFechaHora } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -14,14 +14,14 @@ import { validarEntidad } from './entityValidation'
 const TITULO = 'Datos de la Entidad ante TransUnion'
 
 const CAMPOS = [
-  { nombre: 'tipoEntidad', etiqueta: 'Tipo de entidad', largo: 3, ayuda: '3 dígitos (Tabla 29). Va en el registro 1 y en el nombre del archivo.' },
-  { nombre: 'codigoEntidad', etiqueta: 'Código de entidad', largo: 3, ayuda: '3 dígitos (Tabla 30). Va en el registro 1 y en el nombre del archivo.' },
-  { nombre: 'codigoSucursal', etiqueta: 'Código de sucursal', largo: 6, ayuda: '6 caracteres. Va en cada registro 2 y debe existir en TransUnion.' },
+  { nombre: 'tipoEntidad', etiqueta: 'Tipo de entidad', largo: 3, ayuda: '3 dígitos. Forma parte del nombre del archivo.' },
+  { nombre: 'codigoEntidad', etiqueta: 'Código de entidad', largo: 3, ayuda: '3 dígitos. Forma parte del nombre del archivo.' },
+  { nombre: 'codigoSucursal', etiqueta: 'Código de sucursal', largo: 6, ayuda: '6 caracteres. Debe ser la sucursal que asignó TransUnion.' },
 ]
 
 const MSG_GUARDADA_APTA = 'Datos guardados: los archivos nuevos saldrán aptos para envío.'
-const MSG_GUARDADA_CON_RELLENO = 'Datos guardados: todavía hay relleno, los archivos saldrán no aptos para envío.'
-const MSG_RELLENO = 'Datos de la entidad con relleno: los archivos saldrán no aptos para envío.'
+const MSG_GUARDADA_CON_RELLENO = 'Datos guardados: todavía hay datos provisionales, los archivos saldrán no aptos para envío.'
+const MSG_RELLENO = 'Los datos de la entidad son provisionales: los archivos saldrán no aptos para envío.'
 
 export default function EntityPage() {
   usePageTitle(TITULO)
@@ -94,8 +94,8 @@ function AvisoEntidad({ conMarcador }) {
   }
   return (
     <Alert tone="aviso">
-      TransUnion aún no asigna los datos de la entidad. Los datos llevan relleno (<span className="font-mono">X</span>) del mismo
-      largo del campo y los archivos salen <b>no aptos para envío</b>. Cuando TransUnion los asigne, se cambian aquí una sola vez.
+      TransUnion aún no asigna los datos de la entidad. Mientras tanto se usan datos provisionales (<span className="font-mono">X</span> repetida hasta completar
+      el largo del campo) y los archivos salen <b>no aptos para envío</b>. Cuando TransUnion los asigne, se cambian aquí una sola vez.
     </Alert>
   )
 }
@@ -180,7 +180,7 @@ function FormularioEntidad({ entidad, fechaCorte, onGuardada }) {
         )}
         <div className="mt-4 flex flex-wrap justify-end gap-2.5">
           <Button type="button" variant="ghost" onClick={() => setConfirmando(true)} disabled={ocupado}>
-            Volver al relleno
+            Restablecer datos provisionales
           </Button>
           <Button type="submit" loading={form.enviando} disabled={ocupado}>
             Guardar datos
@@ -190,23 +190,13 @@ function FormularioEntidad({ entidad, fechaCorte, onGuardada }) {
       <ConfirmDialog
         open={confirmando}
         danger
-        title="Volver al relleno"
-        message="Los tres datos quedarán en XXX, XXX y XXXXXX y los archivos nuevos saldrán no aptos para envío hasta que se vuelvan a escribir."
-        confirmLabel="Volver al relleno"
+        title="Restablecer datos provisionales"
+        message="Los tres datos volverán a los valores provisionales (XXX, XXX y XXXXXX) y los archivos nuevos saldrán no aptos para envío hasta que se vuelvan a escribir."
+        confirmLabel="Restablecer datos provisionales"
         loading={restaurando}
         onConfirm={volverAlRelleno}
         onCancel={() => setConfirmando(false)}
       />
-      <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted">
-        <li>
-          Si TransUnion asigna varias sucursales, falta definir la regla para asignarlas a cada obligación.
-          <PorConfirmar>por definir</PorConfirmar>
-        </li>
-        <li>
-          Si TransUnion exige un tipo de entidad numérico en el registro tipo 1 mientras no lo asigne, el relleno sería 000.
-          <PorConfirmar />
-        </li>
-      </ul>
     </>
   )
 }

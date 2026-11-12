@@ -11,7 +11,6 @@ import {
   PageHeader,
   Spinner,
   Table,
-  useToast,
 } from '../../components/ui'
 import { mensajeDeError } from '../../lib/api'
 import { formatearFechaISO } from '../../lib/format'
@@ -43,7 +42,6 @@ const PESTAÑAS = [
 
 export default function UpdatesPage() {
   usePageTitle('Novedades Urgentes')
-  const toast = useToast()
 
   // Novedades y sus rectificaciones (RF24, RF55)
   const [novedades, setNovedades] = useState(null)
@@ -107,10 +105,6 @@ export default function UpdatesPage() {
     setIntentoEliminaciones((n) => n + 1)
   }, [])
 
-  const abrirActualizacionEnLinea = () => {
-    toast.info('Se abriría el módulo web Actualización en Línea de TransUnion en una pestaña nueva.')
-  }
-
   // Rectificación de cada novedad de corrección (enlazadas por novedad_id, contrato 0.9.2).
   const rectificacionDe = useMemo(
     () => new Map(rectificaciones.filter((r) => r.novedadId != null).map((r) => [r.novedadId, r])),
@@ -128,10 +122,6 @@ export default function UpdatesPage() {
           <Icon name="plus" size={16} />
           Registrar novedad
         </Button>
-        <Button variant="primary" onClick={abrirActualizacionEnLinea}>
-          <Icon name="link" size={16} />
-          Abrir Actualización en Línea
-        </Button>
       </PageHeader>
 
       <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -139,10 +129,10 @@ export default function UpdatesPage() {
           <Icon name="clock" size={20} />
         </div>
         <p className="text-sm text-slate-700 leading-relaxed">
-          Las novedades urgentes no esperan al corte mensual: se hacen de inmediato en el módulo web{' '}
+          Las novedades urgentes no esperan al corte mensual: regístralas de inmediato en el módulo{' '}
           <b>Actualización en Línea</b> de TransUnion. Lo que se gestione aquí se tiene en cuenta en el{' '}
-          <b>próximo reporte mensual</b> (RF24). Las correcciones de un corte ya enviado se registran
-          como «Corrección» (RF55).
+          <b>próximo reporte mensual</b>. Las correcciones de un corte ya enviado se registran
+          como «Corrección».
         </p>
       </div>
 
@@ -209,7 +199,7 @@ export default function UpdatesPage() {
                       <div className="text-slate-800">{n.motivo}</div>
                       {rect && (
                         <div className="text-xs text-slate-500 mt-0.5">
-                          Rectifica el corte {formatearFechaISO(rect.fechaCorte)} · {rect.medio} (RF55)
+                          Rectifica el corte {formatearFechaISO(rect.fechaCorte)} · {rect.medio}
                         </div>
                       )}
                     </td>
@@ -234,7 +224,7 @@ export default function UpdatesPage() {
       <section className="flex flex-col gap-3 mt-4" aria-labelledby="el-titulo">
         <div>
           <h2 className="text-lg font-bold text-slate-900" id="el-titulo">
-            Obligaciones eliminadas en TransUnion (RF50)
+            Obligaciones eliminadas en TransUnion
           </h2>
           <p className="text-sm text-slate-600">
             No se vuelven a reportar en los cortes siguientes y su número no se puede reutilizar.

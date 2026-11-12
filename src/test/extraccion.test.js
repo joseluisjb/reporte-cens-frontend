@@ -151,7 +151,7 @@ describe('generar un corte', () => {
     await entrarAnalista()
     await expect(generateCut({ fechaCorte: '2026-10-05' })).rejects.toMatchObject({
       status: 409,
-      message: 'Ya existe un corte en BORRADOR con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.',
+      message: 'Ya existe un corte en borrador con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.',
     })
   })
 
@@ -213,7 +213,7 @@ describe('eliminar un corte', () => {
 
   test('un corte ENVIADO o VALIDADO no se elimina: 409 y sigue ahí', async () => {
     await entrarAnalista()
-    const mensaje = 'Solo se puede eliminar un corte en estado BORRADOR.'
+    const mensaje = 'Solo se puede eliminar un corte en borrador.'
     await expect(deleteCut(1)).rejects.toMatchObject({ status: 409, message: mensaje }) // ENVIADO
     await validateCut(2)
     await expect(deleteCut(2)).rejects.toMatchObject({ status: 409, message: mensaje }) // VALIDADO
@@ -227,7 +227,7 @@ describe('ciclo del corte: BORRADOR, VALIDADO y ENVIADO', () => {
     conArchivoApto(2)
 
     // No se puede enviar un BORRADOR.
-    await expect(registerSubmission(2)).rejects.toMatchObject({ status: 409, message: 'El corte no está en estado VALIDADO.' })
+    await expect(registerSubmission(2)).rejects.toMatchObject({ status: 409, message: 'El corte todavía no está validado.' })
 
     // Validar: BORRADOR → VALIDADO con advertencias que no bloquean.
     const validado = await validateCut(2)
@@ -238,7 +238,7 @@ describe('ciclo del corte: BORRADOR, VALIDADO y ENVIADO', () => {
     expect((await getCut(2)).estado).toBe('VALIDADO')
 
     // Validar de nuevo: ya no es BORRADOR.
-    await expect(validateCut(2)).rejects.toMatchObject({ status: 409, message: 'El corte no está en estado BORRADOR.' })
+    await expect(validateCut(2)).rejects.toMatchObject({ status: 409, message: 'El corte no está en borrador.' })
 
     // Fecha de envío futura o con mal formato.
     await expect(registerSubmission(2, { fechaEnvio: '2099-01-01' })).rejects.toMatchObject({ status: 400, message: 'La fecha de envío no puede ser futura.' })
@@ -302,7 +302,7 @@ describe('ciclo del corte: BORRADOR, VALIDADO y ENVIADO', () => {
 
   test('validar un corte ya ENVIADO → 409 "no está en estado BORRADOR"', async () => {
     await entrarAnalista()
-    await expect(validateCut(1)).rejects.toMatchObject({ status: 409, message: 'El corte no está en estado BORRADOR.' })
+    await expect(validateCut(1)).rejects.toMatchObject({ status: 409, message: 'El corte no está en borrador.' })
   })
 })
 

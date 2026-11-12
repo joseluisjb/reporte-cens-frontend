@@ -5,7 +5,7 @@
 //    la carga inicial y aquí no se edita (contrato 0.9.1).
 //  - Estados de TransUnion: los 10 de la Tabla 4b (Manual, p. 64), para consulta.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Alert, Badge, Button, Card, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, Table, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, EmptyState, Icon, PageHeader, Spinner, Table, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaHora, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -21,18 +21,18 @@ const TITULO = 'Homologación de Estados'
 // Notas del uso de cada estado en CENS (ficha RF48 y mockup v3, `estUso`).
 const NOTAS = {
   '02': 'Cierre: se reporta una sola vez',
-  '03': 'Crédito caducado con mora (RF14)',
-  '04': 'Propuesta: desde 04 no se puede volver a Vigente ni cerrar',
-  '06': 'Castigo contable de CENS con mora (RF45)',
+  '03': 'Crédito caducado con mora',
+  '04': 'No se usa en CENS. Desde Suspendida no se vuelve a Vigente ni se cierra.',
+  '06': 'Castigo contable de CENS con mora',
   '07': 'Cierre: se reporta una sola vez',
-  '08': 'No se usa (Acta 3)',
+  '08': 'No se usa',
   '10': 'Solo si el cliente está admitido en el proceso de ley',
   '11': 'Solo si el cliente está admitido en el proceso de ley',
   '12': 'Solo si el cliente está admitido en el proceso de ley',
 }
 
-// «01 · Vigente», con el nombre que manda la API (GET /estados/) o, si no lo trae, el del catálogo local.
-const textoEstado = (codigo, estados) => `${codigo} · ${estados.find((e) => e.codigo === codigo)?.nombre ?? descripcionEstado(codigo)}`
+// «Vigente», con el nombre que manda la API (GET /estados/) o, si no lo trae, el del catálogo local.
+const textoEstado = (codigo, estados) => estados.find((e) => e.codigo === codigo)?.nombre ?? descripcionEstado(codigo)
 const comoSeReporta = (accion, estadoTu, estados) => (accion === ACCIONES.CIERRE ? 'cierre' : textoEstado(estadoTu, estados))
 
 export default function StateMappingPage() {
@@ -41,9 +41,9 @@ export default function StateMappingPage() {
   const [datos, setDatos] = useState(null) // { estados, homologaciones } | null mientras carga
   const [errorCarga, setErrorCarga] = useState('')
   const [intento, setIntento] = useState(0)
-  const [editando, setEditando] = useState(null) // estado del SAC en edición
+  const [editando, setEditando] = useState(null) // estado del sistema comercial en edición
   const botonesEditar = useRef({})
-  const [foco, setFoco] = useState(null) // estado del SAC cuyo «Editar» recibe el foco al salir de la edición
+  const [foco, setFoco] = useState(null) // estado del sistema comercial cuyo «Editar» recibe el foco al salir de la edición
 
   useEffect(() => {
     let cancelado = false
@@ -122,7 +122,7 @@ export default function StateMappingPage() {
             botonesEditar={botonesEditar}
           />
           <EstadosTransUnion estados={datos.estados} />
-          <p className="mt-5 text-sm text-muted">Cada cambio queda en la bitácora (módulo Parametrización) y se aplica desde la próxima actualización mensual.</p>
+          <p className="mt-5 text-sm text-muted">Cada cambio queda en el registro de auditoría y se aplica en la próxima actualización mensual.</p>
         </>
       )}
     </>
@@ -135,7 +135,7 @@ function AvisoSinHomologar({ homologaciones }) {
   if (!sin.length) {
     return (
       <div className="mb-5">
-        <Alert tone="info">Todos los estados del SAC están homologados.</Alert>
+        <Alert tone="info">Todos los estados del sistema comercial tienen su equivalencia.</Alert>
       </div>
     )
   }
@@ -143,10 +143,9 @@ function AvisoSinHomologar({ homologaciones }) {
     <div className="mb-5">
       <Alert tone="aviso">
         <b>
-          {plural(sin.length, 'estado del SAC sin homologar', 'estados del SAC sin homologar')} ({sin.map((h) => h.estadoSac).join(', ')})
+          {plural(sin.length, 'estado del sistema comercial sin equivalencia', 'estados del sistema comercial sin equivalencia')} ({sin.map((h) => h.estadoSac).join(', ')})
         </b>
-        : las obligaciones con {sin.length === 1 ? 'ese estado' : 'esos estados'} se bloquean en la validación del corte (RF53) hasta que se homologuen.{' '}
-        <PorConfirmar>pendiente de CENS</PorConfirmar>
+        : las obligaciones con {sin.length === 1 ? 'ese estado' : 'esos estados'} se bloquean al validar el corte hasta que tengan equivalencia.
       </Alert>
     </div>
   )
@@ -157,23 +156,23 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
   return (
     <section aria-labelledby={id} className="mb-6">
       <h2 id={id} className="font-hd text-lg font-bold">
-        Estados del sistema comercial (SAC)
+        Estados del sistema comercial
       </h2>
       <p className="text-sm text-muted">
-        Cada estado del crédito en el SAC se reporta como un estado de TransUnion o como un cierre. Solo se pueden elegir los estados que CENS usa.
+        Cada estado del crédito en el sistema comercial se reporta como un estado de TransUnion o como un cierre. Solo se pueden elegir los estados que CENS usa.
       </p>
       <p className="mb-3 text-sm text-muted">
-        Si los créditos de una obligación tienen estados distintos, la obligación toma el de menor número de prioridad (el 1 gana sobre el 5); si alguno está sin
-        homologar, se bloquea en la validación del corte (RF53). La prioridad viene de la carga inicial y aquí no se edita. <PorConfirmar />
+        Si los créditos de una obligación tienen estados distintos, se usa el de prioridad más alta (1 es la más alta). Si alguno no tiene equivalencia, la
+        obligación se bloquea al validar el corte.
       </p>
       <Card className="overflow-hidden">
         {datos.homologaciones.length === 0 ? (
-          <EmptyState>No hay estados del SAC cargados: se cargan con la carga inicial de la base (script 12).</EmptyState>
+          <EmptyState>Todavía no hay estados del sistema comercial. Pide al equipo técnico que los cargue.</EmptyState>
         ) : (
-        <Table caption="Estados del sistema comercial (SAC)">
+        <Table caption="Estados del sistema comercial">
           <thead>
             <tr>
-              <th scope="col">Estado del SAC</th>
+              <th scope="col">Estado en el sistema comercial</th>
               <th scope="col">Prioridad</th>
               <th scope="col">Descripción</th>
               <th scope="col">Se reporta como</th>
@@ -192,11 +191,11 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
                 <tr key={h.estadoSac}>
                   <td className="font-mono font-bold">{h.estadoSac}</td>
                   <td className="font-mono">{h.prioridad}</td>
-                  <td className="text-muted">{h.descripcion ?? 'Por confirmar con CENS'}</td>
+                  <td className="text-muted">{h.descripcion ?? 'Sin descripción'}</td>
                   <td>
                     <SeReportaComo homologacion={h} />
                   </td>
-                  <td>{h.confirmado ? <Badge tone="ok">Confirmado</Badge> : <PorConfirmar />}</td>
+                  <td>{h.confirmado ? <Badge tone="ok">Sí</Badge> : <Badge tone="off">No</Badge>}</td>
                   <td className="whitespace-nowrap">
                     {h.actualizadoPor ? (
                       <>
@@ -204,7 +203,7 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
                         <div className="text-xs text-muted">{h.actualizadoPor}</div>
                       </>
                     ) : (
-                      <span className="text-xs text-muted">Carga inicial (script 12)</span>
+                      <span className="text-xs text-muted">Carga inicial</span>
                     )}
                   </td>
                   <td>
@@ -238,7 +237,7 @@ function SeReportaComo({ homologacion: h }) {
     return (
       <>
         <Badge tone="info">Cierre</Badge>
-        <div className="text-xs text-muted">Saldada (02) o Castigada recuperada (07), según el estado anterior (RF12, RF15)</div>
+        <div className="text-xs text-muted">Saldada o Castigada recuperada, según el estado anterior</div>
       </>
     )
   }
@@ -284,7 +283,7 @@ function FilaEdicion({ homologacion: h, estados, onCancelar, onGuardada, onSinCa
     <tr className="bg-amber-50/40">
       <td className="font-mono font-bold">{h.estadoSac}</td>
       <td className="font-mono">{h.prioridad}</td>
-      <td className="text-muted">{h.descripcion ?? 'Por confirmar con CENS'}</td>
+      <td className="text-muted">{h.descripcion ?? 'Sin descripción'}</td>
       <td colSpan={3}>
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor={ids.accion} className="sr-only">
@@ -303,7 +302,7 @@ function FilaEdicion({ homologacion: h, estados, onCancelar, onGuardada, onSinCa
             className="rounded-ctl border border-gris-d bg-white px-3 py-2 text-sm"
           >
             <option value={ACCIONES.ESTADO}>Estado de TransUnion</option>
-            <option value={ACCIONES.CIERRE}>Cierre (RF12 o RF15)</option>
+            <option value={ACCIONES.CIERRE}>Cierre</option>
           </select>
           <label htmlFor={ids.estadoTu} className="sr-only">
             Estado de TransUnion para {h.estadoSac}
@@ -366,14 +365,14 @@ function EstadosTransUnion({ estados }) {
   return (
     <section aria-labelledby={id}>
       <h2 id={id} className="font-hd text-lg font-bold">
-        Estados de TransUnion (Tabla 4b · Sector Real Servicios)
+        Estados de TransUnion
       </h2>
-      <p className="mb-3 text-sm text-muted">Los 10 estados del Manual, para consulta: los define TransUnion y su uso lo aprueba CENS.</p>
+      <p className="mb-3 text-sm text-muted">Los 10 estados que define TransUnion. CENS decide cuáles usa.</p>
       <Card className="overflow-hidden">
         {estados.length === 0 ? (
           <EmptyState>No hay estados de TransUnion cargados.</EmptyState>
         ) : (
-        <Table compact caption="Estados de TransUnion (Tabla 4b)">
+        <Table compact caption="Estados de TransUnion">
           <thead>
             <tr>
               <th scope="col">Código</th>
@@ -391,7 +390,7 @@ function EstadosTransUnion({ estados }) {
                   {e.esCierre && <CandadoCerrada />}
                 </td>
                 <td className="whitespace-nowrap">
-                  {e.usado ? <Badge tone="ok">Sí</Badge> : <Badge tone="off">No</Badge>} {!e.confirmado && <PorConfirmar />}
+                  {e.usado ? <Badge tone="ok">Sí</Badge> : <Badge tone="off">No</Badge>}
                 </td>
                 <td className="text-muted">{NOTAS[e.codigo] ?? ''}</td>
               </tr>

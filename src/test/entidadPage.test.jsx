@@ -1,7 +1,7 @@
 // Pantalla 15 · Datos de la Entidad ante TransUnion (RF57). «Listo cuando» de la ficha:
 //   - el Administrador guarda 001 / 123 / A1B2C3 → se guarda y los archivos nuevos salen aptos;
 //   - 12 en el tipo de entidad → error en el campo (y 400 del backend);
-//   - el Analista intenta el PUT → 403 en español, y en la pantalla ve «Acceso restringido».
+//   - el Analista intenta el PUT → 403 en español, y la ruta lo devuelve al inicio.
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -35,7 +35,7 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.getByLabelText('Código de sucursal')).toHaveAccessibleDescription(/6 caracteres/)
     expect(await screen.findByText('SSRXXXXXX20260930')).toBeInTheDocument() // prefijo + último corte
-    expect(screen.getAllByText('por definir')).toHaveLength(1)
+    expect(screen.queryByText('por definir')).not.toBeInTheDocument()
   })
 
   test('guarda 001 / 123 / A1B2C3: el aviso pasa a «aptos» y cambia el nombre del archivo', async () => {
@@ -74,37 +74,37 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     expect(sucursal).toHaveAttribute('aria-invalid', 'true')
   })
 
-  test('«Volver al relleno» deja XXX, XXX y XXXXXX', async () => {
+  test('«Restablecer datos provisionales» deja XXX, XXX y XXXXXX', async () => {
     await abrirComoAdmin()
     await escribir('Tipo de entidad', '001')
     await escribir('Código de entidad', '123')
     await escribir('Código de sucursal', 'A1B2C3')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar datos' }))
     await screen.findByRole('note')
-    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
-    const dialogo = await screen.findByRole('alertdialog', { name: 'Volver al relleno' })
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Volver al relleno' }))
-    expect(await screen.findByText('Datos de la entidad con relleno: los archivos saldrán no aptos para envío.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Restablecer datos provisionales' }))
+    const dialogo = await screen.findByRole('alertdialog', { name: 'Restablecer datos provisionales' })
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Restablecer datos provisionales' }))
+    expect(await screen.findByText('Los datos de la entidad son provisionales: los archivos saldrán no aptos para envío.')).toBeInTheDocument()
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
     expect(screen.getByLabelText('Código de entidad')).toHaveValue('XXX')
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
-  test('«Volver al relleno» con el marcador ya guardado deja los botones activos y limpia lo escrito', async () => {
+  test('«Restablecer datos provisionales» con el marcador ya guardado deja los botones activos y limpia lo escrito', async () => {
     await abrirComoAdmin()
     await escribir('Tipo de entidad', '001')
-    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
-    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Volver al relleno' }))
-    await screen.findByText('Datos de la entidad con relleno: los archivos saldrán no aptos para envío.')
+    await userEvent.click(screen.getByRole('button', { name: 'Restablecer datos provisionales' }))
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Restablecer datos provisionales' }))
+    await screen.findByText('Los datos de la entidad son provisionales: los archivos saldrán no aptos para envío.')
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
     expect(screen.getByRole('button', { name: 'Guardar datos' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Volver al relleno' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Restablecer datos provisionales' })).toBeEnabled()
   })
 
   test('cancelar la confirmación no cambia nada', async () => {
     await abrirComoAdmin()
-    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Restablecer datos provisionales' }))
     await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
@@ -115,7 +115,7 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     await escribir('Código de sucursal', 'xxxxxx')
     const guardar = screen.getByRole('button', { name: 'Guardar datos' })
     await userEvent.click(guardar)
-    await screen.findByText('Datos guardados: todavía hay relleno, los archivos saldrán no aptos para envío.')
+    await screen.findByText('Datos guardados: todavía hay datos provisionales, los archivos saldrán no aptos para envío.')
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.getByRole('button', { name: 'Guardar datos' })).toBe(guardar) // el mismo botón: no se remontó
   })

@@ -43,13 +43,13 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   await userEvent.click(boton('Iniciar sesión'))
   expect(await screen.findByRole('alert')).toHaveTextContent(/desactivado/i)
 
-  // 1:30 administrador con el menú completo (13 opciones; las del Analista, bloqueadas)
+  // 1:30 administrador con el menú de administración (7 opciones)
   await userEvent.clear(screen.getByLabelText('Correo electrónico'))
   await userEvent.type(screen.getByLabelText('Correo electrónico'), 'rmartinez@example.com')
   await userEvent.type(screen.getByLabelText('Contraseña'), 'Admin12345')
   await userEvent.click(boton('Iniciar sesión'))
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
-  expect(within(menuPrincipal()).getAllByRole('link')).toHaveLength(13)
+  expect(within(menuPrincipal()).getAllByRole('link')).toHaveLength(7)
 
   // 2:00 crear usuario: la contraseña temporal se envía por correo (simulado)
   await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /gestión de usuarios/i }))
@@ -131,15 +131,15 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   await userEvent.click(boton('Guardar y continuar'))
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Laura' })).toBeInTheDocument()
 
-  // 9:00 roles: el Analista ve las de administración bloqueadas y, escribiendo la dirección, "Acceso restringido"
-  expect(within(menuPrincipal()).getByRole('link', { name: /gestión de usuarios/i })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
+  // 9:00 roles: el Analista no ve las de administración y, escribiendo la dirección, vuelve al inicio
+  expect(within(menuPrincipal()).queryByRole('link', { name: /gestión de usuarios/i })).not.toBeInTheDocument()
   recargar('/usuarios')
-  expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Bienvenido, Laura' })).toBeInTheDocument()
 
   // 9:30 extracción (Laura, Analista): corte en BORRADOR con obligaciones consolidadas
   await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /extracción de cartera/i }))
   expect(await screen.findByText('Corte #2 al 30/09/2026')).toBeInTheDocument()
-  expect(screen.getByText('BORRADOR')).toBeInTheDocument()
+  expect(screen.getByText('Borrador')).toBeInTheDocument()
   expect(await screen.findByText('TITULAR FICTICIO 01')).toBeInTheDocument()
   expect(screen.getByText('******0001')).toBeInTheDocument()
 
@@ -151,7 +151,7 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   fireEvent.change(fecha, { target: { value: '2026-10-05' } })
   await userEvent.click(boton('Iniciar extracción'))
   expect(
-    await screen.findByText('Ya existe un corte en BORRADOR con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.'),
+    await screen.findByText('Ya existe un corte en borrador con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.'),
   ).toBeInTheDocument()
 
   // 11:30 regenerar el borrador del 30/09 con un grupo
@@ -162,12 +162,12 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
 
   // 12:30 validar y 13:30 registrar el envío (contrato 0.9: con un archivo apto del corte)
   await userEvent.click(await screen.findByRole('button', { name: 'Validar corte' }))
-  expect(await screen.findByText('VALIDADO')).toBeInTheDocument()
+  expect(await screen.findByText('Validado')).toBeInTheDocument()
   conArchivoApto(2)
   await userEvent.click(boton('Registrar envío a TransUnion'))
   const envio = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
   await userEvent.click(envio.getByRole('button', { name: 'Confirmar envío' }))
-  expect(await screen.findByText('ENVIADO')).toBeInTheDocument()
+  expect(await screen.findByText('Enviado')).toBeInTheDocument()
 
   // los datos creados en la demo siguen ahí tras las recargas: Laura entra con su nueva contraseña
   await cerrarSesion(/^laura díaz/i)

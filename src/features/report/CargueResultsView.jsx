@@ -7,8 +7,8 @@ import { Badge, Card, EmptyState, Table } from '../../components/ui'
 import { formatearFechaHora, formatearFechaISO } from '../../lib/format'
 
 const TIPOS = {
-  CORRECTIVA: { texto: 'Correctiva', tono: 'error' },
-  INFORMATIVA: { texto: 'Informativa', tono: 'aviso' },
+  CORRECTIVA: { texto: 'Debe corregirse', tono: 'error' },
+  INFORMATIVA: { texto: 'Solo aviso', tono: 'aviso' },
   NO_REPORTADA: { texto: 'No reportada', tono: 'aviso' },
 }
 
@@ -19,14 +19,14 @@ export default function CargueResultsView({ resultados }) {
     [resultados.recibidos, 'Registros recibidos'],
     [resultados.cargados, 'Cargados'],
     [resultados.conInconsistencias, 'Con inconsistencias'],
-    [resultados.noReportadas, 'No reportadas (R)'],
+    [resultados.noReportadas, 'No reportadas'],
   ]
   return (
     <Card as="section" aria-labelledby={id} className="mt-5 p-6">
       <h2 id={id} className="font-semibold">
         Resultados del cargue · corte {corte}
       </h2>
-      <p className="mb-4 text-sm text-muted">Archivos de respuesta de TransUnion cargados el {formatearFechaHora(resultados.fechaCarga)} (RF54)</p>
+      <p className="mb-4 text-sm text-muted">Archivos de respuesta de TransUnion cargados el {formatearFechaHora(resultados.fechaCarga)}</p>
       <ul aria-label={`Resumen del cargue del corte ${corte}`} className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map(([valor, etiqueta]) => (
           <li key={etiqueta} className="flex flex-col gap-0.5 rounded-xl border border-line bg-white px-4 py-3.5">
@@ -62,14 +62,15 @@ export default function CargueResultsView({ resultados }) {
                   <Badge tone={TIPOS[i.tipo]?.tono ?? 'off'}>{TIPOS[i.tipo]?.texto ?? i.tipo}</Badge>
                 </td>
                 <td>
-                  <span className="font-mono">{i.codigo}</span> · {i.descripcion}
+                  <span title={`Código ${i.codigo}`}>{i.descripcion}</span>
+                  <span className="ml-1.5 font-mono text-xs text-muted">{i.codigo}</span>
                 </td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
-      <p className="mt-3 text-sm text-muted">Las correctivas se corrigen y se reenvían; las informativas no impiden el cargue.</p>
+      <p className="mt-3 text-sm text-muted">Lo que debe corregirse se corrige y se reenvía; los avisos no impiden el cargue.</p>
     </Card>
   )
 }

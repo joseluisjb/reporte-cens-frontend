@@ -1,6 +1,6 @@
 // Tabla de obligaciones de la pantalla 9 (mockup v3: oblRows). El número abre el detalle; las cerradas
 // llevan candado (RF13, RF16) y las etiquetas «Primer reporte», «Revisar», «Eliminada en TransUnion»,
-// «En reclamo» y «Caducado en el SAC» salen de los campos del contrato.
+// «En reclamo» y «Crédito caducado» salen de los campos del contrato.
 import { memo } from 'react'
 import { Badge, Table } from '../../components/ui'
 import { formatearCOP } from '../../lib/format'
@@ -18,7 +18,7 @@ export default function ObligationsTable({ obligaciones, onVerDetalle }) {
           <th scope="col">Número de Obligación</th>
           <th scope="col">Deudor</th>
           <th scope="col">Estado</th>
-          <th scope="col">Edad de Mora (Tabla 9)</th>
+          <th scope="col">Edad de mora</th>
           <th scope="col" className="text-right!">
             Valor en Mora y Cuotas en Mora
           </th>
@@ -65,7 +65,7 @@ const FilaObligacion = memo(function FilaObligacion({ obligacion: o, onVerDetall
           </span>
           {o.eliminada && <Badge tone="error">Eliminada en TransUnion</Badge>}
           {o.enReclamo && <Badge tone="aviso">En reclamo</Badge>}
-          {o.caducado && !o.cerrada && <Badge tone="off">Caducado en el SAC</Badge>}
+          {o.caducado && !o.cerrada && <Badge tone="off">Crédito caducado</Badge>}
           {o.requiereRevision && <Badge tone="aviso">Revisar</Badge>}
         </div>
       </td>

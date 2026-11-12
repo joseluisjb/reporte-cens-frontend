@@ -1,5 +1,5 @@
 // Revisión de accesibilidad automática de las pantallas de Johan (login, sesión, contraseñas,
-// usuarios, acceso restringido y diálogos). Cada prueba corre axe-core sobre la pantalla real.
+// usuarios, menú por rol y diálogos). Cada prueba corre axe-core sobre la pantalla real.
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expectAccesible } from './axe'
@@ -111,7 +111,7 @@ describe('pantallas con sesión', () => {
 
   test('homologación de estados (pantalla 16), con una fila en edición y su error', async () => {
     await renderConSesion('/homologacion-estados')
-    await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+    await screen.findByRole('table', { name: 'Estados del sistema comercial' })
     await expectAccesible()
     await userEvent.click(boton('Editar la homologación del estado B'))
     await userEvent.click(boton('Guardar'))
@@ -132,7 +132,7 @@ describe('pantallas con sesión', () => {
   test('actualización mensual (pantalla 10), con el resultado, los rechazos y la matriz', async () => {
     server.use(...cicloConRechazosYRevisiones())
     await renderConSesion('/ciclo', 'jperez@example.com', 'Analista123')
-    await screen.findByRole('table', { name: /Matriz de cambios de estado/ })
+    await screen.findByRole('table', { name: /Cambios de estado permitidos/ })
     await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
     await expectAccesible()
     await userEvent.click(boton('Ejecutar actualización mensual'))
@@ -157,7 +157,7 @@ describe('pantallas con sesión', () => {
     await screen.findByRole('table', { name: 'Archivos generados' })
     await expectAccesible()
     await userEvent.click(boton('Validar corte'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Generar archivo plano' }, { timeout: 4000 }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Generar archivo para TransUnion' }, { timeout: 4000 }))
     await screen.findByRole('region', { name: 'Archivo generado' })
     await expectAccesible()
   })
@@ -214,15 +214,15 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
-  test('acceso restringido (Analista)', async () => {
-    renderApp('/usuarios', ANALISTA)
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
+  test('menú del Analista (solo sus opciones)', async () => {
+    renderApp('/panel', ANALISTA)
+    await screen.findByRole('heading', { name: 'Bienvenido, Juan' })
     await expectAccesible()
   })
 
-  test('acceso restringido (Administrador en una pantalla del Analista) y menú con opciones bloqueadas', async () => {
-    renderApp('/obligaciones')
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
+  test('menú del Administrador (solo sus opciones)', async () => {
+    renderApp('/panel')
+    await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
     await expectAccesible()
   })
 

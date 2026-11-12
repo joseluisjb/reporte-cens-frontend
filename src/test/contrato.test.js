@@ -407,7 +407,7 @@ describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligacion
 
   test('GET /obligaciones/ 400: ErrorCampos en cada filtro inválido y `detail` en la paginación (0.9.3)', async () => {
     await entrar(ANALISTA)
-    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?estado_tu=05' })).toEqual({ estado_tu: ['Estado no válido. Usa un código de la Tabla 4b.'] })
+    expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?estado_tu=05' })).toEqual({ estado_tu: ['Estado no válido.'] })
     expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?cuotas_mora_min=-1' })).toHaveProperty('cuotas_mora_min')
     expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?eliminada=quizas' })).toHaveProperty('eliminada')
     expect(await verifica('get', '/obligaciones/', 400, { url: '/obligaciones/?abierta=quizas' })).toHaveProperty('abierta')
@@ -490,7 +490,7 @@ describe('conformidad de los mocks de la Iteración 2 (contrato 0.9): obligacion
     const marcador = { tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX' }
     expect(await verifica('put', '/entidad/', 200, { datos: marcador })).toMatchObject({ con_marcador: true, prefijo_archivo: 'SSRXXXXXX' })
     expect(await verifica('put', '/entidad/', 400, { datos: { ...datos, tipo_entidad: '12' } })).toEqual({
-      tipo_entidad: ['El tipo de entidad debe tener 3 dígitos (o XXX mientras TransUnion no los asigne).'],
+      tipo_entidad: ['El tipo de entidad debe tener 3 dígitos.'],
     })
     expect(await verifica('put', '/entidad/', 400, { datos: { ...datos, codigo_sucursal: 'a1-b2' } })).toHaveProperty('codigo_sucursal')
     expect(await verifica('put', '/entidad/', 400, { datos: {} })).toEqual({
@@ -667,7 +667,7 @@ describe('conformidad de los mocks de refinanciaciones (contrato 0.9)', () => {
     expect(await verifica('post', '/refinanciaciones/', 404, { datos: { ...pedido, obligacion_original_id: 999 } })).toEqual({ detail: 'Obligación no encontrada.' })
     db.obligaciones.find((o) => o.id === 5).estado = '04'
     expect(await verifica('post', '/refinanciaciones/', 409, { datos: { ...pedido, obligacion_original_id: 5 } })).toEqual({
-      detail: 'TransUnion no acepta pasar de 04 · Suspendida por la entidad a 02 · Saldada (error 713). Define el tratamiento con CENS.',
+      detail: 'TransUnion no acepta pasar de Suspendida por la entidad a Saldada. Consulta con CENS cómo tratar esta obligación antes de refinanciarla.',
       code: 'transicion_no_permitida',
     })
   })
@@ -859,7 +859,7 @@ describe('conformidad de los mocks de los resultados del cargue (contrato 0.9, R
     await verifica('post', '/extracciones/{id}/validar/', 200, { url: '/extracciones/2/validar/' })
     db.archivos = db.archivos.filter((a) => a.corte_id !== 2)
     expect(await verifica('post', '/extracciones/{id}/registrar-envio/', 409, { url: '/extracciones/2/registrar-envio/' })).toEqual({
-      detail: 'Primero genera el archivo plano del corte.',
+      detail: 'Primero genera el archivo para TransUnion del corte.',
       code: 'sin_archivo',
     })
     await verifica('post', '/extracciones/{id}/archivo/', 201, { url: '/extracciones/2/archivo/' })
@@ -902,10 +902,10 @@ describe('conformidad de los mocks de la homologación de estados (contrato 0.9.
     expect(a).toMatchObject({ estado_sac: 'A', prioridad: 1, accion: 'ESTADO', estado_tu: '01', confirmado: true, actualizado_por: 'Rosa Martínez' })
     expect(a.fecha_actualizacion).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'ESTADO', estado_tu: '08' } })).toEqual({
-      estado_tu: ['El estado 08 · Inactivo no se usa en CENS: elige un estado en uso.'],
+      estado_tu: ['El estado Inactivo no se usa en CENS: elige un estado en uso.'],
     })
     expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'ESTADO', estado_tu: '02' } })).toEqual({
-      estado_tu: ['Saldada (02) y Castigada recuperada (07) se asignan con «Cierre», según el estado anterior.'],
+      estado_tu: ['Saldada y Castigada recuperada se asignan con «Cierre», según el estado anterior.'],
     })
     expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 400, { ...ruta('B'), datos: { accion: 'CIERRE', estado_tu: '07' } })).toEqual({
       estado_tu: ['Un estado que cierra el crédito no lleva estado de TransUnion.'],
@@ -916,7 +916,7 @@ describe('conformidad de los mocks de la homologación de estados (contrato 0.9.
     const f = await verifica('put', '/homologacion-estados/{estado_sac}/', 200, { ...ruta('D'), datos: { accion: 'CIERRE', estado_tu: null } })
     expect(f).toMatchObject({ estado_sac: 'D', prioridad: 3, accion: 'CIERRE', estado_tu: null, confirmado: false })
     expect(await verifica('put', '/homologacion-estados/{estado_sac}/', 404, { ...ruta('Z'), datos: { accion: 'CIERRE', estado_tu: null } })).toEqual({
-      detail: 'Estado del SAC no encontrado.',
+      detail: 'Estado del sistema comercial no encontrado.',
     })
     await entrar(ANALISTA)
     await verifica('put', '/homologacion-estados/{estado_sac}/', 403, { ...ruta('A'), datos: { accion: 'ESTADO', estado_tu: '01' } })

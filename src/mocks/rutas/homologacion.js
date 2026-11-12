@@ -29,7 +29,7 @@ export const homologacionHandlers = [
     const { usuario, respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const actual = db.homologacionEstados.find((h) => h.estado_sac === params.estadoSac)
-    if (!actual) return error(404, { detail: 'Estado del SAC no encontrado.' })
+    if (!actual) return error(404, { detail: 'Estado del sistema comercial no encontrado.' })
     const cuerpo = await leerCuerpo(request)
     const accion = cuerpo.accion ?? null
     const estadoTu = typeof cuerpo.estado_tu === 'string' && cuerpo.estado_tu.trim() ? cuerpo.estado_tu.trim() : null

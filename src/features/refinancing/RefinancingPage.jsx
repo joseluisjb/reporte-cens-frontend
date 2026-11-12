@@ -4,7 +4,7 @@
 // con la obligación ya elegida).
 import { useCallback, useEffect, useId, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, Table, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, PageHeader, Spinner, Table, useToast } from '../../components/ui'
 import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearFechaHora, formatearFechaISO, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -13,16 +13,16 @@ import RefinancingModal from './RefinancingModal'
 import { listRefinancings } from './refinancingService'
 
 const PASOS = [
-  ['Se detecta en el SAC', 'Cada extracción revisa el campo de refinanciación del proceso. Este registro manual es de respaldo.'],
+  ['Se detecta sola', 'Cada extracción revisa el campo de refinanciación del proceso. Este registro manual es de respaldo.'],
   [
     'Se cierra la obligación original',
     <>
-      En Saldada (02) si estaba Vigente, o en Castigada recuperada (07) si estaba en Dudoso recaudo o Castigada <PorConfirmar />. Modo de extinción 16 «Refinanciación».
+      Se cierra como Saldada si estaba Vigente, o como Castigada recuperada si estaba en Dudoso recaudo o Castigada. Modo de extinción: Refinanciación.
     </>,
   ],
   [
     'Nace la nueva obligación',
-    'Con número propio, marcada como reestructurada y con su naturaleza (Tabla 11). El vínculo entre las dos queda en NexoVolt: el archivo de TransUnion no tiene un campo para eso.',
+    'Con número propio, marcada como reestructurada y con su naturaleza. El vínculo entre las dos queda en NexoVolt: el archivo de TransUnion no tiene un campo para eso.',
   ],
 ]
 
@@ -70,7 +70,7 @@ export default function RefinancingPage() {
     (r) => {
       cerrar()
       setIntento((n) => n + 1)
-      toast.success(`Refinanciación registrada: ${r.original.numeroObligacion} pasa a ${r.original.estadoCierre.codigo} · ${r.original.estadoCierre.descripcion} y nace ${r.nueva.numeroObligacion} en Vigente (01).`)
+      toast.success(`Refinanciación registrada: ${r.original.numeroObligacion} pasa a ${r.original.estadoCierre.descripcion} y nace ${r.nueva.numeroObligacion} en Vigente.`)
     },
     [cerrar, toast],
   )
@@ -134,7 +134,7 @@ function Registradas({ lista, error, onReintentar }) {
                     Saldo refinanciado
                   </th>
                   <th scope="col">Nueva obligación</th>
-                  <th scope="col">Naturaleza (Tabla 11)</th>
+                  <th scope="col">Naturaleza</th>
                 </tr>
               </thead>
               <tbody>
@@ -142,7 +142,7 @@ function Registradas({ lista, error, onReintentar }) {
                   <tr key={r.id}>
                     <td className="whitespace-nowrap">
                       <span className="font-mono">{formatearFechaHora(r.fechaRegistro)}</span>
-                      <div className="text-xs text-muted">{r.origen === 'SAC' ? 'Detectada en el SAC' : (r.registradaPor ?? '—')}</div>
+                      <div className="text-xs text-muted">{r.origen === 'SAC' ? 'Detectada automáticamente' : (r.registradaPor ?? '—')}</div>
                       <div className="text-xs text-muted">Refinanciada el {formatearFechaISO(r.fecha)}</div>
                     </td>
                     <td className="whitespace-nowrap">
@@ -151,7 +151,7 @@ function Registradas({ lista, error, onReintentar }) {
                       <div className="mt-1 flex flex-col items-start gap-1">
                         <EstadoBadge codigo={r.original.estadoCierre.codigo} descripcion={r.original.estadoCierre.descripcion} />
                         <span className="text-xs text-muted">
-                          modo de extinción {r.original.modoExtincion.codigo} · {r.original.modoExtincion.descripcion}
+                          modo de extinción: {r.original.modoExtincion.descripcion}
                         </span>
                       </div>
                     </td>
@@ -165,9 +165,8 @@ function Registradas({ lista, error, onReintentar }) {
                     </td>
                     <td className="whitespace-nowrap">
                       <Chip>
-                        {r.naturaleza.codigo} · {r.naturaleza.descripcion}
+                        {r.naturaleza.descripcion}
                       </Chip>
-                      {!r.naturaleza.confirmado && <PorConfirmar />}
                       <div className="text-xs text-muted">{plural(r.numeroCuotas, 'cuota', 'cuotas')}</div>
                     </td>
                   </tr>

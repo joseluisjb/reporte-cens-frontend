@@ -67,7 +67,7 @@ export default function ObligationsPage() {
       />
       <p className="mt-3.5 flex items-center gap-2 text-[13px] text-muted">
         <Icon name="lock" size={14} strokeWidth={2.2} />
-        Saldada (02) y Castigada recuperada (07) se reportan una sola vez, en el corte en que cierran, y después ya no (RF13, RF16).
+        Saldada (02) y Castigada recuperada (07) se reportan una sola vez, en el corte en que cierran, y después ya no.
       </p>
       <ObligationDetailPanel obligacionId={obligacionId} onCerrar={cerrarDetalle} onAbrir={verDetalle} />
     </>
@@ -130,7 +130,7 @@ function ResumenCartera({ estado, onFiltrarEstado }) {
             key={c.estado.codigo}
             valor={c.estado.codigo}
             activo={estado === c.estado.codigo}
-            etiqueta={`${c.estado.codigo} · ${c.estado.descripcion}`}
+            etiqueta={c.estado.descripcion}
             cantidad={c.cantidad}
             onFiltrar={onFiltrarEstado}
           />
@@ -181,7 +181,7 @@ function CuotasEnMora({ resumen }) {
             Cuotas en mora por obligación
           </h2>
           <p className="text-sm text-muted">
-            Se calcula en cada actualización mensual, por financiación (RF19) · Último corte:{' '}
+            Se calcula en cada actualización mensual, por financiación. Último corte:{' '}
             {resumen.fechaUltimoCiclo ? formatearFechaISO(resumen.fechaUltimoCiclo) : 'aún no se ha ejecutado'}
           </p>
         </div>
@@ -273,7 +273,7 @@ function ListaObligaciones({ estado, cuotasMoraMin, q, desplazamiento, onBuscar,
         {vista && (
           <p className="text-[13px] text-muted">
             <span role="status">{plural(vista.total, 'obligación', 'obligaciones')}</span>
-            {estado && estado !== FILTRO_ELIMINADAS && ` en ${estado} · ${descripcionEstado(estado)}`}
+            {estado && estado !== FILTRO_ELIMINADAS && ` en ${descripcionEstado(estado)}`}
             {estado === FILTRO_ELIMINADAS && ' eliminadas en TransUnion'} · Haz clic en el número para ver el detalle
           </p>
         )}

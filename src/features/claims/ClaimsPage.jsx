@@ -10,7 +10,6 @@ import {
   EmptyState,
   Icon,
   PageHeader,
-  PorConfirmar,
   Spinner,
   Table,
   useToast,
@@ -132,10 +131,8 @@ export default function ClaimsPage() {
       </div>
 
       <Alert tone="info">
-        Una obligación en reclamo <b>se sigue reportando</b> en el archivo mensual. Aquí solo se
-        prepara el insumo de la «Marcación de obligaciones (Reclamos Batch)» de TransUnion, para que la
-        marque como «en reclamo» y la desmarque al cerrarlo. Se podrá usar cuando TransUnion habilite
-        el perfil de marcación.
+        Una obligación en reclamo <b>se sigue reportando</b> en el archivo mensual. Esta pantalla prepara
+        el archivo que TransUnion usa para marcarla como en reclamo y quitar la marca al cerrarla.
       </Alert>
 
       {cargando && (
@@ -164,7 +161,7 @@ export default function ClaimsPage() {
               <thead>
                 <tr>
                   <th scope="col">Obligación</th>
-                  <th scope="col">Tipología y observación</th>
+                  <th scope="col">Motivo y observación</th>
                   <th scope="col">Fecha del reclamo</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Archivo</th>
@@ -187,7 +184,6 @@ export default function ClaimsPage() {
                       <td className="min-w-[220px]">
                         <div className="font-medium text-ink">
                           {c.tipologiaDescripcion}
-                          {c.tipologia?.confirmado === false && <PorConfirmar />}
                         </div>
                         {c.observacion && (
                           <div className="text-xs text-muted">{c.observacion}</div>

@@ -82,11 +82,11 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
           'CAMBIOS_RECHAZADOS',
           'Cambios de estado y primer reporte',
           'correctiva',
-          `${plural(rechazos.length, 'obligación tiene', 'obligaciones tienen')} un cambio no permitido (error 713 u 881). Corrige el dato en el SAC, regenera la extracción y vuelve a ejecutar la actualización mensual.`,
+          `${plural(rechazos.length, 'obligación tiene', 'obligaciones tienen')} un cambio no permitido. Corrige el dato en el sistema comercial, regenera la extracción y vuelve a ejecutar la actualización mensual.`,
           ['RF10', 'RF14'],
           { obligaciones: rechazos.map((r) => referida(r, 'estado_tu', r.motivo)) },
         )
-      : resultado('CAMBIOS_RECHAZADOS', 'Cambios de estado y primer reporte', 'ok', 'Todos cumplen la matriz de TransUnion y las reglas de primer reporte.', ['RF10', 'RF14']),
+      : resultado('CAMBIOS_RECHAZADOS', 'Cambios de estado y primer reporte', 'ok', 'Todos cumplen las reglas de TransUnion.', ['RF10', 'RF14']),
   )
 
   // RF21: las activas del último corte enviado deben seguir en este. En el mock todas siguen (las
@@ -126,8 +126,8 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
   })
   resultados.push(
     fallasCierre.length
-      ? resultado('CIERRE_INCOMPLETO', 'Campos de cierre (RF22)', 'correctiva', `Hay cierres sin todos sus campos: ${[...new Set(fallasCierre.map((f) => f.numero_obligacion))].join(', ')}.`, ['RF22'], { obligaciones: fallasCierre })
-      : resultado('CIERRE_INCOMPLETO', 'Campos de cierre (RF22)', 'ok', `${plural(cierres.length, 'cierre', 'cierres')} con saldo, mora y cuota en cero, fecha de pago, modo de extinción y tipo de pago.`, ['RF22']),
+      ? resultado('CIERRE_INCOMPLETO', 'Campos de cierre', 'correctiva', `Hay cierres sin todos sus campos: ${[...new Set(fallasCierre.map((f) => f.numero_obligacion))].join(', ')}.`, ['RF22'], { obligaciones: fallasCierre })
+      : resultado('CIERRE_INCOMPLETO', 'Campos de cierre', 'ok', `${plural(cierres.length, 'cierre', 'cierres')} con saldo, mora y cuota en cero, fecha de pago, modo de extinción y tipo de pago.`, ['RF22']),
   )
 
   // RF47: un pago de la mora lleva fecha de pago, modo de extinción y tipo de pago. Si falta alguno,
@@ -144,8 +144,8 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
   })
   resultados.push(
     fallasPagoMora.length
-      ? resultado('PAGO_MORA_INCOMPLETO', 'Campos del pago de la mora (RF47)', 'informativa', `Hay pagos de la mora sin todos sus campos: ${[...new Set(fallasPagoMora.map((f) => f.numero_obligacion))].join(', ')}. TransUnion tomaría la fecha de corte como fecha de pago.`, ['RF47', 'RF53'], { obligaciones: fallasPagoMora })
-      : resultado('PAGO_MORA_INCOMPLETO', 'Campos del pago de la mora (RF47)', 'ok', 'Los pagos de la mora tienen fecha de pago, modo de extinción y tipo de pago.', ['RF47', 'RF53']),
+      ? resultado('PAGO_MORA_INCOMPLETO', 'Campos del pago de la mora', 'informativa', `Hay pagos de la mora sin todos sus campos: ${[...new Set(fallasPagoMora.map((f) => f.numero_obligacion))].join(', ')}. TransUnion tomaría la fecha de corte como fecha de pago.`, ['RF47', 'RF53'], { obligaciones: fallasPagoMora })
+      : resultado('PAGO_MORA_INCOMPLETO', 'Campos del pago de la mora', 'ok', 'Los pagos de la mora tienen fecha de pago, modo de extinción y tipo de pago.', ['RF47', 'RF53']),
   )
 
   // Valor real pagado (alerta informativa 968 de TransUnion, Manual pp. 5 y 131). El archivo lo llena con
@@ -168,15 +168,15 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
   resultados.push(
     db.cortesConErrorForzado.includes(corte.id)
       ? resultado('SIN_IDENTIFICACION', 'Campos obligatorios', 'correctiva', 'Falta el tipo o el número de identificación.', ['RF53'])
-      : resultado('SIN_IDENTIFICACION', 'Campos obligatorios', 'ok', 'Todas tienen los campos obligatorios de Sector Real Servicios.', ['RF53']),
+      : resultado('SIN_IDENTIFICACION', 'Campos obligatorios', 'ok', 'Todas tienen los campos obligatorios.', ['RF53']),
   )
 
   resultados.push(
     resultado(
       'VALORES_EN_MILES',
-      'Valores en miles de pesos (RF51)',
+      'Valores en miles de pesos',
       'informativa',
-      'Saldo, mora, cuota y valor inicial se reportan en miles de pesos, como enteros. Regla de redondeo por confirmar con TransUnion.',
+      'Saldo, mora, cuota y valor inicial se reportan en miles de pesos, como enteros.',
       ['RF51'],
       { porConfirmar: true },
     ),
@@ -210,8 +210,8 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
 
   resultados.push(
     entidadConMarcador
-      ? resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad (RF57)', 'advertencia', 'Llevan relleno mientras TransUnion no los asigne: el archivo saldrá no apto para envío.', ['RF57'])
-      : resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad (RF57)', 'ok', 'Tipo de entidad, código de entidad y sucursal asignados por TransUnion.', ['RF57']),
+      ? resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad', 'advertencia', 'Llevan datos provisionales mientras TransUnion no los asigne: el archivo saldrá no apto para envío.', ['RF57'])
+      : resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad', 'ok', 'Tipo de entidad, código de entidad y sucursal asignados por TransUnion.', ['RF57']),
   )
 
   const hayCorrectivas = resultados.some((r) => r.nivel === 'correctiva')

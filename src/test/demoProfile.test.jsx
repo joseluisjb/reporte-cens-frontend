@@ -8,13 +8,15 @@ vi.mock('../lib/config', async (importOriginal) => ({ ...(await importOriginal()
 describe('Cambiar de perfil (solo demostración)', () => {
   test('alterna de Analista a Administrador y el menú y las rutas cambian', async () => {
     renderApp('/usuarios', ANALISTA)
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
-    await userEvent.click(screen.getByRole('button', { name: /cambiar de perfil/i }))
+    await screen.findByRole('heading', { name: 'Bienvenido, Juan' })
+    await userEvent.click(screen.getByRole('button', { name: /juan pérez/i }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /cambiar de perfil/i }))
     const dialogo = screen.getByRole('dialog', { name: 'Cambiar de perfil' })
     const confirmar = within(dialogo).getByRole('button', { name: 'Cambiar perfil' })
     expect(confirmar).toBeDisabled() // el perfil actual ya está elegido
     await userEvent.click(within(dialogo).getByRole('radio', { name: /rosa martínez/i }))
     await userEvent.click(confirmar)
+    await userEvent.click(await screen.findByRole('link', { name: /gestión de usuarios/i }))
     expect(await screen.findByRole('heading', { name: 'Usuarios del Sistema' })).toBeInTheDocument()
     await screen.findByText('Juan Pérez') // deja terminar la carga de la lista
     expect(screen.getByText(/ahora estás usando el perfil: rosa martínez · administrador/i)).toBeInTheDocument()
@@ -23,11 +25,13 @@ describe('Cambiar de perfil (solo demostración)', () => {
   // Con sesión real en el mock: al cambiar de perfil, la pantalla 9 pide sus datos como Analista.
   test('en una pantalla del Analista, el Administrador cambia de perfil y la pantalla se abre (Iteración 2)', async () => {
     await renderConSesion('/obligaciones')
-    expect(await screen.findByText(/«Obligaciones y Estados» es exclusiva del rol Analista de Cartera/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /cambiar de perfil/i }))
+    expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /rosa martínez/i }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /cambiar de perfil/i }))
     const dialogo = screen.getByRole('dialog', { name: 'Cambiar de perfil' })
     await userEvent.click(within(dialogo).getByRole('radio', { name: /juan pérez/i }))
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cambiar perfil' }))
+    await userEvent.click(await screen.findByRole('link', { name: /obligaciones y estados/i }))
     expect(await screen.findByRole('heading', { name: 'Obligaciones y Estados' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Ver el detalle de la obligación 2257-4156' })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('status', { name: /^Cargando/ })).not.toBeInTheDocument())

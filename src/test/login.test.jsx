@@ -126,12 +126,12 @@ describe('inicio de sesión correcto', () => {
     expect(screen.getAllByRole('link', { name: /gestión de usuarios/i })).toHaveLength(1)
   })
 
-  test('el Analista entra y ve bloqueadas las opciones del Administrador', async () => {
+  test('el Analista entra y no ve las opciones del Administrador', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
     await iniciar('jperez@example.com', 'Analista123')
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Juan' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /gestión de usuarios/i })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
+    expect(screen.queryByRole('link', { name: /gestión de usuarios/i })).not.toBeInTheDocument()
   })
 
   test('tras iniciar sesión vuelve a la pantalla que quería abrir', async () => {
@@ -206,12 +206,12 @@ describe('arranque en frío del servidor', () => {
         </MemoryRouter>
       </AuthContext.Provider>,
     )
-    const aviso = /conectando con el servidor/i
+    const aviso = /estamos conectando con el sistema/i
     expect(screen.getByRole('status', { name: 'Cargando' })).toBeInTheDocument()
     act(() => vi.advanceTimersByTime(AVISO_LENTO_MS - 1))
     expect(screen.queryByText(aviso)).not.toBeInTheDocument()
     act(() => vi.advanceTimersByTime(1))
-    expect(screen.getByText(aviso)).toHaveTextContent('puede tardar hasta un minuto')
+    expect(screen.getByText(aviso)).toHaveTextContent('Puede tardar hasta un minuto')
     expect(screen.getByRole('status')).toContainElement(screen.getByText(aviso))
   })
 })

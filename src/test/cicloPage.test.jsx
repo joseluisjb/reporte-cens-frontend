@@ -15,7 +15,7 @@ const abrir = async () => {
   await renderConSesion('/ciclo', ...ANALISTA)
   await screen.findByRole('heading', { name: 'Actualización Mensual de Estados', level: 1 })
   await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
-  await screen.findByText(/Financiaciones nuevas en el SAC|No hay financiaciones nuevas/)
+  await screen.findByText(/Financiaciones nuevas del sistema comercial|No hay financiaciones nuevas/)
 }
 const fecha = () => screen.getByLabelText('Fecha de corte')
 const ejecutar = () => userEvent.click(screen.getByRole('button', { name: 'Ejecutar actualización mensual' }))
@@ -40,18 +40,18 @@ describe('pantalla 10 · antes de ejecutar', () => {
     expect(filas('Actualizaciones mensuales anteriores').map((f) => f.textContent)).toEqual([expect.stringContaining('Juan Pérez30/09/20262220')])
     await userEvent.click(screen.getByRole('button', { name: 'Ver el resultado del corte 30/09/2026' }))
     expect(await screen.findByRole('heading', { name: '6 obligaciones actualizadas en el corte 30/09/2026' })).toBeInTheDocument()
-    expect(filaDe('Cambios aplicados', '2259-1092')).toHaveTextContent('01 · Vigentepasa a02 · Saldada')
+    expect(filaDe('Cambios aplicados', '2259-1092')).toHaveTextContent('Vigentepasa aSaldada')
     // Sin ejecutar, no se muestran los pasos del ciclo.
     expect(screen.queryByRole('region', { name: 'Actualización mensual completada' })).not.toBeInTheDocument()
   })
 
-  test('la matriz muestra los 5 estados de CENS con S y N (Manual, p. 40)', async () => {
+  test('la matriz muestra los 5 estados de CENS con S y N ', async () => {
     await abrir()
-    const matriz = await screen.findByRole('table', { name: /Matriz de cambios de estado/ })
+    const matriz = await screen.findByRole('table', { name: /Cambios de estado permitidos/ })
     const [vigenteSinMora, , , , , , saldadaSinMora] = within(matriz).getAllByRole('row').slice(1)
     expect(within(vigenteSinMora).getAllByRole('cell').map((c) => c.textContent).join('')).toBe('SSNSNSSNNN')
     expect(within(saldadaSinMora).getAllByRole('cell').map((c) => c.textContent).join('')).toBe('NNNNNNNNNN')
-    expect(screen.getByText(/nunca se acepta Castigada recuperada/)).toHaveTextContent('(error 881)')
+    expect(screen.getByText(/no se acepta Castigada recuperada/)).toBeInTheDocument()
   })
 })
 
@@ -102,7 +102,7 @@ describe('pantalla 10 · ejecución', () => {
     await ejecutar()
     const progreso = await screen.findByRole('region', { name: 'Actualizando los estados de las obligaciones…' })
     expect(within(progreso).getAllByRole('listitem')).toHaveLength(8)
-    expect(progreso).toHaveTextContent('orden por confirmar con CENS')
+    expect(progreso).not.toHaveTextContent('por confirmar')
     expect(screen.getByRole('button', { name: /Actualizando…/ })).toBeDisabled()
     expect(fecha()).toBeDisabled()
     await waitFor(() => expect(soltar).toBeTypeOf('function')) // la petición ya llegó al handler
@@ -120,27 +120,27 @@ describe('pantalla 10 · ejecución', () => {
     expect(within(kpis).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       '3En primer reporte',
       '7Con pagos aplicados',
-      '1Cierres (02 o 07)',
+      '1Cierres',
       '1A Dudoso o Castigada',
       '1Pagaron la mora',
       '0Cambios rechazados',
     ])
     expect(filas('Cambios aplicados')).toHaveLength(10)
     // RF10: entra en primer reporte; la caducada entra en 03 con la regla «por confirmar» (C-53).
-    expect(filaDe('Cambios aplicados', '2265-2208')).toHaveTextContent('Primer reportepasa a01 · Vigente00Entra con su estado y su mora realesRF10')
-    expect(filaDe('Cambios aplicados', '2267-3361')).toHaveTextContent('Dudoso RecaudoRF14por confirmar')
+    expect(filaDe('Cambios aplicados', '2265-2208')).toHaveTextContent('Primer reportepasa aVigente00Entra con su estado y su mora reales')
+    expect(filaDe('Cambios aplicados', '2267-3361')).toHaveTextContent('Dudoso recaudo')
     // RF11: edad antes → después. RF17: pago aplicado (imputación por confirmar).
     expect(filaDe('Cambios aplicados', '2258-7731')).toHaveTextContent('01 → 02')
-    expect(filaDe('Cambios aplicados', '2258-7731')).toHaveTextContent('Pago de $50.000 aplicado a: parte de la cuota del 14/08/2026RF17por confirmar')
+    expect(filaDe('Cambios aplicados', '2258-7731')).toHaveTextContent('Pago de $50.000 aplicado a: parte de la cuota del 14/08/2026')
     // RF45 y RF46: castigo y pago de la mora sin cancelar el saldo.
-    expect(filaDe('Cambios aplicados', '2250-0987')).toHaveTextContent('03 · Dudoso recaudopasa a06 · Castigada')
-    expect(filaDe('Cambios aplicados', '2244-6410')).toHaveTextContent('Pagó la mora sin cancelar el saldo: vuelve a VigenteRF46por confirmar')
-    expect(filaDe('Cambios aplicados', '2244-6410')).toHaveTextContent('Quedó al día: se reportan fecha de pago, modo de extinción y tipo de pagoRF47')
+    expect(filaDe('Cambios aplicados', '2250-0987')).toHaveTextContent('Dudoso recaudopasa aCastigada')
+    expect(filaDe('Cambios aplicados', '2244-6410')).toHaveTextContent('Pagó la mora sin cancelar el saldo: vuelve a Vigente')
+    expect(filaDe('Cambios aplicados', '2244-6410')).toHaveTextContent('Quedó al día: se reportan fecha de pago, modo de extinción y tipo de pago')
     // RF12: cierre en Saldada.
-    expect(filaDe('Cambios aplicados', '2261-8820')).toHaveTextContent('01 · Vigentepasa a02 · Saldada')
+    expect(filaDe('Cambios aplicados', '2261-8820')).toHaveTextContent('Vigentepasa aSaldada')
     expect(within(filaDe('Cambios aplicados', '2261-8820')).getByRole('link', { name: '2261-8820' })).toHaveAttribute('href', '/obligaciones?obligacion=5')
 
-    expect(screen.getByText('Todos los cambios de estado cumplen la matriz de TransUnion y las reglas de primer reporte.')).toBeInTheDocument()
+    expect(screen.getByText('Todos los cambios de estado cumplen las reglas de TransUnion.')).toBeInTheDocument()
     await waitFor(() => expect(filas('Actualizaciones mensuales anteriores')).toHaveLength(2))
     expect(filas('Actualizaciones mensuales anteriores')[0]).toHaveTextContent('31/10/20263310')
     expect(await screen.findByText(/No hay financiaciones nuevas por ingresar\./)).toBeInTheDocument()
@@ -153,11 +153,11 @@ describe('pantalla 10 · ejecución', () => {
     const rechazos = await screen.findByRole('table', { name: 'Cambios rechazados' })
     expect(screen.getByRole('heading', { name: '2 cambios rechazados: bloquean la validación del corte' })).toBeInTheDocument()
     expect(within(rechazos).getAllByRole('row').slice(1).map((f) => f.textContent)).toEqual([
-      '2267-3361Taller Mecánico Los PinosPrimer reportepasa a07 · Castigada recuperadaError 881: estado no permitido en primer reporte',
-      '2259-1092Jorge Iván Salcedo02 · Saldadapasa a03 · Dudoso recaudoError 713: la matriz no permite pasar de Saldada sin mora a Dudoso Recaudo',
+      '2267-3361Taller Mecánico Los PinosPrimer reportepasa aCastigada recuperadaTransUnion no acepta ese estado en el primer reporte',
+      '2259-1092Jorge Iván SalcedoSaldadapasa aDudoso recaudoTransUnion no acepta pasar de Saldada a Dudoso recaudo',
     ])
     // RF10: nueva caducada sin mora → entra en 01 y queda para revisión.
-    expect(filaDe('Cambios aplicados', '2268-1100')).toHaveTextContent('RevisarEntra con su estado y su mora realesRF10Crédito caducado en el SAC sin mora')
+    expect(filaDe('Cambios aplicados', '2268-1100')).toHaveTextContent('RevisarEntra con su estado y su mora realesCrédito caducado en el sistema comercial sin mora')
     // RF11: salto 00 → 03 y baja 02 → 00 sin abono, para revisión.
     expect(filaDe('Cambios aplicados', '2257-4156')).toHaveTextContent('00 → 03Revisar')
     expect(filaDe('Cambios aplicados', '2260-5543')).toHaveTextContent('02 → 00RevisarLa edad bajó de 02 a 00 sin un abono en el periodo')

@@ -2,8 +2,8 @@
 // Para agregar una pantalla: crea su página en features/<modulo>/ y añade una fila.
 //
 // `roles`: quién puede abrirla. `null` = los dos roles; `SOLO_ADMIN` o `SOLO_ANALISTA` = solo ese rol.
-// El menú muestra todas las opciones: las que el rol no puede abrir salen bloqueadas (candado y
-// etiqueta ADMIN o ANALISTA) y, si se abren, muestran «Acceso restringido», igual que por URL.
+// El menú muestra solo las opciones que el rol puede abrir; si abre por URL una de otro rol, vuelve
+// al inicio (RequireRole).
 // `section`: título del grupo del menú (`null` = sin grupo, arriba). El orden sigue a la maqueta v3.
 import { lazy } from 'react'
 import { ROLES } from '../features/auth/roles'
@@ -13,8 +13,7 @@ export const SOLO_ANALISTA = [ROLES.ANALISTA]
 
 export const SECCIONES = ['Extracción', 'Ciclo de vida', 'Reporte a TransUnion', 'Administración']
 
-// Las pantallas de la Iteración 2 que todavía no existen usan EnConstruccion.<Pantalla> (import estático:
-// un nombre mal escrito falla en lint y build, no al abrir la ruta).
+// Cada pantalla se carga bajo demanda (`lazy`): la ruta solo baja su código al abrirla.
 
 export const NAV_ITEMS = [
   { path: '/panel', label: 'Inicio', icon: 'home', roles: null, section: null, Page: lazy(() => import('../features/home/HomePage')) },
@@ -37,7 +36,3 @@ export const RUTA_LOGIN = '/login'
 
 // ¿El rol puede abrir la opción?
 export const puedeAbrir = (item, rol) => !item.roles || item.roles.includes(rol)
-// ¿Solo ese rol puede abrirla? Compara por contenido, no por identidad del arreglo.
-export const esSoloDe = (item, rol) => item.roles?.length === 1 && item.roles[0] === rol
-// «Administrador» o «Administrador o Analista de Cartera»: mismo texto en el menú y en «Acceso restringido».
-export const textoRoles = (roles) => roles.join(' o ')

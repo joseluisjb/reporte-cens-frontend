@@ -119,7 +119,7 @@ export const gruposHandlers = [
     const grupo = db.grupos.find((g) => g.id === idDeRuta(params.id))
     if (!grupo) return sinGrupo()
     if (db.cortes.some((c) => c.grupo_id === grupo.id && c.estado === 'BORRADOR')) {
-      return error(409, { detail: 'El grupo está asociado a un corte en estado BORRADOR.' })
+      return error(409, { detail: 'El grupo está asociado a un corte en borrador.' })
     }
     db.grupos = db.grupos.filter((g) => g.id !== grupo.id)
     persistir()

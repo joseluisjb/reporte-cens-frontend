@@ -1,5 +1,5 @@
 // Pantalla 16 · Homologación de Estados (RF48), del Administrador. Datos iniciales: la carga del script de
-// la base (A → 01, C → 03, D y B sin homologar, F → cierre; prioridades 1 a 5) y la Tabla 4b del Manual.
+// la base (A → 01, C → 03, D y B sin homologar, F → cierre; prioridades 1 a 5) y los estados de TransUnion.
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -11,9 +11,9 @@ import { renderConSesion } from './renderApp'
 const abrir = async () => {
   await renderConSesion('/homologacion-estados')
   await screen.findByRole('heading', { name: 'Homologación de Estados', level: 1 })
-  await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+  await screen.findByRole('table', { name: 'Estados del sistema comercial' })
 }
-const tablaSac = () => screen.getByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+const tablaSac = () => screen.getByRole('table', { name: 'Estados del sistema comercial' })
 const filaSac = (sac) => within(tablaSac()).getAllByRole('row').find((tr) => tr.firstChild?.textContent === sac)
 const editar = async (sac) => {
   await userEvent.click(screen.getByRole('button', { name: `Editar la homologación del estado ${sac}` }))
@@ -21,23 +21,23 @@ const editar = async (sac) => {
 }
 
 describe('pantalla 16 · homologación de estados (RF48)', () => {
-  test('lista los estados del SAC por prioridad, avisa de B y D sin homologar y muestra la Tabla 4b', async () => {
+  test('lista los estados del sistema comercial por prioridad, avisa de B y D sin equivalencia y muestra los estados de TransUnion', async () => {
     await abrir()
-    expect(screen.getByText(/2 estados del SAC sin homologar \(D, B\)/).closest('[role="status"]')).toHaveTextContent(
-      'se bloquean en la validación del corte (RF53) hasta que se homologuen. pendiente de CENS',
+    expect(screen.getByText(/2 estados del sistema comercial sin equivalencia \(D, B\)/).closest('[role="status"]')).toHaveTextContent(
+      'se bloquean al validar el corte hasta que tengan equivalencia.',
     )
     const filas = within(tablaSac()).getAllByRole('row').slice(1)
     expect(filas.map((tr) => tr.firstChild.textContent)).toEqual(['A', 'C', 'D', 'B', 'F'])
-    expect(filaSac('A')).toHaveTextContent('A1Activo (propuesto)01 · Vigentepor confirmarCarga inicial (script 12)')
+    expect(filaSac('A')).toHaveTextContent('A1ActivoVigenteNoCarga inicial')
     expect(filaSac('B')).toHaveTextContent('Sin homologar')
-    expect(filaSac('F')).toHaveTextContent('CierreSaldada (02) o Castigada recuperada (07), según el estado anterior (RF12, RF15)')
+    expect(filaSac('F')).toHaveTextContent('CierreSaldada o Castigada recuperada, según el estado anterior')
 
-    const tu = screen.getByRole('table', { name: 'Estados de TransUnion (Tabla 4b)' })
+    const tu = screen.getByRole('table', { name: 'Estados de TransUnion' })
     expect(within(tu).getAllByRole('row')).toHaveLength(11)
     const fila = (codigo) => within(tu).getAllByRole('row').find((tr) => tr.firstChild?.textContent === codigo)
-    expect(fila('08')).toHaveTextContent('0808 · InactivoNo No se usa (Acta 3)')
-    expect(fila('04')).toHaveTextContent('No por confirmar')
-    expect(fila('12')).toHaveTextContent('12 · Ley 1564 de 2012 Insolvencia PNNC')
+    expect(fila('08')).toHaveTextContent('08InactivoNoNo se usa')
+    expect(fila('04')).toHaveTextContent('No')
+    expect(fila('12')).toHaveTextContent('Ley 1564 de 2012 Insolvencia PNNC')
     expect(fila('07')).toHaveTextContent('Obligación cerrada: se reporta una sola vez')
   })
 
@@ -49,20 +49,20 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
     const opciones = within(within(fila).getByLabelText('Estado de TransUnion para A')).getAllByRole('option')
     expect(opciones.map((o) => o.textContent)).toEqual([
       'Selecciona…',
-      '01 · Vigente',
-      '03 · Dudoso recaudo',
-      '04 · Suspendida por la entidad (no se usa)',
-      '06 · Castigada',
-      '08 · Inactivo (no se usa)',
-      '10 · Ley 550',
-      '11 · Ley 1116',
-      '12 · Ley 1564 de 2012 Insolvencia PNNC',
+      'Vigente',
+      'Dudoso recaudo',
+      'Suspendida por la entidad (no se usa)',
+      'Castigada',
+      'Inactivo (no se usa)',
+      'Ley 550',
+      'Ley 1116',
+      'Ley 1564 de 2012 Insolvencia PNNC',
     ])
     expect(opciones.find((o) => o.value === '08')).toBeDisabled()
     await userEvent.click(within(fila).getByLabelText('Confirmado por CENS'))
     await userEvent.click(within(fila).getByRole('button', { name: 'Guardar' }))
-    expect(await screen.findByText('Homologación guardada: el estado A se reporta como 01 · Vigente.')).toBeInTheDocument()
-    await waitFor(() => expect(filaSac('A')).toHaveTextContent('01 · VigenteConfirmado'))
+    expect(await screen.findByText('Homologación guardada: el estado A se reporta como Vigente.')).toBeInTheDocument()
+    await waitFor(() => expect(filaSac('A')).toHaveTextContent('VigenteSí'))
     expect(filaSac('A')).toHaveTextContent('Rosa Martínez')
     expect(db.homologacionEstados.find((h) => h.estado_sac === 'A')).toMatchObject({ confirmado: true, actualizado_por: 'Rosa Martínez' })
     expect(screen.getByRole('button', { name: 'Editar la homologación del estado A' })).toHaveFocus()
@@ -74,9 +74,9 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
       const fila = await editar(sac)
       await userEvent.selectOptions(within(fila).getByLabelText(`Estado de TransUnion para ${sac}`), '01')
       await userEvent.click(within(fila).getByRole('button', { name: 'Guardar' }))
-      await screen.findByText(`Homologación guardada: el estado ${sac} se reporta como 01 · Vigente.`)
+      await screen.findByText(`Homologación guardada: el estado ${sac} se reporta como Vigente.`)
     }
-    expect(await screen.findByText('Todos los estados del SAC están homologados.')).toBeInTheDocument()
+    expect(await screen.findByText('Todos los estados del sistema comercial tienen su equivalencia.')).toBeInTheDocument()
   })
 
   test('elegir «Cierre» deshabilita el estado; sin estado pide elegirlo; sin cambios lo dice', async () => {
@@ -99,14 +99,14 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
   test('un 400 del backend se muestra en la fila (estado que CENS no usa)', async () => {
     server.use(
       http.put(`${API_URL}/homologacion-estados/C/`, () =>
-        HttpResponse.json({ estado_tu: ['El estado 08 · Inactivo no se usa en CENS: elige un estado en uso.'] }, { status: 400 }),
+        HttpResponse.json({ estado_tu: ['El estado Inactivo no se usa en CENS: elige un estado en uso.'] }, { status: 400 }),
       ),
     )
     await abrir()
     const fila = await editar('C')
     await userEvent.selectOptions(within(fila).getByLabelText('Estado de TransUnion para C'), '06')
     await userEvent.click(within(fila).getByRole('button', { name: 'Guardar' }))
-    expect(await within(fila).findByRole('alert')).toHaveTextContent('El estado 08 · Inactivo no se usa en CENS: elige un estado en uso.')
+    expect(await within(fila).findByRole('alert')).toHaveTextContent('El estado Inactivo no se usa en CENS: elige un estado en uso.')
     expect(db.homologacionEstados.find((h) => h.estado_sac === 'C').estado_tu).toBe('03')
   })
 
@@ -122,9 +122,9 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
       http.get(`${API_URL}/estados/`, () => HttpResponse.json([])),
     )
     await renderConSesion('/homologacion-estados')
-    expect(await screen.findByText('No hay estados del SAC cargados: se cargan con la carga inicial de la base (script 12).')).toBeInTheDocument()
+    expect(await screen.findByText('Todavía no hay estados del sistema comercial. Pide al equipo técnico que los cargue.')).toBeInTheDocument()
     expect(screen.getByText('No hay estados de TransUnion cargados.')).toBeInTheDocument()
-    expect(screen.queryByText('Todos los estados del SAC están homologados.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Todos los estados del sistema comercial tienen su equivalencia.')).not.toBeInTheDocument()
   })
 
   test('muestra la carga y, si falla, el error con «Reintentar»', async () => {
@@ -135,6 +135,6 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
     expect(await screen.findByText(/^No se pudo cargar la homologación de estados\./)).toBeInTheDocument()
     fallar = false
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
-    expect(await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })).toBeInTheDocument()
+    expect(await screen.findByRole('table', { name: 'Estados del sistema comercial' })).toBeInTheDocument()
   })
 })

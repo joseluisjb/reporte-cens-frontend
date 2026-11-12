@@ -7,10 +7,8 @@ import {
   FieldLabel,
   Input,
   Modal,
-  PorConfirmar,
   Select,
   Spinner,
-  Tag,
 } from '../../components/ui'
 import { CONTROL } from '../../components/ui/Field'
 import { mensajeDeError } from '../../lib/api'
@@ -51,7 +49,6 @@ function Formulario({ onCerrar, onCreado, initialObligacionId }) {
 
   const obligaciones = opciones?.obligaciones ?? []
   const tipologias = opciones?.tipologias ?? []
-  const algunaPorConfirmar = tipologias.some((t) => !t.confirmado)
 
   const form = useFormulario({
     valoresIniciales: {
@@ -131,15 +128,7 @@ function Formulario({ onCerrar, onCreado, initialObligacionId }) {
           </Select>
 
           <Select
-            label={
-              <span className="flex items-center gap-1.5">
-                <span>Tipología del reclamo</span>
-                <Tag tone="info" className="text-xs">
-                  usar la lista de TransUnion
-                </Tag>
-                {algunaPorConfirmar && <PorConfirmar />}
-              </span>
-            }
+            label="Tipo de reclamo"
             id="cl-tip"
             {...form.campo('tipologia')}
           >

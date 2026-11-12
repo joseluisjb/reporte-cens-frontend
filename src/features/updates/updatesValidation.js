@@ -2,7 +2,7 @@
 export const MSG_UPDATES = {
   referencia: 'Ingresa el número de obligación o la identificación del titular.',
   motivo: 'Explica el motivo de la novedad.',
-  motivoEliminacion: 'Selecciona el motivo de la eliminación (Tabla 28).',
+  motivoEliminacion: 'Selecciona el motivo de la eliminación.',
   corte: 'Selecciona el corte a rectificar.',
   campo: 'Ingresa el campo a corregir.',
   valorCorregido: 'Ingresa el valor corregido.',

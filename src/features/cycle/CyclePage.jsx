@@ -7,7 +7,7 @@
 // temporizadores ni avance simulado). El cálculo lo hace el backend; aquí no se copia el applyCycle.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, Input, PageHeader, PorConfirmar, Spinner, Table, TextLink, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, Input, PageHeader, Spinner, Table, TextLink, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
@@ -15,27 +15,21 @@ import { usePageTitle } from '../../lib/usePageTitle'
 import { getObligationsSummary } from '../obligations/obligationsService'
 import PrimerReporte from '../obligations/PrimerReporte'
 import EstadoBadge from '../transunion/EstadoBadge'
-import RfTag from '../transunion/RfTag'
 import { mapCicloFieldErrors } from './cycleMapper'
 import { getCycle, getStateMatrix, listCycles, runCycle } from './cycleService'
 import { corteSiguiente, validarCiclo } from './cycleValidation'
 import MatrixTable from './MatrixTable'
 
-// Los pasos del ciclo en el orden de la ficha (§4.6). Lo que depende de CENS va «por confirmar».
+// Los pasos del ciclo en el orden de la ficha (§4.6).
 const PASOS = [
-  <>Primer reporte: las obligaciones nuevas entran con su estado y su mora reales — RF10</>,
-  <>
-    Aplicación de los pagos extraídos del sistema comercial, de la cuota más antigua a la más reciente <PorConfirmar>orden por confirmar con CENS</PorConfirmar>{' '}
-    — RF17
-  </>,
-  <>Días de mora desde la cuota vencida más antigua sin pagar y edad de mora según la Tabla 9 — RF7, RF11, RF49</>,
-  <>
-    Crédito caducado en el SAC → Dudoso recaudo (03) <PorConfirmar />; castigo contable → Castigada (06) — RF14, RF45
-  </>,
-  <>Pago de la mora sin cancelar el saldo: vuelve a Vigente y se reportan fecha, modo y tipo de pago — RF46, RF47</>,
-  <>Pago total: Saldada (02) o Castigada recuperada (07), con fecha de pago, modo de extinción y tipo de pago — RF12, RF15, RF22</>,
-  <>Validación de cada cambio contra la matriz de TransUnion y las reglas de primer reporte</>,
-  <>Cuotas en mora por obligación — RF19</>,
+  <>Primer reporte: las obligaciones nuevas entran con su estado y su mora reales</>,
+  <>Aplicación de los pagos extraídos del sistema comercial, de la cuota más antigua a la más reciente</>,
+  <>Días de mora desde la cuota vencida más antigua sin pagar y edad de mora</>,
+  <>Crédito caducado en el sistema comercial → Dudoso recaudo; castigo contable → Castigada</>,
+  <>Pago de la mora sin cancelar el saldo: vuelve a Vigente y se reportan fecha, modo y tipo de pago</>,
+  <>Pago total: Saldada o Castigada recuperada, con fecha de pago, modo de extinción y tipo de pago</>,
+  <>Revisión de cada cambio con las reglas de TransUnion y de primer reporte</>,
+  <>Cuotas en mora por obligación</>,
 ]
 
 export default function CyclePage() {
@@ -159,7 +153,7 @@ export default function CyclePage() {
           {sinBorrador && (
             <div className="mt-4">
               <Alert tone="aviso">
-                {sinBorrador} El ciclo trabaja sobre el corte en borrador que crea la extracción. <TextLink to="/extraccion">Ir a Extracción de Cartera</TextLink>
+                {sinBorrador} La actualización trabaja sobre el corte en borrador que crea la extracción. <TextLink to="/extraccion">Ir a Extracción de Cartera</TextLink>
               </Alert>
             </div>
           )}
@@ -203,7 +197,7 @@ function FinanciacionesNuevas() {
   if (!nuevas.length) return <span>No hay financiaciones nuevas por ingresar.</span>
   return (
     <span>
-      Financiaciones nuevas en el SAC:{' '}
+      Financiaciones nuevas del sistema comercial:{' '}
       {nuevas.map((n) => (
         <span key={n.numeroObligacion} className="mr-1">
           <Chip title={n.nombreTitular}>{n.numeroObligacion}</Chip>
@@ -258,7 +252,7 @@ function Resultado({ resultado, onReintentar }) {
   const kpis = [
     [ciclo.primerReporte, 'En primer reporte'],
     [ciclo.conPagos, 'Con pagos aplicados'],
-    [ciclo.cierres, 'Cierres (02 o 07)'],
+    [ciclo.cierres, 'Cierres'],
     [ciclo.aDudoso + ciclo.aCastigada, 'A Dudoso o Castigada'],
     [ciclo.normalizadas, 'Pagaron la mora'],
     [ciclo.rechazos.length, 'Cambios rechazados'],
@@ -323,8 +317,6 @@ function CambiosAplicados({ ciclo }) {
                     {t.reglas.map((r) => (
                       <li key={`${r.rf}-${r.texto}`}>
                         {r.texto}
-                        <RfTag>{r.rf}</RfTag>
-                        {r.porConfirmar && <PorConfirmar />}
                       </li>
                     ))}
                   </ul>
@@ -359,7 +351,7 @@ function CambiosRechazados({ rechazos }) {
   if (!rechazos.length) {
     return (
       <div className="mb-5">
-        <Alert tone="info">Todos los cambios de estado cumplen la matriz de TransUnion y las reglas de primer reporte.</Alert>
+        <Alert tone="info">Todos los cambios de estado cumplen las reglas de TransUnion.</Alert>
       </div>
     )
   }
@@ -392,7 +384,6 @@ function CambiosRechazados({ rechazos }) {
                 <CambioEstado anterior={r.estadoAnterior} nuevo={r.estadoCalculado} />
               </td>
               <td>
-                {/* El motivo ya empieza por «Error 713:» o «Error 881:». */}
                 <span className="font-semibold text-error-d">{r.motivo}</span>
               </td>
             </tr>
@@ -496,11 +487,11 @@ function Matriz() {
   return (
     <section aria-labelledby={id}>
       <h2 id={id} className="font-hd text-lg font-bold">
-        Matriz de cambios de estado (Sector Real Servicios)
+        Cambios de estado permitidos
       </h2>
       <p className="mb-3 text-sm text-muted">
-        Fila: estado del corte anterior. Columna: estado nuevo. <b>n</b> = sin mora, <b>m</b> = con mora. <b>S</b> = TransUnion lo acepta, <b>N</b> = lo
-        rechaza (error 713). Se muestran los 5 estados que usa CENS; el sistema valida contra la matriz completa de 10 estados (Manual, p. 40).
+        Cada fila es el estado anterior y cada columna el nuevo. <b>S</b> = TransUnion acepta el cambio; <b>N</b> = no lo acepta. <b>n</b> = sin mora;{' '}
+        <b>m</b> = con mora. Solo se muestran los estados que usa CENS.
       </p>
       {error && (
         <div className="flex flex-wrap items-center gap-3">
@@ -528,8 +519,7 @@ function Matriz() {
         </Card>
       )}
       <p className="mt-2.5 text-sm text-muted">
-        Primer reporte (p. 38-39): nunca se acepta Castigada recuperada; Dudoso recaudo solo con mora; Castigada solo con mora y edad 01 o mayor (error
-        881).
+        Al entrar por primer reporte: no se acepta Castigada recuperada; Dudoso recaudo solo con mora; Castigada solo con mora y edad de mora 01 o mayor.
       </p>
     </section>
   )

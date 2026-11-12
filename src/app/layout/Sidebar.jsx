@@ -2,35 +2,24 @@ import { NavLink } from 'react-router-dom'
 import rayo from '../../assets/brand/rayo-blanco.png'
 import { Icon } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
-import { ROLES } from '../../features/auth/roles'
-import { NAV_ITEMS, SECCIONES, esSoloDe, puedeAbrir, textoRoles } from '../navigation'
+import { NAV_ITEMS, SECCIONES, puedeAbrir } from '../navigation'
 
 const ITEM =
   'flex w-full items-center gap-2.5 px-5 py-3 text-left text-sm font-medium text-white hover:bg-black/10 focus-visible:outline-white'
-const ETIQUETA = 'ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-citrico px-1.5 py-0.5 text-[10px] font-bold text-sobre-citrico'
 
-// Inicio (sin sección) y luego un grupo por sección, en el orden de la maqueta v3.
-const GRUPOS = [
-  { titulo: null, items: NAV_ITEMS.filter((i) => !i.section) },
-  ...SECCIONES.map((titulo) => ({ titulo, items: NAV_ITEMS.filter((i) => i.section === titulo) })),
-].filter((g) => g.items.length)
+// Solo las opciones que el rol puede abrir: Inicio (sin sección) y luego un grupo por sección, en el
+// orden de la maqueta v3. Una sección sin opciones para el rol no se muestra.
+const gruposDelRol = (rol) => {
+  const items = NAV_ITEMS.filter((i) => puedeAbrir(i, rol))
+  return [
+    { titulo: null, items: items.filter((i) => !i.section) },
+    ...SECCIONES.map((titulo) => ({ titulo, items: items.filter((i) => i.section === titulo) })),
+  ].filter((g) => g.items.length)
+}
 
 const idSeccion = (titulo) => `menu-${titulo.toLowerCase().replaceAll(' ', '-')}`
 
-// Etiqueta del ítem: ADMIN siempre en las del Administrador; ANALISTA solo cuando está bloqueada.
-function Etiqueta({ item, bloqueado }) {
-  const esDeAdmin = esSoloDe(item, ROLES.ADMIN)
-  if (!esDeAdmin && !bloqueado) return null
-  return (
-    <span className={ETIQUETA}>
-      {bloqueado && <Icon name="lock" size={10} strokeWidth={2.5} />}
-      {esDeAdmin ? 'ADMIN' : 'ANALISTA'}
-    </span>
-  )
-}
-
-function ItemMenu({ item, rol, onNavigate }) {
-  const bloqueado = !puedeAbrir(item, rol)
+function ItemMenu({ item, onNavigate }) {
   return (
     <li>
       <NavLink
@@ -40,17 +29,13 @@ function ItemMenu({ item, rol, onNavigate }) {
       >
         <Icon name={item.icon} />
         <span>{item.label}</span>
-        {bloqueado && <span className="sr-only"> (solo para el rol {textoRoles(item.roles)})</span>}
-        <Etiqueta item={item} bloqueado={bloqueado} />
       </NavLink>
     </li>
   )
 }
 
-// Barra lateral. Muestra todas las opciones; las que el rol no puede abrir salen bloqueadas (candado
-// y etiqueta) y llevan a «Acceso restringido». A diferencia de la maqueta, el texto bloqueado no se
-// atenúa: con opacidad, el blanco sobre bosque-d baja del contraste AA. En pantallas angostas es un
-// panel que se abre desde la barra superior.
+// Barra lateral. Cada rol ve solo las opciones que puede abrir (y los títulos de sección que las
+// contienen). En pantallas angostas es un panel que se abre desde la barra superior.
 export default function Sidebar({ rol, open, onNavigate, onLogout }) {
   return (
     <aside
@@ -69,7 +54,7 @@ export default function Sidebar({ rol, open, onNavigate, onLogout }) {
         </span>
       </div>
       <nav aria-label="Navegación principal" className="flex flex-1 flex-col gap-1 overflow-auto">
-        {GRUPOS.map(({ titulo, items }) => (
+        {gruposDelRol(rol).map(({ titulo, items }) => (
           <div key={titulo ?? 'inicio'}>
             {titulo && (
               <p id={idSeccion(titulo)} className="px-5 pt-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">
@@ -78,7 +63,7 @@ export default function Sidebar({ rol, open, onNavigate, onLogout }) {
             )}
             <ul aria-labelledby={titulo ? idSeccion(titulo) : undefined} className="flex flex-col gap-1">
               {items.map((i) => (
-                <ItemMenu key={i.path} item={i} rol={rol} onNavigate={onNavigate} />
+                <ItemMenu key={i.path} item={i} onNavigate={onNavigate} />
               ))}
             </ul>
           </div>

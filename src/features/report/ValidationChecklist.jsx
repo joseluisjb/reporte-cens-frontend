@@ -2,9 +2,9 @@
 // nivel (rojo bloquea, ámbar avisa, azul informa, verde pasó), el RF, «por confirmar» cuando el contrato
 // lo dice y, si la regla falla en obligaciones concretas, la lista con el enlace a su detalle (pantalla 9).
 import { Link } from 'react-router-dom'
-import { Icon, PorConfirmar } from '../../components/ui'
+import { Icon } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
-import RfTag from '../transunion/RfTag'
+import { campoTexto } from '../../lib/textos'
 
 const NIVELES = {
   ok: { icono: 'check', clases: 'bg-green-100 text-bosque-d', texto: 'Pasó' },
@@ -21,7 +21,7 @@ export default function ValidationChecklist({ resultados }) {
           <Item key={r.regla} resultado={r} />
         ))}
       </ul>
-      <p className="mt-3 text-[13px] text-muted">Rojo: bloquea (en TransUnion sería correctiva). Amarillo: solo avisa. Azul: informativo.</p>
+      <p className="mt-3 text-[13px] text-muted">Rojo: impide validar o generar el archivo. Amarillo: solo avisa. Azul: solo informa.</p>
     </>
   )
 }
@@ -36,10 +36,6 @@ function Item({ resultado: r }) {
       <div className="min-w-0 text-sm">
         <b>{r.titulo}</b>
         <span className="sr-only"> ({nivel.texto})</span>
-        {r.rf.map((rf) => (
-          <RfTag key={rf}>{rf}</RfTag>
-        ))}
-        {r.porConfirmar && <PorConfirmar />}
         <div className="text-muted">{r.detalle}</div>
         {r.obligaciones.length > 0 && (
           <ul className="mt-1.5 space-y-1" aria-label={`Obligaciones con «${r.titulo}»`}>
@@ -52,7 +48,7 @@ function Item({ resultado: r }) {
                 ) : (
                   <span className="font-mono font-bold">{o.numeroObligacion}</span>
                 )}
-                {o.campo && <span className="ml-1.5 font-mono text-xs text-muted">{o.campo}</span>} · {o.mensaje}
+                {o.campo && <span className="ml-1.5 text-xs text-muted">{campoTexto(o.campo)}</span>} · {o.mensaje}
               </li>
             ))}
           </ul>

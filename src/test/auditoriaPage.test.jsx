@@ -18,7 +18,7 @@ const filtrar = () => userEvent.click(screen.getByRole('button', { name: 'Filtra
 describe('Log de auditoría', () => {
   test('el Administrador ve la primera página, más reciente primero, con rol y detalle', async () => {
     await abrir()
-    expect(screen.getByRole('heading', { name: 'Log de Auditoría del Sistema' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Registro de auditoría del sistema' })).toBeInTheDocument()
     expect(filas()).toHaveLength(20)
     expect(screen.getByText(`Mostrando 1–20 de ${TOTAL_REGISTROS_AUDITORIA} registros · Página 1 de 3`)).toBeInTheDocument()
     expect(within(filas()[0]).getByText('09/10/2026 17:20')).toBeInTheDocument() // el más reciente
@@ -121,9 +121,9 @@ describe('Log de auditoría', () => {
     expect(screen.queryByText('Ocurrió un error en el servidor. Intenta de nuevo más tarde.')).not.toBeInTheDocument()
   })
 
-  test('el Analista ve "Acceso restringido" (y la sección sale bloqueada en su menú)', async () => {
+  test('el Analista que escribe /auditoria vuelve al inicio y no la ve en su menú', async () => {
     renderApp('/auditoria', ANALISTA)
-    expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Auditoría/ })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
+    expect(await screen.findByRole('heading', { name: 'Bienvenido, Juan' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Auditoría/ })).not.toBeInTheDocument()
   })
 })

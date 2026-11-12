@@ -11,9 +11,10 @@ const TONES = {
 }
 
 // Insignia de estado o rol. tone = 'ok' | 'off' | 'admin' | 'info' | 'aviso' | 'error' | 'turquesa'
-export default function Badge({ tone = 'ok', children, className }) {
+export default function Badge({ tone = 'ok', children, className, title }) {
   return (
     <span
+      title={title}
       className={cx(
         'inline-block rounded-full px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap',
         TONES[tone],

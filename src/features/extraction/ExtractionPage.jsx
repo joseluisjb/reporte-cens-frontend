@@ -25,6 +25,7 @@ import {
   plural,
 } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
+import { estadoCorteTexto, reglaTexto } from '../../lib/textos'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { listConceptGroups } from '../parameters/parametersService'
 import {
@@ -245,8 +246,8 @@ export default function ExtractionPage() {
           Iniciar extracción mensual de cartera
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Aísla y consolida exclusivamente los conceptos de energía de deudores con financiación
-          vigente según las reglas de negocio de CENS.
+          Incluye solo los conceptos de energía de los deudores con financiación vigente. Elige la
+          fecha de corte y, si aplica, un grupo de conceptos.
         </p>
 
         <form {...formExtraccion.formProps} className="mt-5">
@@ -263,7 +264,7 @@ export default function ExtractionPage() {
 
             <div>
               <Select label="Grupo de conceptos de energía" {...formExtraccion.campo('grupoId')}>
-                <option value="">Todos los conceptos reportables (predeterminado)</option>
+                <option value="">Todos los conceptos (predeterminado)</option>
                 {gruposDisponibles.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.nombre}
@@ -325,7 +326,7 @@ export default function ExtractionPage() {
                         : 'off'
                   }
                 >
-                  {corteActual.estado}
+                  {estadoCorteTexto(corteActual.estado)}
                 </Badge>
               </div>
 
@@ -342,7 +343,7 @@ export default function ExtractionPage() {
                   >
                     {cortes.map((c) => (
                       <option key={c.id} value={c.id}>
-                        Corte {c.id} ({formatearFechaISO(c.fechaCorte)}) - {c.estado}
+                        Corte {c.id} ({formatearFechaISO(c.fechaCorte)}) · {estadoCorteTexto(c.estado)}
                       </option>
                     ))}
                   </FilterSelect>
@@ -384,11 +385,11 @@ export default function ExtractionPage() {
             {advertencias.length > 0 && (
               <div className="mt-4">
                 <Alert tone="aviso">
-                  <strong>Validado con observaciones informativas:</strong>
+                  <strong>Validado con advertencias:</strong>
                   <ul className="mt-1 list-inside list-disc text-xs">
                     {advertencias.map((adv, i) => (
                       <li key={i}>
-                        <strong>{adv.regla}:</strong> {adv.mensaje}
+                        <strong>{reglaTexto(adv.regla)}:</strong> {adv.mensaje}
                       </li>
                     ))}
                   </ul>
@@ -451,9 +452,8 @@ export default function ExtractionPage() {
             </div>
 
             <div className="border-b border-gris-d px-4 py-3 text-sm text-muted">
-              El contrato actual informa saldo neto, días de mora y edad de mora. No incluye el estado
-              individual de consolidación ni el detalle de facturación y pagos; esos valores no se
-              infieren en esta pantalla.
+              Muestra el saldo neto, los días de mora y la edad de mora de cada obligación. El estado
+              y los pagos se consultan en Obligaciones y Estados.
             </div>
 
             {cargandoObligaciones ? (
@@ -483,9 +483,9 @@ export default function ExtractionPage() {
                         <th scope="col">Titular</th>
                         <th scope="col">Identificación</th>
                         <th scope="col" className="text-center">Créditos</th>
-                        <th scope="col">Estado TU</th>
+                        <th scope="col">Estado en TransUnion</th>
                         <th scope="col" className="text-center">Días Mora</th>
-                        <th scope="col">Edad Mora (T9)</th>
+                        <th scope="col">Edad de mora</th>
                         <th scope="col" className="text-right">Valor Mora</th>
                         <th scope="col" className="text-right">Saldo neto (COP)</th>
                       </tr>
@@ -503,7 +503,7 @@ export default function ExtractionPage() {
                           </td>
                           <td>
                             <Badge tone={o.estado.codigo === '01' ? 'ok' : 'off'}>
-                              {o.estado.codigo} - {o.estado.descripcion}
+                              {o.estado.descripcion}
                             </Badge>
                           </td>
                           <td className="text-center">
@@ -516,8 +516,8 @@ export default function ExtractionPage() {
                             </span>
                           </td>
                           <td>
-                            <span className="text-xs text-slate-700">
-                              {o.edadMora.codigo} {o.edadMora.descripcion}
+                            <span className="text-xs text-slate-700" title={`${o.edadMora.codigo} ${o.edadMora.descripcion}`}>
+                              {o.edadMora.descripcion}
                             </span>
                           </td>
                           <td className="text-right font-medium text-slate-700">

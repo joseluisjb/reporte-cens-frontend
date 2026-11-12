@@ -1,12 +1,11 @@
 // Componentes compartidos de TransUnion (features/transunion) y las piezas de UI que usan.
 import { render, screen } from '@testing-library/react'
-import { Alert, Badge, PorConfirmar } from '../components/ui'
+import { Alert, Badge } from '../components/ui'
 import CandadoCerrada from '../features/transunion/CandadoCerrada'
 import { ESTADOS_OBLIGACION, esEstadoDeCierre } from '../features/transunion/catalogosTU'
 import CuotasMoraBadge from '../features/transunion/CuotasMoraBadge'
 import EdadMoraBadge from '../features/transunion/EdadMoraBadge'
 import EstadoBadge from '../features/transunion/EstadoBadge'
-import RfTag from '../features/transunion/RfTag'
 import { formatearDias, formatearFechaISOLarga } from '../lib/format'
 
 describe('EstadoBadge', () => {
@@ -23,8 +22,9 @@ describe('EstadoBadge', () => {
     ['12', 'Ley 1564 de 2012 Insolvencia PNNC', 'bg-slate-100'],
   ])('%s se muestra como «%s» con el color de la maqueta', (codigo, texto, fondo) => {
     render(<EstadoBadge codigo={codigo} />)
-    const insignia = screen.getByText(`${codigo} · ${texto}`)
+    const insignia = screen.getByText(texto)
     expect(insignia).toHaveClass(fondo)
+    expect(insignia).toHaveAttribute('title', `${codigo} · ${texto}`) // el código va en el title, no a la vista
   })
 
   test('cubre los 10 estados de la Tabla 4b', () => {
@@ -33,7 +33,7 @@ describe('EstadoBadge', () => {
 
   test('usa la descripción de la API cuando llega', () => {
     render(<EstadoBadge codigo="03" descripcion="Dudoso Recaudo" />)
-    expect(screen.getByText('03 · Dudoso Recaudo')).toBeInTheDocument()
+    expect(screen.getByText('Dudoso Recaudo')).toBeInTheDocument()
   })
 
   test('sin código muestra «Sin estado»', () => {
@@ -49,14 +49,14 @@ describe('EstadoBadge', () => {
       </>,
     )
     expect(screen.getByText('05')).toHaveClass('bg-slate-100')
-    expect(screen.getByText('01 · Vigente')).toBeInTheDocument()
+    expect(screen.getByText('Vigente')).toBeInTheDocument()
   })
 })
 
 describe('EdadMoraBadge', () => {
-  test('muestra código, descripción y los días de mora', () => {
+  test('muestra la descripción (el código va en el title) y los días de mora', () => {
     const { container } = render(<EdadMoraBadge codigo="01" dias={47} />)
-    expect(container).toHaveTextContent('01 - Mora 30')
+    expect(container).toHaveTextContent('Mora 30')
     expect(screen.getByText('47 días de mora')).toBeInTheDocument()
   })
 
@@ -67,7 +67,7 @@ describe('EdadMoraBadge', () => {
         <EdadMoraBadge codigo="00" dias={0} />
       </>,
     )
-    expect(container).toHaveTextContent('00 - Normal')
+    expect(container).toHaveTextContent('Normal')
     expect(container).not.toHaveTextContent('de mora')
   })
 
@@ -104,23 +104,6 @@ describe('CandadoCerrada', () => {
   test('02 y 07 son estados de cierre; los demás no', () => {
     expect(['02', '07'].every(esEstadoDeCierre)).toBe(true)
     expect(['01', '03', '04', '06', '08', '10', '11', '12'].some(esEstadoDeCierre)).toBe(false)
-  })
-})
-
-test('RfTag muestra el requerimiento', () => {
-  render(<RfTag>RF15</RfTag>)
-  expect(screen.getByText('RF15')).toBeInTheDocument()
-})
-
-describe('PorConfirmar', () => {
-  test('por defecto dice «por confirmar»', () => {
-    render(<PorConfirmar />)
-    expect(screen.getByText('por confirmar')).toHaveClass('bg-aviso-claro', 'text-aviso')
-  })
-
-  test('acepta otro texto', () => {
-    render(<PorConfirmar>pendiente de CENS</PorConfirmar>)
-    expect(screen.getByText('pendiente de CENS')).toBeInTheDocument()
   })
 })
 

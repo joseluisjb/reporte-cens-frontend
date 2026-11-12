@@ -160,11 +160,11 @@ function Formulario({ onCerrar, onCreada, onRectificada }) {
         {form.valores.tipo === 'Corrección' && (
           <div className="flex flex-col gap-4 rounded-lg bg-slate-50 p-4 border border-slate-200">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Datos de la rectificación (RF55)
+              Datos de la rectificación
             </p>
 
             <Select
-              label="Corte que se rectifica (RF55)"
+              label="Corte que se rectifica"
               id="nv-corte"
               {...form.campo('corteId')}
             >
@@ -191,7 +191,7 @@ function Formulario({ onCerrar, onCreada, onRectificada }) {
             <Input
               label="Campo a corregir"
               id="nv-campo"
-              placeholder="Ej.: valor_mora"
+              placeholder="Ej.: valor en mora"
               {...form.campo('campo')}
             />
 
@@ -221,18 +221,18 @@ function Formulario({ onCerrar, onCreada, onRectificada }) {
           <div className="flex flex-col gap-4">
             <Alert tone="aviso">
               Al gestionarla, la obligación <b>deja de reportarse</b> en los cortes siguientes y su
-              número <b>no se puede reutilizar</b> (RF50).
+              número <b>no se puede reutilizar</b>.
             </Alert>
 
             <Select
-              label="Motivo de la eliminación (Tabla 28)"
+              label="Motivo de la eliminación"
               id="nv-motivo-elim"
               {...form.campo('motivoEliminacion')}
             >
               <option value="">Selecciona un motivo</option>
               {motivosElim.map((m) => (
                 <option key={m.codigo} value={m.codigo}>
-                  {m.codigo} - {m.descripcion}
+                  {m.descripcion}
                 </option>
               ))}
             </Select>

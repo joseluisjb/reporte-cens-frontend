@@ -2,9 +2,8 @@
 // nivel (rojo bloquea, ámbar avisa, azul informa, verde pasó), el RF, «por confirmar» cuando el contrato
 // lo dice y, si la regla falla en obligaciones concretas, la lista con el enlace a su detalle (pantalla 9).
 import { Link } from 'react-router-dom'
-import { Icon, PorConfirmar } from '../../components/ui'
+import { Icon } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
-import RfTag from '../transunion/RfTag'
 
 const NIVELES = {
   ok: { icono: 'check', clases: 'bg-green-100 text-bosque-d', texto: 'Pasó' },
@@ -36,10 +35,6 @@ function Item({ resultado: r }) {
       <div className="min-w-0 text-sm">
         <b>{r.titulo}</b>
         <span className="sr-only"> ({nivel.texto})</span>
-        {r.rf.map((rf) => (
-          <RfTag key={rf}>{rf}</RfTag>
-        ))}
-        {r.porConfirmar && <PorConfirmar />}
         <div className="text-muted">{r.detalle}</div>
         {r.obligaciones.length > 0 && (
           <ul className="mt-1.5 space-y-1" aria-label={`Obligaciones con «${r.titulo}»`}>

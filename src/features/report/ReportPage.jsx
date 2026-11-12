@@ -6,7 +6,7 @@
 // respuesta de TransUnion y se ven sus resultados (RF54).
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Card, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, TextLink, useToast } from '../../components/ui'
+import { Alert, Button, Card, EmptyState, Icon, PageHeader, Spinner, TextLink, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaISOLarga, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -22,14 +22,12 @@ import UploadResultsModal from './UploadResultsModal'
 import ValidationChecklist from './ValidationChecklist'
 
 const PASOS = [
-  <>Revisar las validaciones del corte: las correctivas bloquean — RF53</>,
-  <>Elegir las obligaciones: las abiertas y las que cerraron en este corte; sin las cerradas antes ni las eliminadas — RF13, RF16, RF21, RF50</>,
-  <>Revisar los campos de cierre de Saldadas y Castigadas recuperadas — RF22</>,
-  <>
-    Convertir los valores a miles de pesos <PorConfirmar>redondeo por confirmar con TransUnion</PorConfirmar> — RF51
-  </>,
-  <>Armar el registro 1 (encabezado), un registro 2 por obligación y el registro 9 (totales) — RF20</>,
-  <>Nombrar el archivo: SSR + tipo de entidad + código de entidad + fecha de corte — RF57</>,
+  <>Revisar las validaciones del corte: las correctivas bloquean</>,
+  <>Elegir las obligaciones: las abiertas y las que cerraron en este corte; sin las cerradas antes ni las eliminadas</>,
+  <>Revisar los campos de cierre de Saldadas y Castigadas recuperadas</>,
+  <>Convertir los valores a miles de pesos</>,
+  <>Armar el registro 1 (encabezado), un registro 2 por obligación y el registro 9 (totales)</>,
+  <>Nombrar el archivo: SSR + tipo de entidad + código de entidad + fecha de corte</>,
 ]
 
 export default function ReportPage() {
@@ -273,7 +271,7 @@ function Parametros({ corte, validaciones, entidad, accion, yaGenerado, onValida
   let ayuda = 'Incluye las obligaciones abiertas y las que cerraron en este corte. Las que cerraron antes ya no se reportan.'
   // Corte enviado: el archivo solo se genera en VALIDADO (contrato, 409 de POST /extracciones/{id}/archivo/)
   // y las correcciones van por RF55 (mockup v3 L1464, pantalla 14).
-  if (!corte.esBorrador && !corte.esValidado) ayuda = 'Este corte ya se envió a TransUnion y no admite otro archivo. Las correcciones de un corte ya enviado se registran como «Corrección» en Novedades Urgentes (RF55).'
+  if (!corte.esBorrador && !corte.esValidado) ayuda = 'Este corte ya se envió a TransUnion y no admite otro archivo. Las correcciones de un corte ya enviado se registran como «Corrección» en Novedades Urgentes.'
   else if (hayCorrectivas) ayuda = 'Corrige las validaciones en rojo para poder validar el corte y generar el archivo.'
   else if (corte.esBorrador) ayuda = 'El corte está en borrador: valídalo para poder generar el archivo.'
   else if (yaGenerado) ayuda = 'Ya existe un archivo para este corte: se generará una nueva versión.'
@@ -351,7 +349,7 @@ function Validaciones({ validaciones }) {
   return (
     <Card as="section" aria-labelledby={id} className="mb-5 p-6">
       <h2 id={id} className="mb-4 font-semibold">
-        Validaciones antes de generar (RF53)
+        Validaciones antes de generar
       </h2>
       <ValidationChecklist resultados={validaciones.resultados} />
     </Card>

@@ -4,7 +4,7 @@
 // (RF17) y la línea de tiempo de estados. Aquí no se registran pagos: vienen de la extracción.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Badge, Button, buttonClasses, Icon, Modal, PorConfirmar, Spinner } from '../../components/ui'
+import { Alert, Badge, Button, buttonClasses, Icon, Modal, Spinner } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
 import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearDias, formatearFechaISO } from '../../lib/format'
@@ -12,7 +12,6 @@ import { esEstadoDeCierre, TABLA_9 } from '../transunion/catalogosTU'
 import CandadoCerrada from '../transunion/CandadoCerrada'
 import CuotasMoraBadge from '../transunion/CuotasMoraBadge'
 import EstadoBadge from '../transunion/EstadoBadge'
-import RfTag from '../transunion/RfTag'
 import { getObligation, getObligationTimeline } from './obligationsService'
 import PrimerReporte from './PrimerReporte'
 
@@ -127,8 +126,6 @@ function Detalle({ o, eventos, onAbrir }) {
           {o.posiblesTransiciones.map((r) => (
             <li key={`${r.rf}-${r.texto}`}>
               {r.texto}
-              <RfTag>{r.rf}</RfTag>
-              {r.porConfirmar && <PorConfirmar />}
             </li>
           ))}
         </ul>
@@ -164,10 +161,8 @@ function Detalle({ o, eventos, onAbrir }) {
         ) : (
           <p className="text-[13px] text-muted">La última extracción no trajo pagos de esta obligación.</p>
         )}
-        {/* Regla de imputación pendiente de CENS (C-29): nota fija de la pantalla, como en el plan. */}
         <p className="mt-2 text-[13px] text-muted">
-          Los pagos vienen de la extracción del SAC; aquí no se registran a mano. Se aplican de la cuota más antigua a la más reciente{' '}
-          <PorConfirmar /> y los días de mora se cuentan desde la cuota más antigua que siga sin pagar completa.
+          Los pagos vienen de la extracción del SAC; aquí no se registran a mano. Se aplican de la cuota más antigua a la más reciente y los días de mora se cuentan desde la cuota más antigua que siga sin pagar completa.
         </p>
       </Seccion>
       <Seccion titulo="Línea de tiempo de estados">
@@ -188,8 +183,7 @@ function Avisos({ o }) {
       )}
       {o.movimientoPosteriorCierre && (
         <Alert tone="aviso">
-          El sistema comercial muestra movimiento después del cierre: la obligación no se vuelve a reportar y solo se corrige por rectificación
-          (RF13, RF16, RF55).
+          El sistema comercial muestra movimiento después del cierre: la obligación no se vuelve a reportar y solo se corrige por rectificación.
         </Alert>
       )}
       {o.advertencias.map((a) => (
@@ -209,10 +203,10 @@ function DatosObligacion({ o, onAbrir }) {
       <Dato etiqueta="Saldo">{formatearCOP(o.valorSaldo)}</Dato>
       <Dato etiqueta="Valor en mora">{formatearCOP(o.valorMora)}</Dato>
       <Dato etiqueta="Días de mora">{formatearDias(o.diasMora)}</Dato>
-      <Dato etiqueta="Edad de mora (Tabla 9)" nota={o.aniosMora != null && `Años en mora: ${o.aniosMora} (RF49)`}>
+      <Dato etiqueta="Edad de mora (Tabla 9)" nota={o.aniosMora != null && `Años en mora: ${o.aniosMora}`}>
         {!edad ? '—' : Object.hasOwn(TABLA_9, edad) ? `${edad} - ${TABLA_9[edad].descripcion}` : edad}
       </Dato>
-      <Dato etiqueta="Fecha de exigibilidad" nota={o.fechaExigibilidad && 'Cuota más antigua sin pagar (RF49)'}>
+      <Dato etiqueta="Fecha de exigibilidad" nota={o.fechaExigibilidad && 'Cuota más antigua sin pagar'}>
         {o.fechaExigibilidad ? formatearFechaISO(o.fechaExigibilidad) : '—'}
       </Dato>
       <Dato etiqueta="Cuotas en mora">
@@ -232,14 +226,14 @@ function DatosObligacion({ o, onAbrir }) {
       <Dato etiqueta="Ingreso al sistema">{formatearFechaISO(o.fechaIngreso)}</Dato>
       {o.reestructuracion && <DatoReestructuracion r={o.reestructuracion} onAbrir={onAbrir} />}
       {o.refinanciadaEn && (
-        <Dato etiqueta="Refinanciada en (RF18)">
+        <Dato etiqueta="Refinanciada en">
           <EnlaceObligacion referencia={o.refinanciadaEn} onAbrir={onAbrir} />
         </Dato>
       )}
       {o.cierre && <DatoCierre cierre={o.cierre} />}
       {o.pagoMora && (
         <Dato
-          etiqueta="Pago de la mora (RF47)"
+          etiqueta="Pago de la mora"
           nota={`Modo ${codigoYDescripcion(o.pagoMora.modoExtincion)} · Tipo de pago ${codigoYDescripcion(o.pagoMora.tipoPago)} · Valor pagado ${formatearCOP(o.pagoMora.valorRealPagado)}`}
         >
           {o.pagoMora.fechaPago ? formatearFechaISO(o.pagoMora.fechaPago) : 'Sin fecha de pago'}
@@ -256,7 +250,6 @@ function DatoReestructuracion({ r, onAbrir }) {
       nota={
         <>
           Naturaleza {codigoYDescripcion(r.naturaleza)}
-          {r.naturaleza.confirmado === false && <PorConfirmar />}
           {r.obligacionAnterior && (
             <>
               {' '}
@@ -276,7 +269,7 @@ function DatoCierre({ cierre }) {
   if (!cierre.fechaPago) {
     return (
       <Dato etiqueta="Cierre" nota={nota}>
-        <span className="text-error-d">Falta la fecha de pago: el cierre no se reporta (RF22)</span>
+        <span className="text-error-d">Falta la fecha de pago: el cierre no se reporta</span>
       </Dato>
     )
   }

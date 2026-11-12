@@ -7,7 +7,7 @@
 // temporizadores ni avance simulado). El cálculo lo hace el backend; aquí no se copia el applyCycle.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, Input, PageHeader, PorConfirmar, Spinner, Table, TextLink, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, Input, PageHeader, Spinner, Table, TextLink, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaHora, formatearFechaISO, formatearFechaISOLarga, plural } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
@@ -15,27 +15,21 @@ import { usePageTitle } from '../../lib/usePageTitle'
 import { getObligationsSummary } from '../obligations/obligationsService'
 import PrimerReporte from '../obligations/PrimerReporte'
 import EstadoBadge from '../transunion/EstadoBadge'
-import RfTag from '../transunion/RfTag'
 import { mapCicloFieldErrors } from './cycleMapper'
 import { getCycle, getStateMatrix, listCycles, runCycle } from './cycleService'
 import { corteSiguiente, validarCiclo } from './cycleValidation'
 import MatrixTable from './MatrixTable'
 
-// Los pasos del ciclo en el orden de la ficha (§4.6). Lo que depende de CENS va «por confirmar».
+// Los pasos del ciclo en el orden de la ficha (§4.6).
 const PASOS = [
-  <>Primer reporte: las obligaciones nuevas entran con su estado y su mora reales — RF10</>,
-  <>
-    Aplicación de los pagos extraídos del sistema comercial, de la cuota más antigua a la más reciente <PorConfirmar>orden por confirmar con CENS</PorConfirmar>{' '}
-    — RF17
-  </>,
-  <>Días de mora desde la cuota vencida más antigua sin pagar y edad de mora según la Tabla 9 — RF7, RF11, RF49</>,
-  <>
-    Crédito caducado en el SAC → Dudoso recaudo (03) <PorConfirmar />; castigo contable → Castigada (06) — RF14, RF45
-  </>,
-  <>Pago de la mora sin cancelar el saldo: vuelve a Vigente y se reportan fecha, modo y tipo de pago — RF46, RF47</>,
-  <>Pago total: Saldada (02) o Castigada recuperada (07), con fecha de pago, modo de extinción y tipo de pago — RF12, RF15, RF22</>,
+  <>Primer reporte: las obligaciones nuevas entran con su estado y su mora reales</>,
+  <>Aplicación de los pagos extraídos del sistema comercial, de la cuota más antigua a la más reciente</>,
+  <>Días de mora desde la cuota vencida más antigua sin pagar y edad de mora según la Tabla 9</>,
+  <>Crédito caducado en el SAC → Dudoso recaudo (03); castigo contable → Castigada (06)</>,
+  <>Pago de la mora sin cancelar el saldo: vuelve a Vigente y se reportan fecha, modo y tipo de pago</>,
+  <>Pago total: Saldada (02) o Castigada recuperada (07), con fecha de pago, modo de extinción y tipo de pago</>,
   <>Validación de cada cambio contra la matriz de TransUnion y las reglas de primer reporte</>,
-  <>Cuotas en mora por obligación — RF19</>,
+  <>Cuotas en mora por obligación</>,
 ]
 
 export default function CyclePage() {
@@ -323,8 +317,6 @@ function CambiosAplicados({ ciclo }) {
                     {t.reglas.map((r) => (
                       <li key={`${r.rf}-${r.texto}`}>
                         {r.texto}
-                        <RfTag>{r.rf}</RfTag>
-                        {r.porConfirmar && <PorConfirmar />}
                       </li>
                     ))}
                   </ul>

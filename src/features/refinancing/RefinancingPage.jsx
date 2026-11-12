@@ -4,7 +4,7 @@
 // con la obligación ya elegida).
 import { useCallback, useEffect, useId, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, Table, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, Chip, EmptyState, Icon, PageHeader, Spinner, Table, useToast } from '../../components/ui'
 import { mensajeDeError } from '../../lib/api'
 import { formatearCOP, formatearFechaHora, formatearFechaISO, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -17,7 +17,7 @@ const PASOS = [
   [
     'Se cierra la obligación original',
     <>
-      En Saldada (02) si estaba Vigente, o en Castigada recuperada (07) si estaba en Dudoso recaudo o Castigada <PorConfirmar />. Modo de extinción 16 «Refinanciación».
+      En Saldada (02) si estaba Vigente, o en Castigada recuperada (07) si estaba en Dudoso recaudo o Castigada. Modo de extinción 16 «Refinanciación».
     </>,
   ],
   [
@@ -167,7 +167,6 @@ function Registradas({ lista, error, onReintentar }) {
                       <Chip>
                         {r.naturaleza.codigo} · {r.naturaleza.descripcion}
                       </Chip>
-                      {!r.naturaleza.confirmado && <PorConfirmar />}
                       <div className="text-xs text-muted">{plural(r.numeroCuotas, 'cuota', 'cuotas')}</div>
                     </td>
                   </tr>

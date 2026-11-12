@@ -24,19 +24,19 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
   test('lista los estados del SAC por prioridad, avisa de B y D sin homologar y muestra la Tabla 4b', async () => {
     await abrir()
     expect(screen.getByText(/2 estados del SAC sin homologar \(D, B\)/).closest('[role="status"]')).toHaveTextContent(
-      'se bloquean en la validación del corte (RF53) hasta que se homologuen. pendiente de CENS',
+      'se bloquean en la validación del corte hasta que se homologuen.',
     )
     const filas = within(tablaSac()).getAllByRole('row').slice(1)
     expect(filas.map((tr) => tr.firstChild.textContent)).toEqual(['A', 'C', 'D', 'B', 'F'])
-    expect(filaSac('A')).toHaveTextContent('A1Activo (propuesto)01 · Vigentepor confirmarCarga inicial (script 12)')
+    expect(filaSac('A')).toHaveTextContent('A1Activo (propuesto)01 · VigenteNoCarga inicial (script 12)')
     expect(filaSac('B')).toHaveTextContent('Sin homologar')
-    expect(filaSac('F')).toHaveTextContent('CierreSaldada (02) o Castigada recuperada (07), según el estado anterior (RF12, RF15)')
+    expect(filaSac('F')).toHaveTextContent('CierreSaldada (02) o Castigada recuperada (07), según el estado anterior')
 
     const tu = screen.getByRole('table', { name: 'Estados de TransUnion (Tabla 4b)' })
     expect(within(tu).getAllByRole('row')).toHaveLength(11)
     const fila = (codigo) => within(tu).getAllByRole('row').find((tr) => tr.firstChild?.textContent === codigo)
-    expect(fila('08')).toHaveTextContent('0808 · InactivoNo No se usa (Acta 3)')
-    expect(fila('04')).toHaveTextContent('No por confirmar')
+    expect(fila('08')).toHaveTextContent('0808 · InactivoNoNo se usa')
+    expect(fila('04')).toHaveTextContent('No')
     expect(fila('12')).toHaveTextContent('12 · Ley 1564 de 2012 Insolvencia PNNC')
     expect(fila('07')).toHaveTextContent('Obligación cerrada: se reporta una sola vez')
   })
@@ -62,7 +62,7 @@ describe('pantalla 16 · homologación de estados (RF48)', () => {
     await userEvent.click(within(fila).getByLabelText('Confirmado por CENS'))
     await userEvent.click(within(fila).getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByText('Homologación guardada: el estado A se reporta como 01 · Vigente.')).toBeInTheDocument()
-    await waitFor(() => expect(filaSac('A')).toHaveTextContent('01 · VigenteConfirmado'))
+    await waitFor(() => expect(filaSac('A')).toHaveTextContent('01 · VigenteSí'))
     expect(filaSac('A')).toHaveTextContent('Rosa Martínez')
     expect(db.homologacionEstados.find((h) => h.estado_sac === 'A')).toMatchObject({ confirmado: true, actualizado_por: 'Rosa Martínez' })
     expect(screen.getByRole('button', { name: 'Editar la homologación del estado A' })).toHaveFocus()

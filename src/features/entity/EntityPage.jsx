@@ -2,7 +2,7 @@
 // navigation.js). Mientras TransUnion no asigne los datos llevan el marcador XXX / XXX / XXXXXX y los
 // archivos salen no aptos para envío. Mockup v3: vEntidad.
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Card, ConfirmDialog, Input, PageHeader, PorConfirmar, Spinner, useToast } from '../../components/ui'
+import { Alert, Button, Card, ConfirmDialog, Input, PageHeader, Spinner, useToast } from '../../components/ui'
 import { formatearFechaHora } from '../../lib/format'
 import { useFormulario } from '../../lib/useFormulario'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -200,11 +200,9 @@ function FormularioEntidad({ entidad, fechaCorte, onGuardada }) {
       <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-muted">
         <li>
           Si TransUnion asigna varias sucursales, falta definir la regla para asignarlas a cada obligación.
-          <PorConfirmar>por definir</PorConfirmar>
         </li>
         <li>
           Si TransUnion exige un tipo de entidad numérico en el registro tipo 1 mientras no lo asigne, el relleno sería 000.
-          <PorConfirmar />
         </li>
       </ul>
     </>

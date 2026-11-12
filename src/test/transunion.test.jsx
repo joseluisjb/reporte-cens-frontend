@@ -1,12 +1,11 @@
 // Componentes compartidos de TransUnion (features/transunion) y las piezas de UI que usan.
 import { render, screen } from '@testing-library/react'
-import { Alert, Badge, PorConfirmar } from '../components/ui'
+import { Alert, Badge } from '../components/ui'
 import CandadoCerrada from '../features/transunion/CandadoCerrada'
 import { ESTADOS_OBLIGACION, esEstadoDeCierre } from '../features/transunion/catalogosTU'
 import CuotasMoraBadge from '../features/transunion/CuotasMoraBadge'
 import EdadMoraBadge from '../features/transunion/EdadMoraBadge'
 import EstadoBadge from '../features/transunion/EstadoBadge'
-import RfTag from '../features/transunion/RfTag'
 import { formatearDias, formatearFechaISOLarga } from '../lib/format'
 
 describe('EstadoBadge', () => {
@@ -104,23 +103,6 @@ describe('CandadoCerrada', () => {
   test('02 y 07 son estados de cierre; los demás no', () => {
     expect(['02', '07'].every(esEstadoDeCierre)).toBe(true)
     expect(['01', '03', '04', '06', '08', '10', '11', '12'].some(esEstadoDeCierre)).toBe(false)
-  })
-})
-
-test('RfTag muestra el requerimiento', () => {
-  render(<RfTag>RF15</RfTag>)
-  expect(screen.getByText('RF15')).toBeInTheDocument()
-})
-
-describe('PorConfirmar', () => {
-  test('por defecto dice «por confirmar»', () => {
-    render(<PorConfirmar />)
-    expect(screen.getByText('por confirmar')).toHaveClass('bg-aviso-claro', 'text-aviso')
-  })
-
-  test('acepta otro texto', () => {
-    render(<PorConfirmar>pendiente de CENS</PorConfirmar>)
-    expect(screen.getByText('pendiente de CENS')).toBeInTheDocument()
   })
 })
 

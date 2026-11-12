@@ -35,7 +35,7 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.getByLabelText('Código de sucursal')).toHaveAccessibleDescription(/6 caracteres/)
     expect(await screen.findByText('SSRXXXXXX20260930')).toBeInTheDocument() // prefijo + último corte
-    expect(screen.getAllByText('por definir')).toHaveLength(1)
+    expect(screen.queryByText('por definir')).not.toBeInTheDocument()
   })
 
   test('guarda 001 / 123 / A1B2C3: el aviso pasa a «aptos» y cambia el nombre del archivo', async () => {

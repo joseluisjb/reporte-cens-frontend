@@ -5,7 +5,7 @@
 //    la carga inicial y aquí no se edita (contrato 0.9.1).
 //  - Estados de TransUnion: los 10 de la Tabla 4b (Manual, p. 64), para consulta.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Alert, Badge, Button, Card, EmptyState, Icon, PageHeader, PorConfirmar, Spinner, Table, useToast } from '../../components/ui'
+import { Alert, Badge, Button, Card, EmptyState, Icon, PageHeader, Spinner, Table, useToast } from '../../components/ui'
 import { ApiError, mensajeDeError } from '../../lib/api'
 import { formatearFechaHora, plural } from '../../lib/format'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -21,11 +21,11 @@ const TITULO = 'Homologación de Estados'
 // Notas del uso de cada estado en CENS (ficha RF48 y mockup v3, `estUso`).
 const NOTAS = {
   '02': 'Cierre: se reporta una sola vez',
-  '03': 'Crédito caducado con mora (RF14)',
+  '03': 'Crédito caducado con mora',
   '04': 'Propuesta: desde 04 no se puede volver a Vigente ni cerrar',
-  '06': 'Castigo contable de CENS con mora (RF45)',
+  '06': 'Castigo contable de CENS con mora',
   '07': 'Cierre: se reporta una sola vez',
-  '08': 'No se usa (Acta 3)',
+  '08': 'No se usa',
   '10': 'Solo si el cliente está admitido en el proceso de ley',
   '11': 'Solo si el cliente está admitido en el proceso de ley',
   '12': 'Solo si el cliente está admitido en el proceso de ley',
@@ -145,8 +145,7 @@ function AvisoSinHomologar({ homologaciones }) {
         <b>
           {plural(sin.length, 'estado del SAC sin homologar', 'estados del SAC sin homologar')} ({sin.map((h) => h.estadoSac).join(', ')})
         </b>
-        : las obligaciones con {sin.length === 1 ? 'ese estado' : 'esos estados'} se bloquean en la validación del corte (RF53) hasta que se homologuen.{' '}
-        <PorConfirmar>pendiente de CENS</PorConfirmar>
+        : las obligaciones con {sin.length === 1 ? 'ese estado' : 'esos estados'} se bloquean en la validación del corte hasta que se homologuen.
       </Alert>
     </div>
   )
@@ -164,7 +163,7 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
       </p>
       <p className="mb-3 text-sm text-muted">
         Si los créditos de una obligación tienen estados distintos, la obligación toma el de menor número de prioridad (el 1 gana sobre el 5); si alguno está sin
-        homologar, se bloquea en la validación del corte (RF53). La prioridad viene de la carga inicial y aquí no se edita. <PorConfirmar />
+        homologar, se bloquea en la validación del corte. La prioridad viene de la carga inicial y aquí no se edita.
       </p>
       <Card className="overflow-hidden">
         {datos.homologaciones.length === 0 ? (
@@ -192,11 +191,11 @@ function EstadosSac({ datos, editando, onEditar, onCancelar, onGuardada, onSinCa
                 <tr key={h.estadoSac}>
                   <td className="font-mono font-bold">{h.estadoSac}</td>
                   <td className="font-mono">{h.prioridad}</td>
-                  <td className="text-muted">{h.descripcion ?? 'Por confirmar con CENS'}</td>
+                  <td className="text-muted">{h.descripcion ?? 'Sin descripción'}</td>
                   <td>
                     <SeReportaComo homologacion={h} />
                   </td>
-                  <td>{h.confirmado ? <Badge tone="ok">Confirmado</Badge> : <PorConfirmar />}</td>
+                  <td>{h.confirmado ? <Badge tone="ok">Sí</Badge> : <Badge tone="off">No</Badge>}</td>
                   <td className="whitespace-nowrap">
                     {h.actualizadoPor ? (
                       <>
@@ -238,7 +237,7 @@ function SeReportaComo({ homologacion: h }) {
     return (
       <>
         <Badge tone="info">Cierre</Badge>
-        <div className="text-xs text-muted">Saldada (02) o Castigada recuperada (07), según el estado anterior (RF12, RF15)</div>
+        <div className="text-xs text-muted">Saldada (02) o Castigada recuperada (07), según el estado anterior</div>
       </>
     )
   }
@@ -284,7 +283,7 @@ function FilaEdicion({ homologacion: h, estados, onCancelar, onGuardada, onSinCa
     <tr className="bg-amber-50/40">
       <td className="font-mono font-bold">{h.estadoSac}</td>
       <td className="font-mono">{h.prioridad}</td>
-      <td className="text-muted">{h.descripcion ?? 'Por confirmar con CENS'}</td>
+      <td className="text-muted">{h.descripcion ?? 'Sin descripción'}</td>
       <td colSpan={3}>
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor={ids.accion} className="sr-only">
@@ -303,7 +302,7 @@ function FilaEdicion({ homologacion: h, estados, onCancelar, onGuardada, onSinCa
             className="rounded-ctl border border-gris-d bg-white px-3 py-2 text-sm"
           >
             <option value={ACCIONES.ESTADO}>Estado de TransUnion</option>
-            <option value={ACCIONES.CIERRE}>Cierre (RF12 o RF15)</option>
+            <option value={ACCIONES.CIERRE}>Cierre</option>
           </select>
           <label htmlFor={ids.estadoTu} className="sr-only">
             Estado de TransUnion para {h.estadoSac}
@@ -391,7 +390,7 @@ function EstadosTransUnion({ estados }) {
                   {e.esCierre && <CandadoCerrada />}
                 </td>
                 <td className="whitespace-nowrap">
-                  {e.usado ? <Badge tone="ok">Sí</Badge> : <Badge tone="off">No</Badge>} {!e.confirmado && <PorConfirmar />}
+                  {e.usado ? <Badge tone="ok">Sí</Badge> : <Badge tone="off">No</Badge>}
                 </td>
                 <td className="text-muted">{NOTAS[e.codigo] ?? ''}</td>
               </tr>

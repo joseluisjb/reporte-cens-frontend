@@ -236,7 +236,7 @@ export default function ParametersPage() {
               : 'border-transparent text-muted hover:text-ink'
           }`}
         >
-          Conceptos de energía (RF35)
+          Conceptos de energía
         </button>
         <button
           type="button"

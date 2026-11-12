@@ -108,7 +108,7 @@ export default function ManageNoveltyModal({ open, novedad, onClose, onGestionad
 
         {novedad.tipo === 'Eliminación' && (
           <Alert tone="aviso">
-            La obligación dejará de reportarse en los cortes siguientes y su número no se podrá reutilizar (RF50).
+            La obligación dejará de reportarse en los cortes siguientes y su número no se podrá reutilizar.
           </Alert>
         )}
 

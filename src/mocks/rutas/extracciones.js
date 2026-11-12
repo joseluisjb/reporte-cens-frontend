@@ -4,7 +4,7 @@
 //  - A2: el corte incluye obligaciones Saldadas (estado 02). A4: estado de la obligación (Tabla 4b).
 //    Ver mocks/datos/obligaciones.js y docs/contrato/DISCREPANCIAS.md. (A3, el tipo de identificación de la
 //    Tabla 2, aplica a los endpoints que devuelven `tipo_id_tu`, que son del historial y aún no se simulan;
-//    el catálogo ya está en features/extraction/catalogosTU.js.)
+//    el catálogo ya está en features/transunion/catalogosTU.js.)
 //  - A9: la fecha de corte debe ser posterior a la del último corte ENVIADO (409).
 //  - S: un id no numérico responde 404 'Corte no encontrado.' (el backend de hoy da 500) y `limite` /
 //    `desplazamiento` se validan (el backend de hoy no).
@@ -15,12 +15,14 @@ import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { enmascararIdentificacion } from '../../lib/format'
 import { generarObligaciones, totalesCorte } from '../datos/obligaciones'
+import { erroresCorrectivos, ultimoCorteEnviado } from '../datos/reporte'
 import { validarCorte } from '../datos/validaciones'
+import { cambiarEstadoCorte, ultimoArchivoDelCorte, validacionesDe } from './reporte'
 import { db, persistir } from '../db'
 import { ahoraBogotaISO, aEntero, error, espera, exigirSesion, hoyLocalISO, idDeRuta, leerCuerpo, url } from '../utilidades'
 
 const sinCorte = () => error(404, { detail: 'Corte no encontrado.' })
-const LIMITE_MAXIMO = 100
+export const LIMITE_MAXIMO = 100
 
 // CorteResumen, con las claves en el orden del contrato. El grupo sale de la FOTO guardada en el corte.
 function aResumen(corte) {
@@ -136,7 +138,7 @@ export const extraccionesHandlers = [
     if (otroBorrador) {
       return error(409, { detail: `Ya existe un corte en BORRADOR con fecha ${otroBorrador.fecha_corte}. Elimínelo o complételo antes de generar otro.` })
     }
-    const ultimaEnviada = db.cortes.filter((c) => c.estado === 'ENVIADO').reduce((max, c) => (c.fecha_corte > max ? c.fecha_corte : max), '')
+    const ultimaEnviada = ultimoCorteEnviado()
     if (ultimaEnviada && fechaCorte <= ultimaEnviada) {
       return error(409, { detail: 'La fecha de corte debe ser posterior a la del último corte enviado.' })
     }
@@ -178,6 +180,13 @@ export const extraccionesHandlers = [
     if (!corte) return sinCorte()
     if (corte.estado !== 'BORRADOR') return error(409, { detail: 'El corte no está en estado BORRADOR.' })
     const { errores, advertencias } = validarCorte(corte, generarObligaciones(corte))
+    // Contrato 0.9 (RF53): un corte con actualización mensual (Iteración 2) también debe pasar las reglas
+    // de «Validaciones antes de generar» (pantalla 12); sus correctivas traen la obligación y el campo.
+    // Los cortes sin ciclo (Iteración 1) siguen con sus reglas de siempre.
+    // SIN_IDENTIFICACION ya la pone validarCorte (cuando una prueba la fuerza): no se repite.
+    if (db.ciclos.some((c) => c.corte_id === corte.id)) {
+      errores.push(...erroresCorrectivos(validacionesDe(corte)).filter((e) => e.regla !== 'SIN_IDENTIFICACION'))
+    }
     if (errores.length) return error(409, { detail: 'El corte tiene errores correctivos que deben resolverse.', errores })
     corte.estado = 'VALIDADO'
     persistir()
@@ -196,8 +205,13 @@ export const extraccionesHandlers = [
     const fechaEnvio = typeof cuerpo.fecha_envio === 'string' && cuerpo.fecha_envio.trim() ? cuerpo.fecha_envio.trim() : hoyLocalISO()
     if (fechaEnvio > hoyLocalISO()) return error(400, { detail: 'La fecha de envío no puede ser futura.' })
     if (corte.estado !== 'VALIDADO') return error(409, { detail: 'El corte no está en estado VALIDADO.' })
-    corte.estado = 'ENVIADO'
+    // Contrato 0.9 (RF20, RF54, RF57): el corte necesita un archivo generado y el último debe ser apto para envío.
+    const archivo = ultimoArchivoDelCorte(corte.id)
+    if (!archivo) return error(409, { detail: 'Primero genera el archivo plano del corte.', code: 'sin_archivo' })
+    if (!archivo.apto_envio) return error(409, { detail: 'El archivo no es apto para envío: faltan los datos de la entidad ante TransUnion.', code: 'archivo_no_apto' })
+    cambiarEstadoCorte(corte, 'ENVIADO')
     corte.fecha_envio = fechaEnvio
+    Object.assign(archivo, { enviado: true, fecha_envio: fechaEnvio })
     persistir()
     return HttpResponse.json(aResumen(corte))
   }),

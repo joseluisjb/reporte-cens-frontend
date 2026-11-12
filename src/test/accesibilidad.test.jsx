@@ -3,7 +3,9 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expectAccesible } from './axe'
+import { server } from '../mocks/server'
 import { ANALISTA, renderApp, renderConSesion } from './renderApp'
+import { cicloConRechazosYRevisiones } from './escenarios/ciclo'
 
 const boton = (nombre) => screen.getByRole('button', { name: nombre })
 
@@ -54,6 +56,13 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
+  test('inicio (Analista) con el panel de la cartera', async () => {
+    await renderConSesion('/panel', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('heading', { name: 'Estado de la cartera' })
+    await screen.findByText(/Corte al/)
+    await expectAccesible()
+  })
+
   test('inicio (Administrador)', async () => {
     renderApp('/panel')
     await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
@@ -87,6 +96,69 @@ describe('pantallas con sesión', () => {
     await screen.findByText('Juan Pérez')
     await userEvent.click(screen.getByRole('switch', { name: 'Usuario Carlos Sánchez activo' }))
     await screen.findByRole('alertdialog', { name: 'Desactivar usuario' })
+    await expectAccesible()
+  })
+
+  test('datos de la entidad (pantalla 15), con marcador y con un error de campo', async () => {
+    await renderConSesion('/entidad')
+    await screen.findByRole('button', { name: 'Guardar datos' })
+    await expectAccesible()
+    await userEvent.clear(screen.getByLabelText('Tipo de entidad'))
+    await userEvent.type(screen.getByLabelText('Tipo de entidad'), '12')
+    await userEvent.click(boton('Guardar datos'))
+    await expectAccesible()
+  })
+
+  test('homologación de estados (pantalla 16), con una fila en edición y su error', async () => {
+    await renderConSesion('/homologacion-estados')
+    await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+    await expectAccesible()
+    await userEvent.click(boton('Editar la homologación del estado B'))
+    await userEvent.click(boton('Guardar'))
+    await screen.findByText('Selecciona el estado de TransUnion.')
+    await expectAccesible()
+  })
+
+  test('obligaciones y estados (pantalla 9), con la lista y el detalle abierto', async () => {
+    await renderConSesion('/obligaciones', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('table', { name: 'Obligaciones y estados' })
+    await screen.findByRole('group', { name: 'Filtrar por estado' })
+    await expectAccesible()
+    await userEvent.click(boton('Ver el detalle de la obligación 2271-5502'))
+    await screen.findByRole('list', { name: 'Línea de tiempo de estados' })
+    await expectAccesible()
+  })
+
+  test('actualización mensual (pantalla 10), con el resultado, los rechazos y la matriz', async () => {
+    server.use(...cicloConRechazosYRevisiones())
+    await renderConSesion('/ciclo', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('table', { name: /Matriz de cambios de estado/ })
+    await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
+    await expectAccesible()
+    await userEvent.click(boton('Ejecutar actualización mensual'))
+    await screen.findByRole('table', { name: 'Cambios rechazados' })
+    await expectAccesible()
+  })
+
+  test('refinanciaciones (pantalla 11), con la lista y el registro con errores', async () => {
+    await renderConSesion('/refinanciaciones', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('table', { name: 'Refinanciaciones registradas' })
+    await expectAccesible()
+    await userEvent.click(boton('Registrar refinanciación'))
+    const dialogo = await screen.findByRole('dialog', { name: 'Registrar refinanciación' })
+    await within(dialogo).findByLabelText('Obligación original')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar refinanciación' }))
+    await expectAccesible()
+  })
+
+  test('reporte a TransUnion (pantalla 12), con el checklist y el archivo generado', async () => {
+    await renderConSesion('/reporte', 'jperez@example.com', 'Analista123')
+    await screen.findByRole('list', { name: 'Validaciones antes de generar' })
+    await screen.findByRole('table', { name: 'Archivos generados' })
+    await expectAccesible()
+    await userEvent.click(boton('Validar corte'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Generar archivo plano' }, { timeout: 4000 }))
+    await screen.findByRole('region', { name: 'Archivo generado' })
     await expectAccesible()
   })
 
@@ -144,6 +216,12 @@ describe('pantallas con sesión', () => {
 
   test('acceso restringido (Analista)', async () => {
     renderApp('/usuarios', ANALISTA)
+    await screen.findByRole('heading', { name: 'Acceso restringido' })
+    await expectAccesible()
+  })
+
+  test('acceso restringido (Administrador en una pantalla del Analista) y menú con opciones bloqueadas', async () => {
+    renderApp('/obligaciones')
     await screen.findByRole('heading', { name: 'Acceso restringido' })
     await expectAccesible()
   })

@@ -126,12 +126,12 @@ describe('inicio de sesión correcto', () => {
     expect(screen.getAllByRole('link', { name: /gestión de usuarios/i })).toHaveLength(1)
   })
 
-  test('el Analista entra y ve solo su menú', async () => {
+  test('el Analista entra y ve bloqueadas las opciones del Administrador', async () => {
     renderApp('/login', null)
     await screen.findByRole('button', { name: 'Iniciar sesión' })
     await iniciar('jperez@example.com', 'Analista123')
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Juan' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /gestión de usuarios/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /gestión de usuarios/i })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
   })
 
   test('tras iniciar sesión vuelve a la pantalla que quería abrir', async () => {

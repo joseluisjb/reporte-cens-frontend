@@ -1,7 +1,8 @@
 // Base de datos FICTICIA para los mocks. Todos los datos y contraseñas son inventados.
 // Vive en memoria y se copia a sessionStorage (solo en los mocks, nunca en producción) para que
 // una recarga de la página no borre lo creado durante una demostración; cerrar la pestaña la reinicia.
-// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de extracción de ejemplo.
+// Incluye usuarios, conceptos de energía, grupos de conceptos y cortes de extracción de ejemplo, y para la
+// Iteración 2 las 12 obligaciones del mockup v3 (`obligaciones`) y los datos de la entidad (`entidad`).
 // Los roles se guardan como CÓDIGO del backend (`ANALISTA_CARTERA`, `ADMINISTRADOR`), igual que el contrato.
 // Cuentas de prueba (solo con VITE_USE_MOCKS=true; el rol se muestra aquí como texto):
 //   rmartinez@example.com / Admin12345      → Administrador
@@ -9,6 +10,14 @@
 //   mgomez@example.com    / Temporal123     → debe cambiar la contraseña (primer ingreso)
 //   avargas@example.com   / Cartera123      → usuario desactivado
 import { CODIGOS_ROL } from '../features/auth/roles'
+import { archivosIniciales } from './datos/archivos'
+import { cicloInicial } from './datos/ciclos'
+import { homologacionesIniciales } from './datos/homologacion'
+import { eliminacionesIniciales, novedadesIniciales, rectificacionesIniciales } from './datos/novedades'
+import { reclamosIniciales } from './datos/reclamos'
+import { obligacionesIniciales } from './datos/obligacionesIteracion2'
+import { refinanciacionesIniciales } from './datos/refinanciaciones'
+import { resultadosIniciales } from './datos/resultadosCargue'
 
 const SESSION_KEY = 'nexovolt-mock-session' // solo mocks: id de un usuario ficticio
 const DB_KEY = 'nexovolt-mock-db-v3' // solo mocks: usuarios ficticios y sus contraseñas de prueba (v2: roles como código; v3: cortes completos)
@@ -47,13 +56,38 @@ const gruposIniciales = () => [
 // del grupo al generar el corte (renombrar el grupo después no reescribe el historial). Las obligaciones
 // no se guardan: se generan al pedirlas (mocks/datos/obligaciones.js). `fecha_envio` y `observacion`
 // no salen en el resumen del corte (CorteResumen).
+// El corte del 31/08 quedó ENVIADO_CON_INCONSISTENCIAS: sus resultados del cargue traen una correctiva
+// (mocks/datos/resultadosCargue.js, ejemplo del contrato 0.9).
 const cortesIniciales = () => [
-  { id: 1, fecha_corte: '2026-08-31', fecha_ejecucion: '2026-09-01T08:05:00-05:00', grupo_id: 1, grupo_nombre: 'Energía financiada', estado: 'ENVIADO', fecha_envio: '2026-09-03', ejecutada_por: 'Juan Pérez', observacion: null },
+  { id: 1, fecha_corte: '2026-08-31', fecha_ejecucion: '2026-09-01T08:05:00-05:00', grupo_id: 1, grupo_nombre: 'Energía financiada', estado: 'ENVIADO_CON_INCONSISTENCIAS', fecha_envio: '2026-09-03', ejecutada_por: 'Juan Pérez', observacion: null },
   { id: 2, fecha_corte: '2026-09-30', fecha_ejecucion: '2026-10-01T07:40:00-05:00', grupo_id: 2, grupo_nombre: 'Solo cuota de energía', estado: 'BORRADOR', fecha_envio: null, ejecutada_por: 'Juan Pérez', observacion: null },
 ]
 
+// Datos de la entidad ante TransUnion (RF57). Mientras TransUnion no los asigne llevan el marcador.
+const entidadInicial = () => ({ tipo_entidad: 'XXX', codigo_entidad: 'XXX', codigo_sucursal: 'XXXXXX', actualizado_por: null, fecha_actualizacion: null })
+
 // Colecciones que se guardan en sessionStorage (todo lo de la base salvo `correos` y la sesión).
-const COLECCIONES = ['usuarios', 'siguienteId', 'conceptos', 'grupos', 'siguienteGrupoId', 'cortes', 'siguienteCorteId']
+const COLECCIONES = [
+  'usuarios',
+  'siguienteId',
+  'conceptos',
+  'grupos',
+  'siguienteGrupoId',
+  'cortes',
+  'siguienteCorteId',
+  'obligaciones',
+  'entidad',
+  'archivos',
+  'contenidosArchivo',
+  'resultadosCargue',
+  'homologacionEstados',
+  'ciclos',
+  'refinanciaciones',
+  'novedades',
+  'eliminaciones',
+  'rectificaciones',
+  'reclamos',
+]
 
 const inicial = () => ({
   usuarios: usuariosIniciales(),
@@ -63,6 +97,23 @@ const inicial = () => ({
   siguienteGrupoId: 4,
   cortes: cortesIniciales(),
   siguienteCorteId: 3,
+  // Iteración 2: no se mezclan con las obligaciones FIC- de la extracción (mocks/datos/obligaciones.js).
+  obligaciones: obligacionesIniciales(),
+  entidad: entidadInicial(),
+  archivos: archivosIniciales(),
+  // Contenido de cada archivo plano, por id (mocks/rutas/reporte.js lo guarda al generarlo).
+  contenidosArchivo: {},
+  // Resultados del cargue de TransUnion por id de archivo (RF54): al inicio, los del archivo del 31/08.
+  resultadosCargue: resultadosIniciales(),
+  // Homologación de los estados del SAC (RF48): la carga inicial del script de la base.
+  homologacionEstados: homologacionesIniciales(),
+  // Actualizaciones mensuales ejecutadas (pantalla 10): al inicio, la del corte 2026-09-30.
+  ciclos: [cicloInicial()],
+  refinanciaciones: refinanciacionesIniciales(),
+  novedades: novedadesIniciales(),
+  eliminaciones: eliminacionesIniciales(),
+  rectificaciones: rectificacionesIniciales(),
+  reclamos: reclamosIniciales(),
 })
 
 // Lo guardado se mezcla sobre los valores iniciales POR COLECCIÓN: una pestaña guardada antes de que

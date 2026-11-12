@@ -23,7 +23,7 @@
 //   mapper lo vuelve a enmascarar por si acaso y NUNCA lo entrega completo a las pantallas: solo expone
 //   `identificacion` enmascarada (últimos 4 dígitos).
 import { enmascararIdentificacion } from '../../lib/format'
-import { descripcionEdadMora, descripcionEstado } from './catalogosTU'
+import { descripcionEdadMora, descripcionEstado } from '../transunion/catalogosTU'
 
 export function mapCorte(raw) {
   return {

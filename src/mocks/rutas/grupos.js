@@ -5,7 +5,7 @@
 import { http, HttpResponse } from 'msw'
 import { ENDPOINTS } from '../../lib/api/endpoints'
 import { db, persistir } from '../db'
-import { aEntero, error, espera, exigirSesion, hoyLocalISO, idDeRuta, leerCuerpo, url } from '../utilidades'
+import { aEntero, error, espera, exigirSesion, SOLO_ADMIN, hoyLocalISO, idDeRuta, leerCuerpo, url } from '../utilidades'
 
 const sinGrupo = () => error(404, { detail: 'Grupo no encontrado.' })
 const esCodigo = (v) => Number.isInteger(v) && v >= 1 && v <= 9999
@@ -75,7 +75,7 @@ export const gruposHandlers = [
 
   http.post(url(ENDPOINTS.gruposConceptos), async ({ request }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const cuerpo = await leerCuerpoGrupo(request)
     const errores = validar(cuerpo, { crear: true })
@@ -92,7 +92,7 @@ export const gruposHandlers = [
 
   http.patch(url(ENDPOINTS.grupoConceptos(':id')), async ({ request, params }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const grupo = db.grupos.find((g) => g.id === idDeRuta(params.id))
     if (!grupo) return sinGrupo()
@@ -114,7 +114,7 @@ export const gruposHandlers = [
 
   http.delete(url(ENDPOINTS.grupoConceptos(':id')), async ({ params }) => {
     await espera()
-    const { respuesta } = exigirSesion(true)
+    const { respuesta } = exigirSesion(SOLO_ADMIN)
     if (respuesta) return respuesta
     const grupo = db.grupos.find((g) => g.id === idDeRuta(params.id))
     if (!grupo) return sinGrupo()

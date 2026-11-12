@@ -15,11 +15,25 @@ import { parse } from 'yaml'
 
 const doc = parse(readFileSync(resolve(process.cwd(), 'docs/contrato/openapi.yaml'), 'utf-8'))
 
+// OpenAPI 3.0 escribe «una referencia o null» como `{ type, nullable: true, allOf: [{ $ref }] }`.
+// Ajv acepta el null por el `type`, pero después lo valida contra el `allOf` y lo rechaza. Para
+// validar, ese patrón se reescribe como `anyOf: [esquema sin nullable, { type: 'null' }]`.
+function nullableConAllOf(nodo) {
+  if (Array.isArray(nodo)) return nodo.map(nullableConAllOf)
+  if (!nodo || typeof nodo !== 'object') return nodo
+  const copia = Object.fromEntries(Object.entries(nodo).map(([k, v]) => [k, nullableConAllOf(v)]))
+  if (copia.nullable === true && Array.isArray(copia.allOf)) {
+    const { nullable, ...resto } = copia // eslint-disable-line no-unused-vars
+    return { anyOf: [resto, { type: 'null' }] }
+  }
+  return copia
+}
+
 // strict:false por las palabras propias de OpenAPI (`example`, `x-roles`, `nullable` suelto...).
 const ajv = new Ajv({ strict: false, allErrors: true })
 addFormats(ajv)
 ajv.addFormat('password', true) // OpenAPI lo usa como pista de interfaz; no hay nada que validar
-ajv.addSchema({ ...doc, $id: 'contrato' })
+ajv.addSchema({ ...nullableConAllOf(doc), $id: 'contrato' })
 
 const escapar = (clave) => clave.replaceAll('~', '~0').replaceAll('/', '~1') // RFC 6901
 const desescapar = (clave) => clave.replaceAll('~1', '/').replaceAll('~0', '~')
@@ -44,7 +58,9 @@ function validadorDe(metodo, ruta, status) {
   }
   const contenido = respuesta?.content?.['application/json']?.schema
   let resultado
-  if (!contenido) resultado = { sinCuerpo: true }
+  // Descargas (`text/plain`, p. ej. el archivo plano): basta con que llegue texto no vacío.
+  if (!contenido && respuesta?.content?.['text/plain']) resultado = { textoPlano: true }
+  else if (!contenido) resultado = { sinCuerpo: true }
   else {
     const validar = ajv.getSchema(`contrato${base}/content/application~1json/schema`)
     if (!validar) throw new Error(`No se pudo compilar el esquema de ${metodo.toUpperCase()} ${ruta} ${status}.`)
@@ -58,8 +74,12 @@ function validadorDe(metodo, ruta, status) {
 // estado. `ruta` es la clave exacta de `paths`, por ejemplo '/conceptos/{codigo}/'.
 export function expectCumpleContrato(metodo, ruta, status, data) {
   const m = metodo.toLowerCase()
-  const { validar, sinCuerpo } = validadorDe(m, ruta, status)
+  const { validar, sinCuerpo, textoPlano } = validadorDe(m, ruta, status)
   const etiqueta = `${m.toUpperCase()} ${ruta} ${status}`
+  if (textoPlano) {
+    if (typeof data !== 'string' || !data) throw new Error(`${etiqueta}: se esperaba texto plano y llegó ${JSON.stringify(data)}.`)
+    return
+  }
   if (sinCuerpo) {
     const vacio = data === undefined || data === null || data === ''
     if (!vacio) throw new Error(`${etiqueta}: el contrato no declara cuerpo y la respuesta trae ${JSON.stringify(data)}.`)

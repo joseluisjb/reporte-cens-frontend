@@ -58,6 +58,13 @@ describe('contraste WCAG AA de los tokens', () => {
     ['texto grande blanco sobre bosque (panel del login)', () => [BLANCO, t('bosque')], 3],
     ['texto blanco sobre el hover del menú (negro 10 % sobre bosque-d)', () => [BLANCO, mezclar(NEGRO, 0.1, t('bosque-d'))], 4.5],
     ['texto blanco sobre el ítem activo del menú (negro 20 % sobre bosque-d)', () => [BLANCO, mezclar(NEGRO, 0.2, t('bosque-d'))], 4.5],
+    ['texto sobre-citrico sobre citrico (etiquetas ADMIN y ANALISTA del menú)', () => [t('sobre-citrico'), t('citrico')], 4.5],
+    ['insignia info: info sobre info-claro (02 Saldada)', () => [t('info'), t('info-claro')], 4.5],
+    ['insignia aviso: aviso sobre aviso-claro (03 Dudoso recaudo, «por confirmar»)', () => [t('aviso'), t('aviso-claro')], 4.5],
+    ['insignia error: error-d sobre error-claro (06 Castigada, 2 o más cuotas en mora)', () => [t('error-d'), t('error-claro')], 4.5],
+    ['insignia turquesa: turquesa sobre turquesa-claro (07 Castigada recuperada)', () => [t('turquesa'), t('turquesa-claro')], 4.5],
+    ['aviso informativo: info-d sobre info-claro', () => [t('info-d'), t('info-claro')], 4.5],
+    ...['01', '02', '03', '06', '07', 'otro'].map((e) => [`barra del panel: estado-${e} sobre blanco (gráfico, 3:1)`, () => [t(`estado-${e}`), BLANCO], 3]),
   ])('%s', (_nombre, colores, minimo) => {
     const [a, b] = colores()
     expect(contraste(a, b)).toBeGreaterThanOrEqual(minimo)

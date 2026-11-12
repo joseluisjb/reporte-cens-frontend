@@ -23,7 +23,7 @@ describe('un Analista no abre las pantallas de administración, ni escribiendo l
   test('la pantalla restringida conserva el menú y permite volver al inicio', async () => {
     renderApp('/usuarios', ANALISTA)
     await screen.findByRole('heading', { name: 'Acceso restringido' })
-    expect(within(menu()).queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument()
+    expect(within(menu()).getByRole('link', { name: /usuarios/i })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
     await userEvent.click(screen.getByRole('link', { name: 'Volver al inicio' }))
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Juan' })).toBeInTheDocument()
   })

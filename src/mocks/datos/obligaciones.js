@@ -1,5 +1,5 @@
 // Obligaciones FICTICIAS de un corte, generadas al pedirlas (no se guardan). Siguen el Manual Sector Real
-// v34 de TransUnion, sector Servicios (ver features/extraction/catalogosTU.js):
+// v34 de TransUnion, sector Servicios (ver features/transunion/catalogosTU.js):
 //  - Cada fila es una obligación (un proceso de financiación). Su número es PERMANENTE: la fila N tiene el
 //    mismo `numero_obligacion` en todos los cortes (cambiarlo haría que TransUnion la tome como nueva).
 //  - `edad_mora` sale SIEMPRE de `dias_mora` con la Tabla 9.
@@ -10,7 +10,7 @@
 //  - `valor_mora` nunca supera `valor_saldo`. Todos los valores son enteros en pesos.
 // Lo que depende del corte (semilla = id del corte) son solo los montos; el estado, los días y las filas
 // saldadas o castigadas dependen de la posición de la fila, así que cualquier corte es coherente.
-import { edadMoraDesdeDias } from '../../features/extraction/catalogosTU'
+import { edadMoraDesdeDias } from '../../features/transunion/catalogosTU'
 
 export const TOTAL_OBLIGACIONES = 24
 

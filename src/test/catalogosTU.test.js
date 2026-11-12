@@ -7,7 +7,7 @@ import {
   ESTADOS_OBLIGACION,
   TABLA_9,
   TIPOS_IDENTIFICACION,
-} from '../features/extraction/catalogosTU'
+} from '../features/transunion/catalogosTU'
 import { enmascararIdentificacion } from '../lib/format'
 
 describe('Tabla 9: edad de mora', () => {
@@ -89,7 +89,7 @@ describe('Tabla 4b: estado de la obligación (Servicios)', () => {
     expect(descripcionEstado('08')).toBe('Inactivo')
     expect(descripcionEstado('10')).toBe('Ley 550')
     expect(descripcionEstado('11')).toBe('Ley 1116')
-    expect(descripcionEstado('12')).toBe('Ley 1564 de 2012')
+    expect(descripcionEstado('12')).toBe('Ley 1564 de 2012 Insolvencia PNNC')
     expect(descripcionEstado('05')).toBe('05')
   })
 })

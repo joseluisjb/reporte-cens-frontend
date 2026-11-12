@@ -10,7 +10,6 @@ import {
   EmptyState,
   Icon,
   PageHeader,
-  PorConfirmar,
   Spinner,
   Table,
   useToast,
@@ -187,7 +186,6 @@ export default function ClaimsPage() {
                       <td className="min-w-[220px]">
                         <div className="font-medium text-ink">
                           {c.tipologiaDescripcion}
-                          {c.tipologia?.confirmado === false && <PorConfirmar />}
                         </div>
                         {c.observacion && (
                           <div className="text-xs text-muted">{c.observacion}</div>

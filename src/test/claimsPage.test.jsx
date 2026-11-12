@@ -51,9 +51,9 @@ describe('pantalla 13 · lista', () => {
     expect(filaDe('2241-3302')).toHaveTextContent('Pendiente de desmarcación')
   })
 
-  test('la tipología del catálogo sin confirmar lleva «por confirmar»', async () => {
+  test('la tipología del catálogo sin confirmar se muestra sin marcas internas', async () => {
     await abrir()
-    expect(filaDe('2260-5543')).toHaveTextContent('Pago no reflejadopor confirmar')
+    expect(filaDe('2260-5543')).toHaveTextContent('Pago no reflejado')
   })
 
   test('sin reclamos muestra el estado vacío', async () => {
@@ -73,10 +73,10 @@ describe('pantalla 13 · lista', () => {
     expect(await screen.findByRole('table', { name: TABLA })).toBeInTheDocument()
   })
 
-  test('el Administrador ve «Acceso restringido» en /reclamos', async () => {
+  test('el Administrador que escribe /reclamos vuelve al inicio', async () => {
     renderApp('/reclamos', ADMIN)
-    expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
-    expect(screen.getByText(/exclusiva del rol Analista de Cartera/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Reclamos Habeas Data' })).not.toBeInTheDocument()
   })
 })
 
@@ -136,10 +136,10 @@ describe('pantalla 13 · registrar un reclamo', () => {
     expect(pedido).not.toHaveBeenCalled()
   })
 
-  test('la tipología lleva «por confirmar» mientras CENS no apruebe la lista', async () => {
+  test('la tipología no lleva marcas de «por confirmar»', async () => {
     await abrir()
     const modal = await abrirRegistro()
-    expect(within(modal).getByText('Tipología del reclamo').parentElement).toHaveTextContent('por confirmar')
+    expect(within(modal).getByText('Tipología del reclamo').parentElement).not.toHaveTextContent('por confirmar')
   })
 
   test('si no cargan las obligaciones lo dice y «Reintentar» las vuelve a pedir', async () => {

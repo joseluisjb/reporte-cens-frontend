@@ -198,9 +198,9 @@ function posiblesTransiciones(o) {
       regla('RF18', `Refinanciación → ${estadoTexto('02')} con modo de extinción 16`),
     ]
   }
-  // 04, 08, 10, 11 y 12: el mockup no les da reglas propias; el cambio lo decide la Matriz (p. 40).
+  // 04, 08, 10, 11 y 12: el mockup no les da reglas propias; el cambio lo decide la Matriz.
   if (o.estado !== '03' && o.estado !== '06') {
-    return [regla('RF48', `Desde ${estadoTexto(o.estado)}, cada cambio de estado se valida con la Matriz de cambios de estado (p. 40)`, true)]
+    return [regla('RF48', `Desde ${estadoTexto(o.estado)}, cada cambio de estado se valida con la Matriz de cambios de estado`, true)]
   }
   return [
     regla('RF15', `Pago total → ${estadoTexto('07')}`),

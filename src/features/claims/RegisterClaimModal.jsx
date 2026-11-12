@@ -7,7 +7,6 @@ import {
   FieldLabel,
   Input,
   Modal,
-  PorConfirmar,
   Select,
   Spinner,
   Tag,
@@ -51,7 +50,6 @@ function Formulario({ onCerrar, onCreado, initialObligacionId }) {
 
   const obligaciones = opciones?.obligaciones ?? []
   const tipologias = opciones?.tipologias ?? []
-  const algunaPorConfirmar = tipologias.some((t) => !t.confirmado)
 
   const form = useFormulario({
     valoresIniciales: {
@@ -137,7 +135,6 @@ function Formulario({ onCerrar, onCreado, initialObligacionId }) {
                 <Tag tone="info" className="text-xs">
                   usar la lista de TransUnion
                 </Tag>
-                {algunaPorConfirmar && <PorConfirmar />}
               </span>
             }
             id="cl-tip"

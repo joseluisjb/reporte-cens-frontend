@@ -51,7 +51,7 @@ export const cicloInicial = () => ({
       regla('RF11', '112 días desde la cuota más antigua sin pagar (10/06/2026): edad 02 → 03'),
     ]),
     transicion(3, '2259-1092', 'Jorge Iván Salcedo', '01', '02', '00', '00', [
-      regla('RF12', 'Pago total: Saldada · fecha de pago 12/09/2026, modo 01, tipo de pago 01'),
+      regla('RF12', 'Pago total: Saldada'),
     ]),
     transicion(11, '2255-7788', 'Inversiones Pamplona S.A.S.', '01', '02', '00', '00', [
       regla('RF18', 'Refinanciada en 2271-5502: se cierra en Saldada con modo de extinción 16 Refinanciación'),
@@ -94,7 +94,7 @@ const CAMBIOS = {
   '2257-4156': {
     saldo: 1080016, vencidas: [], pago_mora: PAGO_MORA('2026-10-20', 196000),
     pagos: [pago(196000, 'cuota del 07/09/2026, cuota del 07/10/2026', 'Pagó las dos cuotas pendientes')],
-    eventos: [['2026-10-31', '01', 'Pagó las dos cuotas pendientes y quedó al día: se reportan fecha de pago, modo de extinción y tipo de pago (RF47)']],
+    eventos: [['2026-10-31', '01', 'Pagó las dos cuotas pendientes y quedó al día: se reportan fecha de pago, modo de extinción y tipo de pago']],
   },
   '2258-7731': {
     saldo: 792300, vencidas: [['2026-08-14', 20000], ['2026-09-14', 70000], ['2026-10-14', 70000]],
@@ -183,7 +183,7 @@ export const resultadoCiclo2026_10_31 = () => ({
       regla('RF14', 'Sigue en Vigente: su crédito caduca a las 6 cuotas (lleva 5)'),
     ]),
     transicion(5, '2261-8820', 'Luis Fernando Cáceres', '01', '02', '00', '00', [
-      regla('RF12', 'Pago total: Saldada · fecha de pago 20/10/2026, modo 01, tipo de pago 01'),
+      regla('RF12', 'Pago total: Saldada'),
     ]),
     transicion(6, '2262-3318', 'Centro Educativo Las Palmas', '01', '01', '01', '01', [
       regla('RF17', 'Pago de $160.000 aplicado a: cuota del 23/08/2026', true),

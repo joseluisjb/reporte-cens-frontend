@@ -1,5 +1,5 @@
 // Revisión de accesibilidad automática de las pantallas de Johan (login, sesión, contraseñas,
-// usuarios, acceso restringido y diálogos). Cada prueba corre axe-core sobre la pantalla real.
+// usuarios, menú por rol y diálogos). Cada prueba corre axe-core sobre la pantalla real.
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expectAccesible } from './axe'
@@ -214,15 +214,15 @@ describe('pantallas con sesión', () => {
     await expectAccesible()
   })
 
-  test('acceso restringido (Analista)', async () => {
-    renderApp('/usuarios', ANALISTA)
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
+  test('menú del Analista (solo sus opciones)', async () => {
+    renderApp('/panel', ANALISTA)
+    await screen.findByRole('heading', { name: 'Bienvenido, Juan' })
     await expectAccesible()
   })
 
-  test('acceso restringido (Administrador en una pantalla del Analista) y menú con opciones bloqueadas', async () => {
-    renderApp('/obligaciones')
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
+  test('menú del Administrador (solo sus opciones)', async () => {
+    renderApp('/panel')
+    await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })
     await expectAccesible()
   })
 

@@ -1,7 +1,7 @@
 // Tarjeta «Archivo generado» de la pantalla 12 (mockup v3: vReporteRes): nombre, estado, aviso de «no apto
 // para envío» con su motivo (RF57), los conteos de registros y «Descargar archivo» (RF20).
 import { useId } from 'react'
-import { Alert, Button, Card, Dato, Icon, PorConfirmar } from '../../components/ui'
+import { Alert, Button, Card, Dato, Icon } from '../../components/ui'
 import { formatearCOP, formatearFechaISOLarga, plural } from '../../lib/format'
 import EstadoArchivoBadge from './EstadoArchivoBadge'
 
@@ -38,11 +38,7 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         <Dato
           etiqueta="Saldo del archivo"
           valor={formatearCOP(archivo.saldoTotal)}
-          nota={
-            <>
-              Se reporta en miles: {miles(archivo.saldoTotal)} <PorConfirmar>redondeo por confirmar con TransUnion</PorConfirmar>
-            </>
-          }
+          nota={`Se reporta en miles: ${miles(archivo.saldoTotal)}`}
         />
       </dl>
       <Button onClick={() => onDescargar(archivo)} loading={descargando}>
@@ -50,8 +46,7 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         Descargar archivo
       </Button>
       <p className="mt-2 text-xs text-muted">
-        Texto de longitud fija en Windows-1252: registro 1 (29 caracteres), un registro 2 por obligación ({archivo.longitudRegistroTipo2} caracteres, por confirmar
-        con TransUnion) y registro 9 (33).
+        Texto de longitud fija en Windows-1252: registro 1 (29 caracteres), un registro 2 por obligación ({archivo.longitudRegistroTipo2} caracteres) y registro 9 (33).
       </p>
     </Card>
   )

@@ -54,7 +54,7 @@ describe('pantalla 11 · lista', () => {
     expect(fila).toHaveTextContent('2255-7788Inversiones Pamplona S.A.S.02 · Saldadamodo de extinción 16 · Refinanciación')
     expect(fila).toHaveTextContent('$4.380.000')
     expect(fila).toHaveTextContent('2271-550201 · VigenteReestructurada (1)')
-    expect(fila).toHaveTextContent('07 · Otrapor confirmar36 cuotas')
+    expect(fila).toHaveTextContent('07 · Otra36 cuotas')
   })
 
   test('sin refinanciaciones muestra el estado vacío', async () => {
@@ -83,7 +83,7 @@ describe('pantalla 11 · registro manual', () => {
     expect(numeros).not.toContain('2259-1092') // Saldada
     expect(numeros).not.toContain('2241-3302') // Castigada recuperada
     expect(numeros).toHaveLength(9)
-    expect(within(dialogo).getByText(/Naturaleza de la reestructuración \(Tabla 11\)/)).toHaveTextContent('código por confirmar con CENS')
+    expect(within(dialogo).getByText(/Naturaleza de la reestructuración \(Tabla 11\)/)).not.toHaveTextContent('por confirmar')
     expect(within(dialogo).getByLabelText('Fecha de la refinanciación')).toHaveValue(hoyISO())
   })
 
@@ -106,7 +106,7 @@ describe('pantalla 11 · registro manual', () => {
     await llenar(dialogo, { numero: '2257-4156', naturaleza: '', cuotas: '' })
     expect(dialogo).toHaveTextContent('La obligación original pasa de 01 · Vigente a 02 · Saldada con modo de extinción 16 · Refinanciación')
     await userEvent.selectOptions(within(dialogo).getByLabelText('Obligación original'), opcionDe(dialogo, '2250-0987'))
-    expect(dialogo).toHaveTextContent('pasa de 03 · Dudoso recaudo a 07 · Castigada recuperadapor confirmar con modo de extinción 16')
+    expect(dialogo).toHaveTextContent('pasa de 03 · Dudoso recaudo a 07 · Castigada recuperada con modo de extinción 16')
   })
 
   test('valida en el cliente: campos obligatorios y cuotas entre 1 y 120', async () => {
@@ -148,7 +148,7 @@ describe('pantalla 11 · registro manual', () => {
     expect(nueva).toHaveTextContent('2250-0987Hotel Mirador Cúcuta07 · Castigada recuperadamodo de extinción 16 · Refinanciación')
     expect(nueva).toHaveTextContent('$5.420.000')
     expect(nueva).toHaveTextContent('2272-610101 · VigenteReestructurada (1)')
-    expect(nueva).toHaveTextContent('06 · Ordinariapor confirmar24 cuotas')
+    expect(nueva).toHaveTextContent('06 · Ordinaria24 cuotas')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     // La original queda cerrada con su vínculo y la nueva en primer reporte.
     const original = db.obligaciones.find((o) => o.numero === '2250-0987')

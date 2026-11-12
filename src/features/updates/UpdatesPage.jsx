@@ -141,8 +141,8 @@ export default function UpdatesPage() {
         <p className="text-sm text-slate-700 leading-relaxed">
           Las novedades urgentes no esperan al corte mensual: se hacen de inmediato en el módulo web{' '}
           <b>Actualización en Línea</b> de TransUnion. Lo que se gestione aquí se tiene en cuenta en el{' '}
-          <b>próximo reporte mensual</b> (RF24). Las correcciones de un corte ya enviado se registran
-          como «Corrección» (RF55).
+          <b>próximo reporte mensual</b>. Las correcciones de un corte ya enviado se registran
+          como «Corrección».
         </p>
       </div>
 
@@ -209,7 +209,7 @@ export default function UpdatesPage() {
                       <div className="text-slate-800">{n.motivo}</div>
                       {rect && (
                         <div className="text-xs text-slate-500 mt-0.5">
-                          Rectifica el corte {formatearFechaISO(rect.fechaCorte)} · {rect.medio} (RF55)
+                          Rectifica el corte {formatearFechaISO(rect.fechaCorte)} · {rect.medio}
                         </div>
                       )}
                     </td>
@@ -234,7 +234,7 @@ export default function UpdatesPage() {
       <section className="flex flex-col gap-3 mt-4" aria-labelledby="el-titulo">
         <div>
           <h2 className="text-lg font-bold text-slate-900" id="el-titulo">
-            Obligaciones eliminadas en TransUnion (RF50)
+            Obligaciones eliminadas en TransUnion
           </h2>
           <p className="text-sm text-slate-600">
             No se vuelven a reportar en los cortes siguientes y su número no se puede reutilizar.

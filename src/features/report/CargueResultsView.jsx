@@ -26,7 +26,7 @@ export default function CargueResultsView({ resultados }) {
       <h2 id={id} className="font-semibold">
         Resultados del cargue · corte {corte}
       </h2>
-      <p className="mb-4 text-sm text-muted">Archivos de respuesta de TransUnion cargados el {formatearFechaHora(resultados.fechaCarga)} (RF54)</p>
+      <p className="mb-4 text-sm text-muted">Archivos de respuesta de TransUnion cargados el {formatearFechaHora(resultados.fechaCarga)}</p>
       <ul aria-label={`Resumen del cargue del corte ${corte}`} className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map(([valor, etiqueta]) => (
           <li key={etiqueta} className="flex flex-col gap-0.5 rounded-xl border border-line bg-white px-4 py-3.5">

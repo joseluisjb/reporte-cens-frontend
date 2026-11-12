@@ -13,7 +13,7 @@ Interfaz del sistema de reporte de cartera de CENS a TransUnion (Seminario Integ
 - `src/components/ui/`: componentes compartidos.
 - `src/lib/api/`: cliente HTTP (`client.js`), `ApiError.js` y rutas en `endpoints.js`.
 - `src/lib/useFormulario.js`: hook de formularios con error por campo.
-- `src/features/auth/RequireRole.jsx` y `roles.js`: guardas por rol (`<RequireRole roles={[ROLES.ANALISTA]} seccion={…}>`).
+- `src/features/auth/RequireRole.jsx` y `roles.js`: guardas por rol (`<RequireRole roles={[ROLES.ANALISTA]}>`; sin permiso, vuelve al inicio).
 - `src/mocks/`: handlers de MSW.
 - `docs/contrato/openapi.yaml`: contrato de la API. Es la fuente: el backend tiene una copia.
 - `docs/iteracion2/`: fichas de los RF de la Iteración 2 (`RF_ITERACION2.md`), mockup v3 y Matriz de cambios de estado.

@@ -49,10 +49,10 @@ describe('pantalla 9 · lista', () => {
     expect(within(kpis).getByRole('button', { name: /Todas/ })).toHaveAttribute('aria-pressed', 'true')
 
     const cuotas = screen.getByRole('region', { name: 'Cuotas en mora por obligación' })
-    expect(cuotas).toHaveTextContent('Se calcula en cada actualización mensual, por financiación (RF19) · Último corte: 30/09/2026')
+    expect(cuotas).toHaveTextContent('Se calcula en cada actualización mensual, por financiación · Último corte: 30/09/2026')
     expect(within(cuotas).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['2Al día', '21 cuota en mora', '22 a 3 cuotas', '34 o más cuotas'])
 
-    expect(screen.getByText(/Saldada \(02\) y Castigada recuperada \(07\) se reportan una sola vez/)).toHaveTextContent('(RF13, RF16)')
+    expect(screen.getByText(/Saldada \(02\) y Castigada recuperada \(07\) se reportan una sola vez/)).not.toHaveTextContent('(RF13, RF16)')
     expect(screen.getByRole('link', { name: 'Actualización mensual' })).toHaveAttribute('href', '/ciclo')
   })
 
@@ -85,11 +85,11 @@ describe('pantalla 9 · lista', () => {
   })
 
   test('marca «Revisar» la obligación que el ciclo dejó para revisión (RF11)', async () => {
-    editar('2257-4156', { requiere_revision: true, motivo_revision: 'La edad bajó de 02 a 00 sin un abono en el periodo (RF11).' })
+    editar('2257-4156', { requiere_revision: true, motivo_revision: 'La edad bajó de 02 a 00 sin un abono en el periodo.' })
     await abrir()
     expect(filaDe('2257-4156')).toHaveTextContent('Revisar')
     const panel = await abrirDetalle('2257-4156')
-    expect(within(panel).getByRole('status')).toHaveTextContent('Revisar: La edad bajó de 02 a 00 sin un abono en el periodo (RF11).')
+    expect(within(panel).getByRole('status')).toHaveTextContent('Revisar: La edad bajó de 02 a 00 sin un abono en el periodo.')
   })
 
   test('un KPI filtra la tabla por estado y queda presionado', async () => {
@@ -232,11 +232,11 @@ describe('pantalla 9 · detalle', () => {
     const panel = await abrirDetalle('2258-7731')
     const cuotas = within(panel).getByRole('table', { name: 'Cuotas vencidas sin pagar' })
     expect(within(cuotas).getAllByRole('row').slice(1).map((r) => r.textContent)).toEqual(['14/08/2026$70.00047', '14/09/2026$70.00016'])
-    expect(dato(panel, 'Fecha de exigibilidad')).toHaveTextContent('14/08/2026Cuota más antigua sin pagar (RF49)')
+    expect(dato(panel, 'Fecha de exigibilidad')).toHaveTextContent('14/08/2026Cuota más antigua sin pagar')
     expect(dato(panel, 'Días de mora')).toHaveTextContent('47 días')
     expect(dato(panel, 'Cuotas en mora')).toHaveTextContent('2 cuotas en mora')
     expect(panel).toHaveTextContent('La última extracción no trajo pagos de esta obligación.')
-    expect(within(panel).getByText(/Se aplican de la cuota más antigua a la más reciente/)).toHaveTextContent('por confirmar')
+    expect(within(panel).getByText(/Se aplican de la cuota más antigua a la más reciente/)).not.toHaveTextContent('por confirmar')
   })
 
   test('cierre en Saldada: fecha, modo y tipo de pago, candado y cuota en $0 (RF12, RF13, RF52)', async () => {
@@ -247,16 +247,16 @@ describe('pantalla 9 · detalle', () => {
     expect(dato(panel, 'Saldo')).toHaveTextContent('$0')
     expect(dato(panel, 'Valor en mora')).toHaveTextContent('$0')
     expect(dato(panel, 'Valor de la cuota')).toHaveTextContent('$0Antes $85.000: al cerrar se reporta en $0')
-    expect(panel).toHaveTextContent('Se reporta una sola vez, en el corte en que cerró (30/09/2026), y después ya noRF13')
+    expect(panel).toHaveTextContent('Se reporta una sola vez, en el corte en que cerró (30/09/2026), y después ya no')
     const pagos = within(panel).getByRole('table', { name: 'Pagos extraídos del sistema comercial' })
     expect(pagos).toHaveTextContent('30/09/2026$170.000Cuotas del 2026-08-12 y del 2026-09-12 (pago total)')
   })
 
-  test('cierre sin fecha de pago: avisa que no se reporta (RF22)', async () => {
+  test('cierre sin fecha de pago: avisa que no se reporta', async () => {
     editar('2259-1092', { cierre: { ...db.obligaciones[2].cierre, fecha_pago: null } })
     await abrir()
     const panel = await abrirDetalle('2259-1092')
-    expect(dato(panel, 'Cierre')).toHaveTextContent('Falta la fecha de pago: el cierre no se reporta (RF22)')
+    expect(dato(panel, 'Cierre')).toHaveTextContent('Falta la fecha de pago: el cierre no se reporta')
   })
 
   test('movimiento después del cierre: alerta de rectificación (RF13, RF16)', async () => {
@@ -264,7 +264,7 @@ describe('pantalla 9 · detalle', () => {
     await abrir()
     const panel = await abrirDetalle('2241-3302')
     expect(within(panel).getByRole('status')).toHaveTextContent('El sistema comercial muestra movimiento después del cierre')
-    expect(panel).toHaveTextContent('Se reporta una sola vez, en el corte en que cerró (31/08/2026), y después ya noRF16')
+    expect(panel).toHaveTextContent('Se reporta una sola vez, en el corte en que cerró (31/08/2026), y después ya no')
   })
 
   test('crédito caducado en Dudoso recaudo y sus transiciones (RF14, RF15, RF45, RF46)', async () => {
@@ -273,10 +273,10 @@ describe('pantalla 9 · detalle', () => {
     expect(dato(panel, 'En el SAC')).toHaveTextContent('Crédito caducadoCaduca a las 4 cuotas atrasadas · lleva 6')
     const reglas = within(panel).getByRole('heading', { name: 'Qué puede pasar con esta obligación' }).nextElementSibling
     expect(within(reglas).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Pago total → 07 · Castigada recuperadaRF15',
-      'Paga la mora sin cancelar el saldo → 01 · VigenteRF46por confirmar',
-      'Castigo contable de CENS → 06 · CastigadaRF45',
-      'Refinanciación → 07 · Castigada recuperada con modo de extinción 16RF18',
+      'Pago total → 07 · Castigada recuperada',
+      'Paga la mora sin cancelar el saldo → 01 · Vigente',
+      'Castigo contable de CENS → 06 · Castigada',
+      'Refinanciación → 07 · Castigada recuperada con modo de extinción 16',
     ])
   })
 
@@ -287,15 +287,15 @@ describe('pantalla 9 · detalle', () => {
     expect(dato(panel, 'En el SAC')).toHaveTextContent('No caducadoCaduca a las 4 cuotas atrasadas · lleva 3')
   })
 
-  test('en Vigente, la caducidad del crédito lleva «por confirmar» (RF12, RF14, RF45, RF18)', async () => {
+  test('en Vigente, la caducidad del crédito sin marcas internas (RF12, RF14, RF45, RF18)', async () => {
     await abrir()
     const panel = await abrirDetalle('2257-4156')
     const reglas = within(panel).getByRole('heading', { name: 'Qué puede pasar con esta obligación' }).nextElementSibling
     expect(within(reglas).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Pago total → 02 · SaldadaRF12',
-      'Crédito caducado en el SAC y con mora → 03 · Dudoso recaudoRF14por confirmar',
-      'Castigo contable de CENS y con mora → 06 · CastigadaRF45',
-      'Refinanciación → 02 · Saldada con modo de extinción 16RF18',
+      'Pago total → 02 · Saldada',
+      'Crédito caducado en el SAC y con mora → 03 · Dudoso recaudo',
+      'Castigo contable de CENS y con mora → 06 · Castigada',
+      'Refinanciación → 02 · Saldada con modo de extinción 16',
     ])
   })
 
@@ -303,8 +303,8 @@ describe('pantalla 9 · detalle', () => {
     await abrir()
     const panel = await abrirDetalle('2244-6410')
     expect(panel).toHaveTextContent('Transportes Catatumbo S.A.S. · 06 · Castigada')
-    expect(panel).toHaveTextContent('Sigue en Castigada mientras tenga moraRF45')
-    expect(panel).toHaveTextContent('Pago total → 07 · Castigada recuperadaRF15')
+    expect(panel).toHaveTextContent('Sigue en Castigada mientras tenga mora')
+    expect(panel).toHaveTextContent('Pago total → 07 · Castigada recuperada')
     expect(dato(panel, 'Edad de mora (Tabla 9)')).toHaveTextContent('08 - Mora 240')
   })
 
@@ -314,7 +314,7 @@ describe('pantalla 9 · detalle', () => {
     })
     await abrir()
     const panel = await abrirDetalle('2257-4156')
-    expect(dato(panel, 'Pago de la mora (RF47)')).toHaveTextContent('20/09/2026Modo 01 · Voluntario · Tipo de pago 01 · Voluntario · Valor pagado $98.000')
+    expect(dato(panel, 'Pago de la mora')).toHaveTextContent('20/09/2026Modo 01 · Voluntario · Tipo de pago 01 · Voluntario · Valor pagado $98.000')
   })
 
   test('con edad 14 muestra los años en mora (RF49)', async () => {
@@ -322,18 +322,18 @@ describe('pantalla 9 · detalle', () => {
     await abrir()
     const panel = await abrirDetalle('2261-8820')
     expect(dato(panel, 'Días de mora')).toHaveTextContent('800 días')
-    expect(dato(panel, 'Edad de mora (Tabla 9)')).toHaveTextContent('14 - Mora 730Años en mora: 2 (RF49)')
+    expect(dato(panel, 'Edad de mora (Tabla 9)')).toHaveTextContent('14 - Mora 730Años en mora: 2')
   })
 
   test('reestructurada: naturaleza por confirmar y enlace a la obligación anterior (RF18)', async () => {
     await abrir('/obligaciones?obligacion=12')
     const panel = await screen.findByRole('dialog', { name: 'Obligación 2271-5502' })
-    expect(dato(panel, 'Obligación reestructurada')).toHaveTextContent('01 · Sí (1)Naturaleza 07 · Otrapor confirmar · viene de 2255-7788')
+    expect(dato(panel, 'Obligación reestructurada')).toHaveTextContent('01 · Sí (1)Naturaleza 07 · Otra · viene de 2255-7788')
     await userEvent.click(within(panel).getByRole('button', { name: 'Ver el detalle de la obligación 2255-7788' }))
     const anterior = await screen.findByRole('dialog', { name: 'Obligación 2255-7788' })
     expect(anterior).toContainElement(document.activeElement) // el foco no se sale del panel
     expect(dato(anterior, 'Cierre')).toHaveTextContent('Modo 16 · Refinanciación · Tipo de pago 02 · No voluntario')
-    expect(dato(anterior, 'Refinanciada en (RF18)')).toHaveTextContent('2271-5502')
+    expect(dato(anterior, 'Refinanciada en')).toHaveTextContent('2271-5502')
   })
 
   test('la línea de tiempo va del evento más reciente al más antiguo', async () => {

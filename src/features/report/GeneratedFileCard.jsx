@@ -32,7 +32,7 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         </div>
       )}
       <dl className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Dato etiqueta="Obligaciones (registros 2)" valor={archivo.nRegistros} nota={`${plural(archivo.totalRegistros, 'registro', 'registros')} con el 1 y el 9`} />
+        <Dato etiqueta="Obligaciones incluidas" valor={archivo.nRegistros} nota={`${plural(archivo.totalRegistros, 'línea', 'líneas')}, con encabezado y totales`} />
         <Dato etiqueta="No incluidas" valor={archivo.nExcluidas} nota="Cerradas antes o eliminadas" />
         <Dato etiqueta="Fecha de corte" valor={formatearFechaISOLarga(archivo.fechaCorte)} />
         <Dato
@@ -46,7 +46,7 @@ export default function GeneratedFileCard({ archivo, onDescargar, descargando })
         Descargar archivo
       </Button>
       <p className="mt-2 text-xs text-muted">
-        Texto de longitud fija en Windows-1252: registro 1 (29 caracteres), un registro 2 por obligación ({archivo.longitudRegistroTipo2} caracteres) y registro 9 (33).
+        Archivo de texto de longitud fija.
       </p>
     </Card>
   )

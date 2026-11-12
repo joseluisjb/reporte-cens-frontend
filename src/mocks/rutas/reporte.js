@@ -13,7 +13,7 @@ import { aEntidad } from './entidad'
 const SIN_CORTE = { detail: 'Corte no encontrado.' }
 const SIN_ARCHIVO = { detail: 'Archivo no encontrado.' }
 const LONGITUD_REGISTRO_2 = 930 // parámetro del backend; el Manual declara 930 y sus campos suman 929 (por confirmar)
-const MOTIVO_NO_APTO = 'La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.'
+const MOTIVO_NO_APTO = 'Faltan los datos de la entidad ante TransUnion: el archivo sería rechazado.'
 
 const buscarCorte = (id) => db.cortes.find((c) => c.id === idDeRuta(id) && c.estado !== 'ANULADO') ?? null
 // Del más reciente al más antiguo; dos generados en el mismo segundo se ordenan por id.

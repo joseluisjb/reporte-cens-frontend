@@ -42,13 +42,13 @@ export const obligacionesIniciales = () => [
   obligacion({
     id: 1, numero: '2257-4156', titular: 'Carlos Andrés Rueda', concepto: 30, estado: '01', saldo: 1276016, cuota: 98000,
     valor_inicial: 1600000, ingreso: '2026-03-31', vencidas: cuotas(['2026-09-07', 98000]),
-    eventos: eventos(['2026-03-31', '01', 'Primer reporte en Vigente (01), al día'], ['2026-09-30', '01', 'Una cuota sin pagar: 23 días de mora (edad 00, con valor en mora)']),
+    eventos: eventos(['2026-03-31', '01', 'Primer reporte en Vigente, al día'], ['2026-09-30', '01', 'Una cuota sin pagar: 23 días de mora (edad 00, con valor en mora)']),
   }),
   obligacion({
     id: 2, numero: '2258-7731', titular: 'María Fernanda Ortiz', concepto: 3625, estado: '01', saldo: 842300, cuota: 70000,
     valor_inicial: 1050000, ingreso: '2026-02-28', vencidas: cuotas(['2026-08-14', 70000], ['2026-09-14', 70000]),
     eventos: eventos(
-      ['2026-02-28', '01', 'Primer reporte en Vigente (01), al día'],
+      ['2026-02-28', '01', 'Primer reporte en Vigente, al día'],
       ['2026-08-31', '01', 'Primera cuota sin pagar: 17 días de mora'],
       ['2026-09-30', '01', 'Dos cuotas sin pagar: 47 días desde la más antigua, edad 01', '01'],
     ),
@@ -59,9 +59,9 @@ export const obligacionesIniciales = () => [
     cierre: { fecha_corte: '2026-09-30', fecha_pago: '2026-09-12', modo_extincion: VOLUNTARIO, tipo_pago: VOLUNTARIO },
     pagos: [{ fecha_corte: '2026-09-30', valor: 170000, aplicado_a: 'Cuotas del 2026-08-12 y del 2026-09-12 (pago total)', nota: null }],
     eventos: eventos(
-      ['2025-11-30', '01', 'Primer reporte en Vigente (01), al día'],
+      ['2025-11-30', '01', 'Primer reporte en Vigente, al día'],
       ['2026-08-31', '01', 'Una cuota sin pagar: 19 días de mora'],
-      ['2026-09-12', '02', 'Pago total: pasa a Saldada (02). Fecha de pago 12/09/2026, modo de extinción 01, tipo de pago 01'],
+      ['2026-09-12', '02', 'Pago total: pasa a Saldada. Fecha de pago 12/09/2026, modo de extinción 01, tipo de pago 01'],
       ['2026-09-30', '02', 'Se reporta como Saldada en este corte, una sola vez'],
     ),
   }),
@@ -70,24 +70,24 @@ export const obligacionesIniciales = () => [
     valor_inicial: 4300000, ingreso: '2025-12-31', atrasos_permitidos: 6, en_reclamo: true,
     vencidas: cuotas(['2026-06-10', 215000], ['2026-07-10', 215000], ['2026-08-10', 215000], ['2026-09-10', 215000]),
     eventos: eventos(
-      ['2025-12-31', '01', 'Primer reporte en Vigente (01), al día'],
+      ['2025-12-31', '01', 'Primer reporte en Vigente, al día'],
       ['2026-06-30', '01', 'Primera cuota sin pagar: 20 días de mora'],
       ['2026-07-31', '01', '51 días desde la cuota más antigua sin pagar', '01'],
       ['2026-08-31', '01', '82 días desde la cuota más antigua sin pagar', '02'],
       ['2026-09-22', '01', 'Marcada en reclamo Habeas Data (Pago no reflejado). Se sigue reportando', '03'],
-      ['2026-09-30', '01', '112 días. Su crédito caduca en el SAC a las 6 cuotas atrasadas (lleva 4)', '03'],
+      ['2026-09-30', '01', '112 días. Su crédito caduca en el sistema comercial a las 6 cuotas atrasadas (lleva 4)', '03'],
     ),
   }),
   obligacion({
     id: 5, numero: '2261-8820', titular: 'Luis Fernando Cáceres', concepto: 30, estado: '01', saldo: 498700, cuota: 41000,
     valor_inicial: 615000, ingreso: '2026-01-31', vencidas: cuotas(['2026-09-15', 41000]),
-    eventos: eventos(['2026-01-31', '01', 'Primer reporte en Vigente (01), al día'], ['2026-09-30', '01', 'Una cuota sin pagar: 15 días de mora']),
+    eventos: eventos(['2026-01-31', '01', 'Primer reporte en Vigente, al día'], ['2026-09-30', '01', 'Una cuota sin pagar: 15 días de mora']),
   }),
   obligacion({
     id: 6, numero: '2262-3318', titular: 'Centro Educativo Las Palmas', concepto: 3839, estado: '01', saldo: 1904120, cuota: 160000,
     valor_inicial: 2400000, ingreso: '2026-04-30', en_reclamo: true, vencidas: cuotas(['2026-08-23', 160000], ['2026-09-23', 160000]),
     eventos: eventos(
-      ['2026-04-30', '01', 'Primer reporte en Vigente (01), al día'],
+      ['2026-04-30', '01', 'Primer reporte en Vigente, al día'],
       ['2026-08-31', '01', 'Primera cuota sin pagar: 8 días de mora'],
       ['2026-09-18', '01', 'Marcada en reclamo Habeas Data (Información incorrecta). Se sigue reportando'],
       ['2026-09-30', '01', '38 días desde la cuota más antigua sin pagar', '01'],
@@ -98,8 +98,8 @@ export const obligacionesIniciales = () => [
     valor_inicial: 6480000, ingreso: '2025-06-30', caducado: true,
     vencidas: cuotas(['2026-04-27', 270000], ['2026-05-27', 270000], ['2026-06-27', 270000], ['2026-07-27', 270000], ['2026-08-27', 270000], ['2026-09-27', 270000]),
     eventos: eventos(
-      ['2025-06-30', '01', 'Primer reporte en Vigente (01), al día'],
-      ['2026-07-31', '03', 'Crédito caducado en el SAC (4 cuotas atrasadas): pasa a Dudoso Recaudo (03)', '03'],
+      ['2025-06-30', '01', 'Primer reporte en Vigente, al día'],
+      ['2026-07-31', '03', 'Crédito caducado en el sistema comercial (4 cuotas atrasadas): pasa a Dudoso recaudo', '03'],
       ['2026-09-30', '03', '156 días desde la cuota más antigua sin pagar', '05'],
     ),
   }),
@@ -111,9 +111,9 @@ export const obligacionesIniciales = () => [
       ['2026-06-02', 190000], ['2026-07-02', 190000], ['2026-08-02', 190000], ['2026-09-02', 190000],
     ),
     eventos: eventos(
-      ['2025-01-31', '01', 'Primer reporte en Vigente (01), al día'],
-      ['2026-05-31', '03', 'Crédito caducado en el SAC: pasa a Dudoso Recaudo (03)', '03'],
-      ['2026-07-31', '06', 'CENS la castigó contablemente (marca de castigo del SAC): pasa a Castigada (06)', '05'],
+      ['2025-01-31', '01', 'Primer reporte en Vigente, al día'],
+      ['2026-05-31', '03', 'Crédito caducado en el sistema comercial: pasa a Dudoso recaudo', '03'],
+      ['2026-07-31', '06', 'CENS la castigó contablemente (marca de castigo del sistema comercial): pasa a Castigada', '05'],
       ['2026-09-30', '06', '240 días desde la cuota más antigua sin pagar', '08'],
     ),
   }),
@@ -122,24 +122,24 @@ export const obligacionesIniciales = () => [
     valor_inicial: 1200000, ingreso: '2025-02-28',
     cierre: { fecha_corte: '2026-08-31', fecha_pago: '2026-08-20', modo_extincion: VOLUNTARIO, tipo_pago: VOLUNTARIO },
     eventos: eventos(
-      ['2025-02-28', '01', 'Primer reporte en Vigente (01), al día'],
-      ['2026-02-28', '03', 'Crédito caducado en el SAC: pasa a Dudoso Recaudo (03)', '04'],
-      ['2026-08-20', '07', 'Pago total estando en Dudoso Recaudo: pasa a Castigada recuperada (07)'],
+      ['2025-02-28', '01', 'Primer reporte en Vigente, al día'],
+      ['2026-02-28', '03', 'Crédito caducado en el sistema comercial: pasa a Dudoso recaudo', '04'],
+      ['2026-08-20', '07', 'Pago total estando en Dudoso recaudo: pasa a Castigada recuperada'],
       ['2026-08-31', '07', 'Se reportó como Castigada recuperada en el corte 31/08/2026. Desde septiembre ya no se reporta'],
     ),
   }),
   obligacion({
     id: 10, numero: '2263-9004', titular: 'Ferretería La Esquina', concepto: 3588, estado: '01', saldo: 1450000, cuota: 120000,
     valor_inicial: 1450000, ingreso: '2026-09-30', primer_reporte: true,
-    eventos: eventos(['2026-09-30', '01', 'Ingresa en este corte: primer reporte en Vigente (01), al día']),
+    eventos: eventos(['2026-09-30', '01', 'Ingresa en este corte: primer reporte en Vigente, al día']),
   }),
   obligacion({
     id: 11, numero: '2255-7788', titular: 'Inversiones Pamplona S.A.S.', concepto: 3801, estado: '02', saldo: 0, cuota: 0, cuota_antes_cierre: 230000,
     valor_inicial: 4600000, ingreso: '2025-08-31', refinanciada_en: { obligacion_id: 12, numero_obligacion: '2271-5502' },
     cierre: { fecha_corte: '2026-09-30', fecha_pago: '2026-09-28', modo_extincion: REFINANCIACION, tipo_pago: NO_VOLUNTARIO },
     eventos: eventos(
-      ['2025-08-31', '01', 'Primer reporte en Vigente (01), al día'],
-      ['2026-09-28', '02', 'Refinanciada: se cierra en Saldada (02) con modo de extinción 16 Refinanciación'],
+      ['2025-08-31', '01', 'Primer reporte en Vigente, al día'],
+      ['2026-09-28', '02', 'Refinanciada: se cierra en Saldada con modo de extinción Refinanciación'],
     ),
   }),
   obligacion({
@@ -150,7 +150,7 @@ export const obligacionesIniciales = () => [
       naturaleza: { codigo: '07', descripcion: 'Otra', confirmado: false },
       obligacion_anterior: { obligacion_id: 11, numero_obligacion: '2255-7788' },
     },
-    eventos: eventos(['2026-09-28', '01', 'Nueva obligación por la refinanciación de 2255-7788: primer reporte en Vigente (01), marcada como reestructurada']),
+    eventos: eventos(['2026-09-28', '01', 'Nueva obligación por la refinanciación de 2255-7788: primer reporte en Vigente, marcada como reestructurada']),
   }),
 ]
 
@@ -165,7 +165,7 @@ export const FINANCIACIONES_NUEVAS = [
 const ORDEN_ESTADOS = ['01', '03', '06', '02', '07', '04', '08', '10', '11', '12']
 
 const diasEntre = (desde, hasta) => Math.round((Date.parse(hasta) - Date.parse(desde)) / 86400000)
-export const estadoTexto = (codigo) => `${codigo} · ${descripcionEstado(codigo)}`
+export const estadoTexto = (codigo) => descripcionEstado(codigo)
 
 // Mora al corte: cuotas vencidas sin pagar, de la más antigua a la más reciente (RF7, RF17, RF19, RF49).
 function moraAlCorte(o, corte = FECHA_ULTIMO_CICLO) {
@@ -192,21 +192,21 @@ function posiblesTransiciones(o) {
   }
   if (o.estado === '01') {
     return [
-      regla('RF12', `Pago total → ${estadoTexto('02')}`),
-      regla('RF14', `Crédito caducado en el SAC y con mora → ${estadoTexto('03')}`, true),
-      regla('RF45', `Castigo contable de CENS y con mora → ${estadoTexto('06')}`),
-      regla('RF18', `Refinanciación → ${estadoTexto('02')} con modo de extinción 16`),
+      regla('RF12', `Pago total: pasa a ${estadoTexto('02')}`),
+      regla('RF14', `Crédito caducado con mora: pasa a ${estadoTexto('03')}`, true),
+      regla('RF45', `Castigo contable: pasa a ${estadoTexto('06')}`),
+      regla('RF18', `Refinanciación: pasa a ${estadoTexto('02')}`),
     ]
   }
-  // 04, 08, 10, 11 y 12: el mockup no les da reglas propias; el cambio lo decide la Matriz.
+  // 04, 08, 10, 11 y 12: el mockup no les da reglas propias; el cambio lo deciden las reglas de TransUnion.
   if (o.estado !== '03' && o.estado !== '06') {
-    return [regla('RF48', `Desde ${estadoTexto(o.estado)}, cada cambio de estado se valida con la Matriz de cambios de estado`, true)]
+    return [regla('RF48', `Desde ${estadoTexto(o.estado)}, cada cambio de estado se revisa con las reglas de TransUnion`, true)]
   }
   return [
-    regla('RF15', `Pago total → ${estadoTexto('07')}`),
-    regla('RF46', `Paga la mora sin cancelar el saldo → ${estadoTexto('01')}`, true),
-    o.estado === '03' ? regla('RF45', `Castigo contable de CENS → ${estadoTexto('06')}`) : regla('RF45', 'Sigue en Castigada mientras tenga mora'),
-    regla('RF18', `Refinanciación → ${estadoTexto('07')} con modo de extinción 16`),
+    regla('RF15', `Pago total: pasa a ${estadoTexto('07')}`),
+    regla('RF46', `Normalización: pasa a ${estadoTexto('01')}`, true),
+    o.estado === '03' ? regla('RF45', `Castigo contable: pasa a ${estadoTexto('06')}`) : regla('RF45', 'Sigue en Castigada mientras tenga mora'),
+    regla('RF18', `Refinanciación: pasa a ${estadoTexto('07')}`),
   ]
 }
 

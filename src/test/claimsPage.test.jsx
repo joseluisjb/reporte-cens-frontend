@@ -26,7 +26,7 @@ const abrirRegistro = async () => {
 }
 async function llenarRegistro(modal, { numero = '2258-7731', tipologia = '02', fecha, observacion } = {}) {
   await userEvent.selectOptions(within(modal).getByLabelText('Obligación'), within(modal).getByRole('option', { name: new RegExp(`^${numero} · `) }))
-  await userEvent.selectOptions(within(modal).getByLabelText(/Tipología del reclamo/), tipologia)
+  await userEvent.selectOptions(within(modal).getByLabelText(/Tipo de reclamo/), tipologia)
   if (fecha !== undefined) {
     const campo = within(modal).getByLabelText('Fecha del reclamo')
     await userEvent.clear(campo)
@@ -44,7 +44,7 @@ describe('pantalla 13 · lista', () => {
     expect(screen.getByText('Obligaciones en reclamo').previousSibling).toHaveTextContent('2')
     expect(screen.getByText(/Una obligación en reclamo/)).toHaveTextContent('se sigue reportando')
     const tabla = screen.getByRole('table', { name: TABLA })
-    expect(within(tabla).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Obligación', 'Tipología y observación', 'Fecha del reclamo', 'Estado', 'Archivo', 'Acciones'])
+    expect(within(tabla).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Obligación', 'Motivo y observación', 'Fecha del reclamo', 'Estado', 'Archivo', 'Acciones'])
     expect(filaDe('2260-5543')).toHaveTextContent('Pendiente de marcación')
     expect(filaDe('2262-3318')).toHaveTextContent('Marcación generada')
     expect(filaDe('2241-3302')).toHaveTextContent('CerradoProcedente · 20/09/2026')
@@ -123,7 +123,7 @@ describe('pantalla 13 · registrar un reclamo', () => {
     const modal = await abrirRegistro()
     await llenarRegistro(modal, { tipologia: '01' })
     expect(await within(modal).findByText('Selecciona una tipología válida de la Ley 1266.')).toBeInTheDocument()
-    expect(within(modal).getByLabelText(/Tipología del reclamo/)).toHaveAttribute('aria-invalid', 'true')
+    expect(within(modal).getByLabelText(/Tipo de reclamo/)).toHaveAttribute('aria-invalid', 'true')
   })
 
   test('una fecha futura se rechaza en el cliente, sin llamar al servidor', async () => {
@@ -139,7 +139,7 @@ describe('pantalla 13 · registrar un reclamo', () => {
   test('la tipología no lleva marcas de «por confirmar»', async () => {
     await abrir()
     const modal = await abrirRegistro()
-    expect(within(modal).getByText('Tipología del reclamo').parentElement).not.toHaveTextContent('por confirmar')
+    expect(within(modal).getByText('Tipo de reclamo').parentElement).not.toHaveTextContent('por confirmar')
   })
 
   test('si no cargan las obligaciones lo dice y «Reintentar» las vuelve a pedir', async () => {

@@ -206,12 +206,12 @@ describe('arranque en frío del servidor', () => {
         </MemoryRouter>
       </AuthContext.Provider>,
     )
-    const aviso = /conectando con el servidor/i
+    const aviso = /estamos conectando con el sistema/i
     expect(screen.getByRole('status', { name: 'Cargando' })).toBeInTheDocument()
     act(() => vi.advanceTimersByTime(AVISO_LENTO_MS - 1))
     expect(screen.queryByText(aviso)).not.toBeInTheDocument()
     act(() => vi.advanceTimersByTime(1))
-    expect(screen.getByText(aviso)).toHaveTextContent('puede tardar hasta un minuto')
+    expect(screen.getByText(aviso)).toHaveTextContent('Puede tardar hasta un minuto')
     expect(screen.getByRole('status')).toContainElement(screen.getByText(aviso))
   })
 })

@@ -103,7 +103,7 @@ export function leerResultados(archivosCargados, { archivo, obligacionId }) {
   if (!archivosCargados.length) throw new ArchivoRechazado('Adjunta al menos un archivo de resultados de TransUnion.', 'estructura_invalida')
   const leidos = archivosCargados.map(({ nombre, texto }) => {
     const reconocido = reconocer(nombre)
-    if (!reconocido) throw sinEstructura(nombre, 'el nombre no es el de un archivo de resultados de TransUnion, Manual p. 43')
+    if (!reconocido) throw sinEstructura(nombre, 'el nombre no es el de un archivo de resultados de TransUnion')
     if (reconocido.fecha !== archivo.fecha_corte) throw deOtroCorte(nombre, reconocido.fecha, archivo.fecha_corte)
     const filas = filasDe(nombre, texto)
     let inconsistencias = []

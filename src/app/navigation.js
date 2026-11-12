@@ -13,8 +13,7 @@ export const SOLO_ANALISTA = [ROLES.ANALISTA]
 
 export const SECCIONES = ['Extracción', 'Ciclo de vida', 'Reporte a TransUnion', 'Administración']
 
-// Las pantallas de la Iteración 2 que todavía no existen usan EnConstruccion.<Pantalla> (import estático:
-// un nombre mal escrito falla en lint y build, no al abrir la ruta).
+// Cada pantalla se carga bajo demanda (`lazy`): la ruta solo baja su código al abrirla.
 
 export const NAV_ITEMS = [
   { path: '/panel', label: 'Inicio', icon: 'home', roles: null, section: null, Page: lazy(() => import('../features/home/HomePage')) },

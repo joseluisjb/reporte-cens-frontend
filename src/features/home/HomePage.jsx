@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { Badge, Card, Icon, PageHeader, Spinner, TextLink } from '../../components/ui'
 import { formatearCOP, formatearFechaISO, plural } from '../../lib/format'
+import { estadoCorteTexto } from '../../lib/textos'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { useAuth } from '../auth/authContext'
 import { ROLES } from '../auth/roles'
@@ -98,7 +99,7 @@ function TarjetaUltimaExtraccion() {
         </div>
         {resultado.estado === 'listo' && resultado.corte && (
           <Badge tone={resultado.corte.esEnviado ? 'ok' : resultado.corte.esValidado ? 'admin' : 'off'}>
-            {resultado.corte.estado}
+            {estadoCorteTexto(resultado.corte.estado)}
           </Badge>
         )}
       </div>

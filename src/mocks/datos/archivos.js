@@ -26,7 +26,7 @@ export const archivosIniciales = () => [
     saldo_total: 21863586,
     longitud_registro_tipo2: 930,
     apto_envio: false,
-    motivo_no_apto: 'La entidad tiene datos con relleno (XXX): TransUnion lo rechazaría.',
+    motivo_no_apto: 'Faltan los datos de la entidad ante TransUnion: el archivo sería rechazado.',
     enviado: false,
     fecha_envio: null,
     estado_corte: 'VALIDADO',

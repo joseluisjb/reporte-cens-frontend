@@ -41,7 +41,7 @@ export function cicloConRechazosYRevisiones() {
       {
         obligacion_id: 16, numero_obligacion: '2268-1100', nombre_titular: 'Papelería El Cuaderno', estado_anterior: null, estado_nuevo: '01',
         edad_anterior: null, edad_nueva: '00', primer_reporte: true, requiere_revision: true,
-        reglas: [regla('RF10', 'Entra con su estado y su mora reales'), regla('RF14', 'Crédito caducado en el SAC sin mora: entra en Vigente y queda para revisión', true)],
+        reglas: [regla('RF10', 'Entra con su estado y su mora reales'), regla('RF14', 'Crédito caducado en el sistema comercial sin mora: entra en Vigente y queda para revisión', true)],
       },
       {
         obligacion_id: 1, numero_obligacion: '2257-4156', nombre_titular: 'Carlos Andrés Rueda', estado_anterior: '01', estado_nuevo: '01',
@@ -57,11 +57,11 @@ export function cicloConRechazosYRevisiones() {
     rechazos: [
       {
         obligacion_id: 15, numero_obligacion: '2267-3361', nombre_titular: 'Taller Mecánico Los Pinos', estado_anterior: null, estado_calculado: '07',
-        codigo: '881', motivo: 'Error 881: estado no permitido en primer reporte',
+        codigo: '881', motivo: 'TransUnion no acepta ese estado en el primer reporte',
       },
       {
         obligacion_id: 3, numero_obligacion: '2259-1092', nombre_titular: 'Jorge Iván Salcedo', estado_anterior: '02', estado_calculado: '03',
-        codigo: '713', motivo: 'Error 713: la matriz no permite pasar de Saldada sin mora a Dudoso Recaudo',
+        codigo: '713', motivo: 'TransUnion no acepta pasar de Saldada a Dudoso recaudo',
       },
     ],
   }

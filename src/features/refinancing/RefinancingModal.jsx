@@ -95,7 +95,7 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
       open
       onClose={onCerrar}
       title="Registrar refinanciación"
-      subtitle="Respaldo manual: normalmente el sistema la detecta en el SAC al hacer la extracción."
+      subtitle="Respaldo manual: normalmente el sistema la detecta solo al hacer la extracción."
       footer={
         <>
           <Button variant="ghost" onClick={onCerrar}>
@@ -123,7 +123,7 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
         </div>
       )}
       {!opciones && !errorCarga && (
-        <div role="status" aria-label="Cargando las obligaciones y la Tabla 11" className="flex justify-center p-8">
+        <div role="status" aria-label="Cargando las obligaciones y las naturalezas" className="flex justify-center p-8">
           <Spinner className="size-6" />
         </div>
       )}
@@ -145,13 +145,13 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
             ))}
           </Select>
           <Select
-            label="Naturaleza de la reestructuración (Tabla 11)"
+            label="Naturaleza de la reestructuración"
             {...form.campo('naturaleza')}
           >
             <option value="">Selecciona la naturaleza…</option>
             {opciones.naturalezas.map((n) => (
               <option key={n.codigo} value={n.codigo}>
-                {n.codigo} · {n.descripcion}
+                {n.descripcion}
               </option>
             ))}
           </Select>
@@ -176,8 +176,8 @@ function Formulario({ obligacionInicial, onCerrar, onRegistrada }) {
             </Alert>
           ) : (
             <Alert tone="aviso">
-              TransUnion no acepta pasar de {elegida.estado?.codigo} · {elegida.estado?.descripcion} a <EstadoBadge codigo={cierre} /> (error 713). Define el
-              tratamiento con CENS.
+              TransUnion no acepta pasar de {elegida.estado?.descripcion} a <EstadoBadge codigo={cierre} />. Consulta con CENS cómo tratar esta
+              obligación antes de refinanciarla.
             </Alert>
           )}
           {aviso && <Alert tone="aviso">{aviso}</Alert>}
@@ -196,8 +196,8 @@ function NotaCierre({ obligacion }) {
     <span>
       La obligación original pasa de <EstadoBadge codigo={obligacion.estado?.codigo} descripcion={obligacion.estado?.descripcion} /> a{' '}
       <EstadoBadge codigo={cierre} />
-      {' '}con modo de extinción <b>16 · Refinanciación</b> y tipo de pago{' '}
-      <b>02 · No voluntario</b>. La nueva entra en <b>primer reporte</b> en Vigente (01), marcada como reestructurada.
+      {' '}con modo de extinción <b>Refinanciación</b> y tipo de pago{' '}
+      <b>No voluntario</b>. La nueva entra en <b>primer reporte</b> en Vigente, marcada como reestructurada.
     </span>
   )
 }

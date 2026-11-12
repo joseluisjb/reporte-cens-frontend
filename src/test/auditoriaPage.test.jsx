@@ -18,7 +18,7 @@ const filtrar = () => userEvent.click(screen.getByRole('button', { name: 'Filtra
 describe('Log de auditoría', () => {
   test('el Administrador ve la primera página, más reciente primero, con rol y detalle', async () => {
     await abrir()
-    expect(screen.getByRole('heading', { name: 'Log de Auditoría del Sistema' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Registro de auditoría del sistema' })).toBeInTheDocument()
     expect(filas()).toHaveLength(20)
     expect(screen.getByText(`Mostrando 1–20 de ${TOTAL_REGISTROS_AUDITORIA} registros · Página 1 de 3`)).toBeInTheDocument()
     expect(within(filas()[0]).getByText('09/10/2026 17:20')).toBeInTheDocument() // el más reciente

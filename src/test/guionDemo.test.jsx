@@ -139,7 +139,7 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   // 9:30 extracción (Laura, Analista): corte en BORRADOR con obligaciones consolidadas
   await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /extracción de cartera/i }))
   expect(await screen.findByText('Corte #2 al 30/09/2026')).toBeInTheDocument()
-  expect(screen.getByText('BORRADOR')).toBeInTheDocument()
+  expect(screen.getByText('Borrador')).toBeInTheDocument()
   expect(await screen.findByText('TITULAR FICTICIO 01')).toBeInTheDocument()
   expect(screen.getByText('******0001')).toBeInTheDocument()
 
@@ -151,7 +151,7 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   fireEvent.change(fecha, { target: { value: '2026-10-05' } })
   await userEvent.click(boton('Iniciar extracción'))
   expect(
-    await screen.findByText('Ya existe un corte en BORRADOR con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.'),
+    await screen.findByText('Ya existe un corte en borrador con fecha 2026-09-30. Elimínelo o complételo antes de generar otro.'),
   ).toBeInTheDocument()
 
   // 11:30 regenerar el borrador del 30/09 con un grupo
@@ -162,12 +162,12 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
 
   // 12:30 validar y 13:30 registrar el envío (contrato 0.9: con un archivo apto del corte)
   await userEvent.click(await screen.findByRole('button', { name: 'Validar corte' }))
-  expect(await screen.findByText('VALIDADO')).toBeInTheDocument()
+  expect(await screen.findByText('Validado')).toBeInTheDocument()
   conArchivoApto(2)
   await userEvent.click(boton('Registrar envío a TransUnion'))
   const envio = within(screen.getByRole('dialog', { name: 'Registrar envío a TransUnion' }))
   await userEvent.click(envio.getByRole('button', { name: 'Confirmar envío' }))
-  expect(await screen.findByText('ENVIADO')).toBeInTheDocument()
+  expect(await screen.findByText('Enviado')).toBeInTheDocument()
 
   // los datos creados en la demo siguen ahí tras las recargas: Laura entra con su nueva contraseña
   await cerrarSesion(/^laura díaz/i)

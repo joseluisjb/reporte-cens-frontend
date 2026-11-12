@@ -82,11 +82,11 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
           'CAMBIOS_RECHAZADOS',
           'Cambios de estado y primer reporte',
           'correctiva',
-          `${plural(rechazos.length, 'obligación tiene', 'obligaciones tienen')} un cambio no permitido (error 713 u 881). Corrige el dato en el SAC, regenera la extracción y vuelve a ejecutar la actualización mensual.`,
+          `${plural(rechazos.length, 'obligación tiene', 'obligaciones tienen')} un cambio no permitido. Corrige el dato en el sistema comercial, regenera la extracción y vuelve a ejecutar la actualización mensual.`,
           ['RF10', 'RF14'],
           { obligaciones: rechazos.map((r) => referida(r, 'estado_tu', r.motivo)) },
         )
-      : resultado('CAMBIOS_RECHAZADOS', 'Cambios de estado y primer reporte', 'ok', 'Todos cumplen la matriz de TransUnion y las reglas de primer reporte.', ['RF10', 'RF14']),
+      : resultado('CAMBIOS_RECHAZADOS', 'Cambios de estado y primer reporte', 'ok', 'Todos cumplen las reglas de TransUnion.', ['RF10', 'RF14']),
   )
 
   // RF21: las activas del último corte enviado deben seguir en este. En el mock todas siguen (las
@@ -168,7 +168,7 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
   resultados.push(
     db.cortesConErrorForzado.includes(corte.id)
       ? resultado('SIN_IDENTIFICACION', 'Campos obligatorios', 'correctiva', 'Falta el tipo o el número de identificación.', ['RF53'])
-      : resultado('SIN_IDENTIFICACION', 'Campos obligatorios', 'ok', 'Todas tienen los campos obligatorios de Sector Real Servicios.', ['RF53']),
+      : resultado('SIN_IDENTIFICACION', 'Campos obligatorios', 'ok', 'Todas tienen los campos obligatorios.', ['RF53']),
   )
 
   resultados.push(
@@ -210,7 +210,7 @@ export function validacionesDelCorte(corte, { entidadConMarcador }) {
 
   resultados.push(
     entidadConMarcador
-      ? resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad', 'advertencia', 'Llevan relleno mientras TransUnion no los asigne: el archivo saldrá no apto para envío.', ['RF57'])
+      ? resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad', 'advertencia', 'Llevan datos provisionales mientras TransUnion no los asigne: el archivo saldrá no apto para envío.', ['RF57'])
       : resultado('ENTIDAD_CON_MARCADOR', 'Datos de la entidad', 'ok', 'Tipo de entidad, código de entidad y sucursal asignados por TransUnion.', ['RF57']),
   )
 

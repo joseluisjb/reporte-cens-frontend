@@ -9,7 +9,6 @@ import {
   Modal,
   Select,
   Spinner,
-  Tag,
 } from '../../components/ui'
 import { CONTROL } from '../../components/ui/Field'
 import { mensajeDeError } from '../../lib/api'
@@ -129,14 +128,7 @@ function Formulario({ onCerrar, onCreado, initialObligacionId }) {
           </Select>
 
           <Select
-            label={
-              <span className="flex items-center gap-1.5">
-                <span>Tipología del reclamo</span>
-                <Tag tone="info" className="text-xs">
-                  usar la lista de TransUnion
-                </Tag>
-              </span>
-            }
+            label="Tipo de reclamo"
             id="cl-tip"
             {...form.campo('tipologia')}
           >

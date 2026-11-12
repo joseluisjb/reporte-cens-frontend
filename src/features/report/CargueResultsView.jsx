@@ -7,8 +7,8 @@ import { Badge, Card, EmptyState, Table } from '../../components/ui'
 import { formatearFechaHora, formatearFechaISO } from '../../lib/format'
 
 const TIPOS = {
-  CORRECTIVA: { texto: 'Correctiva', tono: 'error' },
-  INFORMATIVA: { texto: 'Informativa', tono: 'aviso' },
+  CORRECTIVA: { texto: 'Debe corregirse', tono: 'error' },
+  INFORMATIVA: { texto: 'Solo aviso', tono: 'aviso' },
   NO_REPORTADA: { texto: 'No reportada', tono: 'aviso' },
 }
 
@@ -19,7 +19,7 @@ export default function CargueResultsView({ resultados }) {
     [resultados.recibidos, 'Registros recibidos'],
     [resultados.cargados, 'Cargados'],
     [resultados.conInconsistencias, 'Con inconsistencias'],
-    [resultados.noReportadas, 'No reportadas (R)'],
+    [resultados.noReportadas, 'No reportadas'],
   ]
   return (
     <Card as="section" aria-labelledby={id} className="mt-5 p-6">
@@ -62,14 +62,15 @@ export default function CargueResultsView({ resultados }) {
                   <Badge tone={TIPOS[i.tipo]?.tono ?? 'off'}>{TIPOS[i.tipo]?.texto ?? i.tipo}</Badge>
                 </td>
                 <td>
-                  <span className="font-mono">{i.codigo}</span> · {i.descripcion}
+                  <span title={`Código ${i.codigo}`}>{i.descripcion}</span>
+                  <span className="ml-1.5 font-mono text-xs text-muted">{i.codigo}</span>
                 </td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
-      <p className="mt-3 text-sm text-muted">Las correctivas se corrigen y se reenvían; las informativas no impiden el cargue.</p>
+      <p className="mt-3 text-sm text-muted">Lo que debe corregirse se corrige y se reenvía; los avisos no impiden el cargue.</p>
     </Card>
   )
 }

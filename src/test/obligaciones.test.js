@@ -158,12 +158,12 @@ describe('reglas de la revisión del PR #43', () => {
     expect(mapObligacionesFieldErrors({ estado_tu: 'Estado no válido.', cuotas_mora_min: 'x' })).toMatchObject({ estado: 'Estado no válido.', cuotasMoraMin: 'x' })
   })
 
-  test('en 04, 08, 10, 11 y 12 «Qué puede pasar» remite a la Matriz, con «por confirmar»', () => {
+  test('en 04, 08, 10, 11 y 12 «Qué puede pasar» remite a las reglas de TransUnion, con «por confirmar»', () => {
     for (const estado of ['04', '08', '10', '11', '12']) {
       const [regla, ...resto] = aDetalle({ ...obligacionesIniciales()[0], estado }).posibles_transiciones
       expect(resto).toHaveLength(0)
       expect(regla).toMatchObject({ rf: 'RF48', por_confirmar: true })
-      expect(regla.texto).toMatch(/Matriz de cambios de estado/)
+      expect(regla.texto).toMatch(/reglas de TransUnion/)
     }
   })
 

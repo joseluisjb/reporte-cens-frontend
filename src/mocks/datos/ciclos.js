@@ -54,7 +54,7 @@ export const cicloInicial = () => ({
       regla('RF12', 'Pago total: Saldada'),
     ]),
     transicion(11, '2255-7788', 'Inversiones Pamplona S.A.S.', '01', '02', '00', '00', [
-      regla('RF18', 'Refinanciada en 2271-5502: se cierra en Saldada con modo de extinción 16 Refinanciación'),
+      regla('RF18', 'Refinanciada en 2271-5502: se cierra en Saldada con modo de extinción Refinanciación'),
     ]),
   ],
   rechazos: [],
@@ -69,19 +69,19 @@ const NUEVAS = [
   obligacion({
     id: 13, numero: '2265-2208', titular: 'Panadería La Espiga', concepto: 30, estado: '01', saldo: 612000, cuota: 51000,
     valor_inicial: 612000, ingreso: '2026-10-31', primer_reporte: true,
-    eventos: eventos(['2026-10-31', '01', 'Primer reporte en Vigente (01), al día']),
+    eventos: eventos(['2026-10-31', '01', 'Primer reporte en Vigente, al día']),
   }),
   obligacion({
     id: 14, numero: '2266-7745', titular: 'Colegio San Rafael', concepto: 3839, estado: '01', saldo: 2210000, cuota: 184000,
     valor_inicial: 2210000, ingreso: '2026-10-31', primer_reporte: true, atrasos_permitidos: 6,
     vencidas: cuotas(['2026-09-05', 184000], ['2026-10-05', 184000]),
-    eventos: eventos(['2026-10-31', '01', 'Primer reporte en Vigente (01) con 56 días de mora', '01']),
+    eventos: eventos(['2026-10-31', '01', 'Primer reporte en Vigente con 56 días de mora', '01']),
   }),
   obligacion({
     id: 15, numero: '2267-3361', titular: 'Taller Mecánico Los Pinos', concepto: 3588, estado: '03', saldo: 934000, cuota: 78000,
     valor_inicial: 934000, ingreso: '2026-10-31', primer_reporte: true, caducado: true,
     vencidas: cuotas(['2026-07-10', 78000], ['2026-08-10', 78000], ['2026-09-10', 78000], ['2026-10-10', 78000]),
-    eventos: eventos(['2026-10-31', '03', 'Primer reporte en Dudoso Recaudo (03) con 113 días de mora (crédito caducado en el SAC)', '03']),
+    eventos: eventos(['2026-10-31', '03', 'Primer reporte en Dudoso recaudo con 113 días de mora (crédito caducado en el sistema comercial)', '03']),
   }),
 ]
 
@@ -109,7 +109,7 @@ const CAMBIOS = {
     estado: '02', saldo: 0, cuota: 0, cuota_antes_cierre: 41000, vencidas: [],
     cierre: { fecha_corte: '2026-10-31', fecha_pago: '2026-10-20', modo_extincion: VOLUNTARIO, tipo_pago: VOLUNTARIO },
     pagos: [pago(498700, 'cuota del 15/09/2026, cuota del 15/10/2026', 'Pagó todo el saldo')],
-    eventos: [['2026-10-31', '02', 'Pago total: pasa a Saldada (02). Se reporta en este corte, una sola vez']],
+    eventos: [['2026-10-31', '02', 'Pago total: pasa a Saldada. Se reporta en este corte, una sola vez']],
   },
   '2262-3318': {
     saldo: 1744120, vencidas: [['2026-09-23', 160000], ['2026-10-23', 160000]],
@@ -119,12 +119,12 @@ const CAMBIOS = {
   '2250-0987': {
     estado: '06',
     vencidas: [['2026-04-27', 270000], ['2026-05-27', 270000], ['2026-06-27', 270000], ['2026-07-27', 270000], ['2026-08-27', 270000], ['2026-09-27', 270000], ['2026-10-27', 270000]],
-    eventos: [['2026-10-31', '06', 'CENS la castigó contablemente: pasa a Castigada (06). 187 días: edad 05 → 06', '06']],
+    eventos: [['2026-10-31', '06', 'CENS la castigó contablemente: pasa a Castigada. 187 días: edad 05 → 06', '06']],
   },
   '2244-6410': {
     estado: '01', saldo: 1270000, caducado: false, vencidas: [], pago_mora: PAGO_MORA('2026-10-20', 1710000),
     pagos: [pago(1710000, 'cuotas del 02/02/2026 al 02/10/2026', 'Pagó toda la mora sin cancelar el saldo')],
-    eventos: [['2026-10-31', '01', 'Pagó toda la mora sin cancelar el saldo: vuelve a Vigente (01). Edad 08 → 00']],
+    eventos: [['2026-10-31', '01', 'Pagó toda la mora sin cancelar el saldo: vuelve a Vigente. Edad 08 → 00']],
   },
   '2263-9004': { saldo: 1330000, pagos: [pago(120000, 'cuota del 15/10/2026', 'Pagó la cuota del mes')] },
   '2271-5502': { saldo: 4215000, pagos: [pago(165000, 'cuota del 15/10/2026', 'Pagó la cuota del mes')] },
@@ -149,7 +149,7 @@ export function obligacionesTrasCiclo(obligaciones) {
 }
 
 // Resultado (CicloDetalle sin corte, fecha ni usuario, que pone la ruta).
-// `con_pagos` cuenta las 7 obligaciones con pagos del SAC en CAMBIOS (el mockup no contaba la cuota del
+// `con_pagos` cuenta las 7 obligaciones con pagos del sistema comercial en CAMBIOS (el mockup no contaba la cuota del
 // mes de las que estaban al día) y `normalizadas` solo la que volvió a 01 por RF46 (2244-6410), como
 // define el contrato.
 export const resultadoCiclo2026_10_31 = () => ({
@@ -166,8 +166,8 @@ export const resultadoCiclo2026_10_31 = () => ({
     transicion(14, '2266-7745', 'Colegio San Rafael', null, '01', null, '01', [ENTRA]),
     // El paso de caducado a Dudoso recaudo espera la confirmación de CENS (C-53).
     transicion(15, '2267-3361', 'Taller Mecánico Los Pinos', null, '03', null, '03', [
-      regla('RF10', 'Entra con su estado y su mora reales · caducado en el SAC'),
-      regla('RF14', 'Crédito caducado en el SAC con 4 cuotas en mora: Dudoso Recaudo', true),
+      regla('RF10', 'Entra con su estado y su mora reales · caducado en el sistema comercial'),
+      regla('RF14', 'Crédito caducado en el sistema comercial con 4 cuotas en mora: Dudoso recaudo', true),
     ]),
     transicion(1, '2257-4156', 'Carlos Andrés Rueda', '01', '01', '00', '00', [
       regla('RF17', 'Pago de $196.000 aplicado a: cuota del 07/09/2026, cuota del 07/10/2026', true),

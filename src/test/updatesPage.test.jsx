@@ -33,7 +33,7 @@ describe('pantalla 14 · lista y navegación', () => {
 
     // Botones de acción principales
     expect(screen.getByRole('button', { name: /Registrar novedad/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Abrir Actualización en Línea/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Abrir Actualización en Línea/i })).not.toBeInTheDocument()
 
     // Pestañas y contadores iniciales (3 novedades: 2 pendientes, 1 gestionada)
     expect(screen.getByRole('button', { name: 'Todas (3)' })).toBeInTheDocument()
@@ -109,7 +109,7 @@ describe('pantalla 14 · gestionar novedad en línea (RF24)', () => {
 
     const modal = await screen.findByRole('dialog', { name: /Gestionar en Actualización en Línea/i })
     expect(modal).toBeInTheDocument()
-    expect(within(modal).getByText(/Abre el módulo web/i)).toBeInTheDocument()
+    expect(within(modal).getByText(/Entra al módulo web/i)).toBeInTheDocument()
 
     // Enviar vacío muestra error de validación
     const botonConfirmar = within(modal).getByRole('button', { name: 'Marcar como gestionada' })

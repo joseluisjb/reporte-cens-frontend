@@ -5,9 +5,9 @@
 export const MARCADOR = Object.freeze({ tipoEntidad: 'XXX', codigoEntidad: 'XXX', codigoSucursal: 'XXXXXX' })
 
 export const MSG_ENTIDAD = {
-  tipoEntidad: 'El tipo de entidad debe tener 3 dígitos (o XXX mientras TransUnion no los asigne).',
-  codigoEntidad: 'El código de entidad debe tener 3 dígitos (o XXX mientras TransUnion no los asigne).',
-  codigoSucursal: 'El código de sucursal debe tener 6 caracteres (o XXXXXX mientras TransUnion no los asigne).',
+  tipoEntidad: 'El tipo de entidad debe tener 3 dígitos.',
+  codigoEntidad: 'El código de entidad debe tener 3 dígitos.',
+  codigoSucursal: 'El código de sucursal debe tener 6 caracteres.',
 }
 
 // Las usa también el backend simulado (mocks/rutas/entidad.js), para que no se separen.

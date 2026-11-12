@@ -56,7 +56,7 @@ export default function PanelAnalista() {
     <div className="mt-4 space-y-4">
       {resumen.entidadConMarcador && (
         <Alert tone="aviso">
-          TransUnion aún no asigna los datos de la entidad: el tipo de entidad, el código de entidad y la sucursal llevan relleno (
+          TransUnion aún no asigna los datos de la entidad: el tipo de entidad, el código de entidad y la sucursal llevan datos provisionales (
           <span className="font-mono">XXX</span>), así que los archivos salen <b>no aptos para envío</b>. El Administrador los cambia en
           «Datos de la Entidad» cuando TransUnion los asigne.
         </Alert>

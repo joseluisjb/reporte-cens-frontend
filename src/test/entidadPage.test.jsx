@@ -74,37 +74,37 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     expect(sucursal).toHaveAttribute('aria-invalid', 'true')
   })
 
-  test('«Volver al relleno» deja XXX, XXX y XXXXXX', async () => {
+  test('«Restablecer datos provisionales» deja XXX, XXX y XXXXXX', async () => {
     await abrirComoAdmin()
     await escribir('Tipo de entidad', '001')
     await escribir('Código de entidad', '123')
     await escribir('Código de sucursal', 'A1B2C3')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar datos' }))
     await screen.findByRole('note')
-    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
-    const dialogo = await screen.findByRole('alertdialog', { name: 'Volver al relleno' })
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Volver al relleno' }))
-    expect(await screen.findByText('Datos de la entidad con relleno: los archivos saldrán no aptos para envío.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Restablecer datos provisionales' }))
+    const dialogo = await screen.findByRole('alertdialog', { name: 'Restablecer datos provisionales' })
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Restablecer datos provisionales' }))
+    expect(await screen.findByText('Los datos de la entidad son provisionales: los archivos saldrán no aptos para envío.')).toBeInTheDocument()
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
     expect(screen.getByLabelText('Código de entidad')).toHaveValue('XXX')
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
-  test('«Volver al relleno» con el marcador ya guardado deja los botones activos y limpia lo escrito', async () => {
+  test('«Restablecer datos provisionales» con el marcador ya guardado deja los botones activos y limpia lo escrito', async () => {
     await abrirComoAdmin()
     await escribir('Tipo de entidad', '001')
-    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
-    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Volver al relleno' }))
-    await screen.findByText('Datos de la entidad con relleno: los archivos saldrán no aptos para envío.')
+    await userEvent.click(screen.getByRole('button', { name: 'Restablecer datos provisionales' }))
+    await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Restablecer datos provisionales' }))
+    await screen.findByText('Los datos de la entidad son provisionales: los archivos saldrán no aptos para envío.')
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
     expect(screen.getByRole('button', { name: 'Guardar datos' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Volver al relleno' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Restablecer datos provisionales' })).toBeEnabled()
   })
 
   test('cancelar la confirmación no cambia nada', async () => {
     await abrirComoAdmin()
-    await userEvent.click(screen.getByRole('button', { name: 'Volver al relleno' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Restablecer datos provisionales' }))
     await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancelar' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Tipo de entidad')).toHaveValue('XXX')
@@ -115,7 +115,7 @@ describe('pantalla 15 · Datos de la Entidad (Administrador)', () => {
     await escribir('Código de sucursal', 'xxxxxx')
     const guardar = screen.getByRole('button', { name: 'Guardar datos' })
     await userEvent.click(guardar)
-    await screen.findByText('Datos guardados: todavía hay relleno, los archivos saldrán no aptos para envío.')
+    await screen.findByText('Datos guardados: todavía hay datos provisionales, los archivos saldrán no aptos para envío.')
     expect(screen.getByLabelText('Código de sucursal')).toHaveValue('XXXXXX')
     expect(screen.getByRole('button', { name: 'Guardar datos' })).toBe(guardar) // el mismo botón: no se remontó
   })

@@ -11,7 +11,7 @@ import { db } from '../mocks/db'
 import { server } from '../mocks/server'
 import { cicloConRechazosYRevisiones, corteDeOctubreEnBorrador } from './escenarios/ciclo'
 import { renderConSesion } from './renderApp'
-import { expectSinTextoInterno, TEXTO_INTERNO } from './textoInterno'
+import { expectSinTextoInterno, TEXTO_INTERNO, TEXTO_JERGA } from './textoInterno'
 
 const SESION = {
   [ROLES.ADMIN]: ['rmartinez@example.com', 'Admin12345'],
@@ -33,7 +33,7 @@ const TITULOS = {
   '/reclamos': 'Reclamos Habeas Data',
   '/novedades': 'Novedades Urgentes',
   '/usuarios': 'Usuarios del Sistema',
-  '/auditoria': 'Log de Auditoría del Sistema',
+  '/auditoria': 'Registro de auditoría del sistema',
   '/entidad': 'Datos de la Entidad ante TransUnion',
   '/homologacion-estados': 'Homologación de Estados',
 }
@@ -72,6 +72,46 @@ describe('el detector de texto interno', () => {
       expect(TEXTO_INTERNO.test(texto)).toBe(false)
     },
   )
+
+  test.each([
+    'Edad de mora (Tabla 9)',
+    'Ver Manual, p. 43',
+    'Primer reporte (p. 38-39)',
+    'Sector Real Servicios',
+    'Cumplen la matriz de TransUnion',
+    'Error 713: no permitido',
+    'una falla (error 881)',
+    'Primer reporte (regla 881)',
+    'Caducado en el SAC',
+    'datos con relleno (XXX)',
+    'registro 1 y registro 9',
+    'Generar archivo plano',
+    'Carga inicial (script 12)',
+    'Activo (propuesto)',
+    'Desconocido: preguntar a CENS',
+    'Corte en BORRADOR',
+    'Corte VALIDADO',
+    'ENVIADO_CON_INCONSISTENCIAS',
+    'Log de Auditoría',
+    'Se abriría el módulo',
+  ])('la jerga detecta «%s»', (texto) => {
+    expect(TEXTO_JERGA.test(texto)).toBe(true)
+  })
+
+  test.each(['Edad de mora', 'Estados del sistema comercial', 'Datos provisionales', 'Registro de auditoría del sistema', 'Corte en borrador', 'Generar archivo para TransUnion'])(
+    'la jerga deja pasar «%s»',
+    (texto) => {
+      expect(TEXTO_JERGA.test(texto)).toBe(false)
+    },
+  )
+
+  test('expectSinTextoInterno también falla con jerga, en texto y en atributos', () => {
+    const contenedor = document.createElement('div')
+    contenedor.innerHTML = '<p>Crédito caducado en el SAC</p>'
+    expect(() => expectSinTextoInterno(contenedor)).toThrow(/«SAC»/)
+    contenedor.innerHTML = '<span title="Tabla 9">x</span>'
+    expect(() => expectSinTextoInterno(contenedor)).toThrow(/«Tabla 9»/)
+  })
 
   test('expectSinTextoInterno falla mostrando el fragmento, también en atributos', () => {
     const contenedor = document.createElement('div')
@@ -173,9 +213,9 @@ describe('reporte a TransUnion', () => {
     expectSinTextoInterno()
 
     await userEvent.click(screen.getByRole('button', { name: 'Validar corte' }))
-    await screen.findByText('Corte validado: ya puedes generar el archivo plano.')
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Generar archivo plano' })).toBeEnabled())
-    await userEvent.click(screen.getByRole('button', { name: 'Generar archivo plano' }))
+    await screen.findByText('Corte validado: ya puedes generar el archivo para TransUnion.')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Generar archivo para TransUnion' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Generar archivo para TransUnion' }))
     await screen.findByRole('region', { name: 'Archivo generado' })
     await screen.findByText('Archivo generado: SSRXXXXXX20260930 (no apto para envío).')
     expectSinTextoInterno()
@@ -255,7 +295,7 @@ describe('reclamos', () => {
 describe('homologación y entidad', () => {
   test('fila en edición de un estado sin homologar y de uno homologado', async () => {
     await abrirRuta('/homologacion-estados', ADMIN)
-    await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+    await screen.findByRole('table', { name: 'Estados del sistema comercial' })
     expectSinTextoInterno()
     const botones = screen.getAllByRole('button', { name: /^Editar la homologación del estado / })
     for (const boton of [botones[0], botones.at(-1)]) {

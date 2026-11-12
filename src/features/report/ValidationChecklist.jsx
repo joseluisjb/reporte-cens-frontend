@@ -4,6 +4,7 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../../components/ui'
 import { cx } from '../../components/ui/cx'
+import { campoTexto } from '../../lib/textos'
 
 const NIVELES = {
   ok: { icono: 'check', clases: 'bg-green-100 text-bosque-d', texto: 'Pasó' },
@@ -20,7 +21,7 @@ export default function ValidationChecklist({ resultados }) {
           <Item key={r.regla} resultado={r} />
         ))}
       </ul>
-      <p className="mt-3 text-[13px] text-muted">Rojo: bloquea (en TransUnion sería correctiva). Amarillo: solo avisa. Azul: informativo.</p>
+      <p className="mt-3 text-[13px] text-muted">Rojo: impide validar o generar el archivo. Amarillo: solo avisa. Azul: solo informa.</p>
     </>
   )
 }
@@ -47,7 +48,7 @@ function Item({ resultado: r }) {
                 ) : (
                   <span className="font-mono font-bold">{o.numeroObligacion}</span>
                 )}
-                {o.campo && <span className="ml-1.5 font-mono text-xs text-muted">{o.campo}</span>} · {o.mensaje}
+                {o.campo && <span className="ml-1.5 text-xs text-muted">{campoTexto(o.campo)}</span>} · {o.mensaje}
               </li>
             ))}
           </ul>

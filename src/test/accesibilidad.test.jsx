@@ -111,7 +111,7 @@ describe('pantallas con sesión', () => {
 
   test('homologación de estados (pantalla 16), con una fila en edición y su error', async () => {
     await renderConSesion('/homologacion-estados')
-    await screen.findByRole('table', { name: 'Estados del sistema comercial (SAC)' })
+    await screen.findByRole('table', { name: 'Estados del sistema comercial' })
     await expectAccesible()
     await userEvent.click(boton('Editar la homologación del estado B'))
     await userEvent.click(boton('Guardar'))
@@ -132,7 +132,7 @@ describe('pantallas con sesión', () => {
   test('actualización mensual (pantalla 10), con el resultado, los rechazos y la matriz', async () => {
     server.use(...cicloConRechazosYRevisiones())
     await renderConSesion('/ciclo', 'jperez@example.com', 'Analista123')
-    await screen.findByRole('table', { name: /Matriz de cambios de estado/ })
+    await screen.findByRole('table', { name: /Cambios de estado permitidos/ })
     await screen.findByRole('table', { name: 'Actualizaciones mensuales anteriores' })
     await expectAccesible()
     await userEvent.click(boton('Ejecutar actualización mensual'))
@@ -157,7 +157,7 @@ describe('pantallas con sesión', () => {
     await screen.findByRole('table', { name: 'Archivos generados' })
     await expectAccesible()
     await userEvent.click(boton('Validar corte'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Generar archivo plano' }, { timeout: 4000 }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Generar archivo para TransUnion' }, { timeout: 4000 }))
     await screen.findByRole('region', { name: 'Archivo generado' })
     await expectAccesible()
   })

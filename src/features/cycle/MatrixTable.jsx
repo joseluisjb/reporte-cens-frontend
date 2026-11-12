@@ -1,4 +1,4 @@
-// Matriz de cambios de estado (Sector Real Servicios, Manual p. 40) con los 5 estados que usa CENS,
+// Matriz de cambios de estado con los 5 estados que usa CENS,
 // como el vMatriz del mockup v3. Fila = estado del corte anterior; columna = estado nuevo; n = sin
 // mora y m = con mora. La matriz viene de la API (`GET /matriz-estados/`): aquí no se copia.
 import { cx } from '../../components/ui/cx'
@@ -17,16 +17,16 @@ export default function MatrixTable({ matriz }) {
   return (
     <div className="overflow-auto">
       <table className="w-full border-collapse text-center text-xs [&_td]:border [&_td]:border-line [&_td]:p-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-slate-50 [&_th]:p-1.5 [&_th]:font-semibold">
-        <caption className="sr-only">Matriz de cambios de estado: S = TransUnion acepta el cambio, N = lo rechaza (error 713)</caption>
+        <caption className="sr-only">Cambios de estado permitidos: S = TransUnion acepta el cambio, N = TransUnion no acepta el cambio</caption>
         <thead>
           <tr>
             <th scope="col" className="text-left">
-              Desde \ hacia
+              Estado anterior / nuevo
             </th>
             {COMBINACIONES.map(([codigo, conMora]) => (
-              <th key={codigo + conMora} scope="col" title={`${descripcionEstado(codigo)} ${mora(conMora)}`} className="font-mono whitespace-nowrap">
-                {codigo} {conMora ? 'm' : 'n'}
-                <span className="sr-only"> ({mora(conMora)})</span>
+              <th key={codigo + conMora} scope="col" title={`${codigo} · ${descripcionEstado(codigo)} ${mora(conMora)}`} className="whitespace-nowrap">
+                {descripcionEstado(codigo)}
+                <span className="block font-normal text-muted">{mora(conMora)}</span>
               </th>
             ))}
           </tr>

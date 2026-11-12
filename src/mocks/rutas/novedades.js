@@ -64,7 +64,7 @@ export const novedadesHandlers = [
       errores.motivo = ['Explica el motivo de la novedad.']
     }
     if (cuerpo.tipo === 'ELIMINACION' && !cuerpo.motivo_eliminacion) {
-      errores.motivo_eliminacion = ['Selecciona el motivo de la eliminación (Tabla 28).']
+      errores.motivo_eliminacion = ['Selecciona el motivo de la eliminación.']
     }
 
     if (Object.keys(errores).length) return error(400, errores)

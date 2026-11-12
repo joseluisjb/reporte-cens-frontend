@@ -58,7 +58,7 @@ function validadorDe(metodo, ruta, status) {
   }
   const contenido = respuesta?.content?.['application/json']?.schema
   let resultado
-  // Descargas (`text/plain`, p. ej. el archivo plano): basta con que llegue texto no vacío.
+  // Descargas (`text/plain`, p. ej. el archivo para TransUnion): basta con que llegue texto no vacío.
   if (!contenido && respuesta?.content?.['text/plain']) resultado = { textoPlano: true }
   else if (!contenido) resultado = { sinCuerpo: true }
   else {

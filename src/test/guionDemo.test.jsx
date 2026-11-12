@@ -43,13 +43,13 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   await userEvent.click(boton('Iniciar sesión'))
   expect(await screen.findByRole('alert')).toHaveTextContent(/desactivado/i)
 
-  // 1:30 administrador con el menú completo (13 opciones; las del Analista, bloqueadas)
+  // 1:30 administrador con el menú de administración (7 opciones)
   await userEvent.clear(screen.getByLabelText('Correo electrónico'))
   await userEvent.type(screen.getByLabelText('Correo electrónico'), 'rmartinez@example.com')
   await userEvent.type(screen.getByLabelText('Contraseña'), 'Admin12345')
   await userEvent.click(boton('Iniciar sesión'))
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
-  expect(within(menuPrincipal()).getAllByRole('link')).toHaveLength(13)
+  expect(within(menuPrincipal()).getAllByRole('link')).toHaveLength(7)
 
   // 2:00 crear usuario: la contraseña temporal se envía por correo (simulado)
   await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /gestión de usuarios/i }))
@@ -131,10 +131,10 @@ test('recorrido completo del guion: usuarios, parametrización, auditoría, prim
   await userEvent.click(boton('Guardar y continuar'))
   expect(await screen.findByRole('heading', { name: 'Bienvenido, Laura' })).toBeInTheDocument()
 
-  // 9:00 roles: el Analista ve las de administración bloqueadas y, escribiendo la dirección, "Acceso restringido"
-  expect(within(menuPrincipal()).getByRole('link', { name: /gestión de usuarios/i })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
+  // 9:00 roles: el Analista no ve las de administración y, escribiendo la dirección, vuelve al inicio
+  expect(within(menuPrincipal()).queryByRole('link', { name: /gestión de usuarios/i })).not.toBeInTheDocument()
   recargar('/usuarios')
-  expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Bienvenido, Laura' })).toBeInTheDocument()
 
   // 9:30 extracción (Laura, Analista): corte en BORRADOR con obligaciones consolidadas
   await userEvent.click(within(menuPrincipal()).getByRole('link', { name: /extracción de cartera/i }))

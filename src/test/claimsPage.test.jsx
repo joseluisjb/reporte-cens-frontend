@@ -73,10 +73,10 @@ describe('pantalla 13 · lista', () => {
     expect(await screen.findByRole('table', { name: TABLA })).toBeInTheDocument()
   })
 
-  test('el Administrador ve «Acceso restringido» en /reclamos', async () => {
+  test('el Administrador que escribe /reclamos vuelve al inicio', async () => {
     renderApp('/reclamos', ADMIN)
-    expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
-    expect(screen.getByText(/exclusiva del rol Analista de Cartera/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Bienvenido, Rosa' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Reclamos Habeas Data' })).not.toBeInTheDocument()
   })
 })
 

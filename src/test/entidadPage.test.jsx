@@ -1,7 +1,7 @@
 // Pantalla 15 · Datos de la Entidad ante TransUnion (RF57). «Listo cuando» de la ficha:
 //   - el Administrador guarda 001 / 123 / A1B2C3 → se guarda y los archivos nuevos salen aptos;
 //   - 12 en el tipo de entidad → error en el campo (y 400 del backend);
-//   - el Analista intenta el PUT → 403 en español, y en la pantalla ve «Acceso restringido».
+//   - el Analista intenta el PUT → 403 en español, y la ruta lo devuelve al inicio.
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'

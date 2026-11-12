@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server'
@@ -8,24 +8,14 @@ const menu = () => screen.queryByRole('navigation', { name: 'Navegación princip
 
 describe('un Analista no abre las pantallas de administración, ni escribiendo la dirección', () => {
   test.each([
-    ['/usuarios', 'Gestión de Usuarios', 'Usuarios del Sistema'],
-    ['/auditoria', 'Auditoría', 'Log de Auditoría del Sistema'],
-    ['/parametrizacion', 'Parametrización de Conceptos', 'Códigos de Concepto de Energía'],
-  ])('%s muestra "Acceso restringido" y no la pantalla', async (ruta, seccion, tituloDePantalla) => {
+    ['/usuarios', 'Usuarios del Sistema'],
+    ['/auditoria', 'Log de Auditoría del Sistema'],
+    ['/parametrizacion', 'Códigos de Concepto de Energía'],
+  ])('%s lleva al inicio y no muestra la pantalla', async (ruta, tituloDePantalla) => {
     renderApp(ruta, ANALISTA)
-    expect(await screen.findByRole('heading', { name: 'Acceso restringido' })).toBeInTheDocument()
-    expect(screen.getByText(new RegExp(`«${seccion}» es exclusiva del rol Administrador`))).toBeInTheDocument()
-    expect(screen.getByText('Analista de Cartera', { selector: 'b' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: tituloDePantalla })).not.toBeInTheDocument()
-    expect(document.title).toBe('NexoVolt — Acceso restringido')
-  })
-
-  test('la pantalla restringida conserva el menú y permite volver al inicio', async () => {
-    renderApp('/usuarios', ANALISTA)
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
-    expect(within(menu()).getByRole('link', { name: /usuarios/i })).toHaveAccessibleName(expect.stringContaining('(solo para el rol Administrador)'))
-    await userEvent.click(screen.getByRole('link', { name: 'Volver al inicio' }))
     expect(await screen.findByRole('heading', { name: 'Bienvenido, Juan' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: tituloDePantalla })).not.toBeInTheDocument()
+    expect(menu()).toBeInTheDocument()
   })
 
   test('las pantallas permitidas siguen abriendo', async () => {
@@ -36,7 +26,7 @@ describe('un Analista no abre las pantallas de administración, ni escribiendo l
 
   test('no ofrece "Cambiar de perfil" fuera del modo demostración', async () => {
     renderApp('/usuarios', ANALISTA)
-    await screen.findByRole('heading', { name: 'Acceso restringido' })
+    await screen.findByRole('heading', { name: 'Bienvenido, Juan' })
     expect(screen.queryByRole('button', { name: /cambiar de perfil/i })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /juan pérez/i }))
     expect(screen.queryByRole('menuitem', { name: /cambiar de perfil/i })).not.toBeInTheDocument()
@@ -51,7 +41,6 @@ describe('el Administrador abre todo', () => {
   ])('%s', async (ruta, titulo) => {
     await renderConSesion(ruta)
     expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Acceso restringido' })).not.toBeInTheDocument()
     if (ruta === '/usuarios') await screen.findByText('Juan Pérez') // deja terminar la carga de la lista
     if (ruta === '/parametrizacion') await screen.findByText('CUOTA FINANCIACION ENERGIA')
   })

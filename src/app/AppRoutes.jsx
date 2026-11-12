@@ -21,13 +21,13 @@ export default function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route path="/cambio-password" element={<ChangePasswordPage />} />
         <Route element={<AppLayout />}>
-          {NAV_ITEMS.map(({ path, label, roles, Page }) => (
+          {NAV_ITEMS.map(({ path, roles, Page }) => (
             <Route
               key={path}
               path={path}
               element={
                 roles ? (
-                  <RequireRole roles={roles} seccion={label}>
+                  <RequireRole roles={roles}>
                     <Page />
                   </RequireRole>
                 ) : (

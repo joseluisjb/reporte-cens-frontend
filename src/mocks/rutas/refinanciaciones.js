@@ -141,7 +141,7 @@ export const refinanciacionesHandlers = [
       fecha_registro: ahoraBogotaISO(),
       registrada_por: usuario.nombre,
       origen: 'MANUAL',
-      obligacion_original: { obligacion_id: original.id, numero_obligacion: original.numero, nombre_titular: original.titular, estado_cierre: cierre, modo_extincion: REFINANCIACION },
+      obligacion_original: { obligacion_id: original.id, numero_obligacion: original.numero, nombre_titular: original.titular, estado_cierre: cierre, modo_extincion: REFINANCIACION, fecha_corte_cierre: null },
       obligacion_nueva: { obligacion_id: nuevaId, numero_obligacion: numero, estado_tu: '01', numero_reestructuraciones: nueva.reestructuracion.numero_reestructuraciones },
       saldo_refinanciado: saldo,
       naturaleza: { ...naturaleza },

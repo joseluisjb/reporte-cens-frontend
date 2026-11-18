@@ -23,6 +23,8 @@ export function mapRefinanciacion(raw) {
       nombreTitular: o.nombre_titular,
       estadoCierre: estado(o.estado_cierre),
       modoExtincion: { codigo: o.modo_extincion.codigo, descripcion: o.modo_extincion.descripcion },
+      // Corte en que se reportó el cierre; null mientras la original siga abierta (contrato 0.9.6).
+      fechaCorteCierre: o.fecha_corte_cierre ? soloFecha(o.fecha_corte_cierre) : null,
     },
     nueva: { id: n.obligacion_id, numeroObligacion: n.numero_obligacion, estado: estado(n.estado_tu), numeroReestructuraciones: n.numero_reestructuraciones },
     saldoRefinanciado: raw.saldo_refinanciado,

@@ -287,6 +287,14 @@ describe('pantalla 9 · detalle', () => {
     expect(dato(panel, 'Caducidad del crédito')).toHaveTextContent('No caducadoCaduca a las 4 cuotas atrasadas · lleva 3')
   })
 
+  test('sin atrasos permitidos en el sistema comercial no inventa «Caduca a las 0» (RF14, contrato 0.9.6)', async () => {
+    editar('2261-8820', { atrasos_permitidos: null })
+    await abrir()
+    const panel = await abrirDetalle('2261-8820')
+    expect(dato(panel, 'Caducidad del crédito')).toHaveTextContent('No caducadoEl sistema comercial no indica con cuántas cuotas atrasadas caduca · lleva')
+    expect(dato(panel, 'Caducidad del crédito')).not.toHaveTextContent('Caduca a las')
+  })
+
   test('en Vigente, la caducidad del crédito sin marcas internas (RF12, RF14, RF45, RF18)', async () => {
     await abrir()
     const panel = await abrirDetalle('2257-4156')

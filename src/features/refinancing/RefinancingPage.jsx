@@ -153,6 +153,11 @@ function Registradas({ lista, error, onReintentar }) {
                         <span className="text-xs text-muted">
                           modo de extinción: {r.original.modoExtincion.descripcion}
                         </span>
+                        <span className="text-xs text-muted">
+                          {r.original.fechaCorteCierre
+                            ? `Cerrada en el corte del ${formatearFechaISO(r.original.fechaCorteCierre)}`
+                            : 'Sigue abierta: se cierra en la actualización mensual del próximo corte'}
+                        </span>
                       </div>
                     </td>
                     <td className="text-right whitespace-nowrap">{formatearCOP(r.saldoRefinanciado)}</td>

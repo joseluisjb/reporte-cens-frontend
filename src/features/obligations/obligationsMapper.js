@@ -86,7 +86,7 @@ export function mapObligacionDetalle(raw) {
     valorCuotaAntesCierre: raw.valor_cuota_antes_cierre ?? null,
     fechaExigibilidad: fecha(raw.fecha_exigibilidad),
     aniosMora: raw.anios_mora ?? null,
-    atrasosPermitidos: raw.atrasos_permitidos,
+    atrasosPermitidos: raw.atrasos_permitidos ?? null, // null: el SAC no lo tiene (contrato 0.9.6)
     cuotasAtrasadas: raw.cuotas_atrasadas,
     cierre: mapCierre(raw.cierre),
     pagoMora: mapPagoMora(raw.pago_mora),

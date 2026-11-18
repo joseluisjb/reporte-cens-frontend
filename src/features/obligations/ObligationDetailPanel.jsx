@@ -220,7 +220,12 @@ function DatosObligacion({ o, onAbrir }) {
       </Dato>
       <Dato etiqueta="Valor inicial">{o.valorInicial == null ? '—' : formatearCOP(o.valorInicial)}</Dato>
       <Dato etiqueta="Primer reporte">{o.primerReporte ? 'Sí: aún no se ha incluido en ningún archivo' : 'No'}</Dato>
-      <Dato etiqueta="Caducidad del crédito" nota={`Caduca a las ${o.atrasosPermitidos} cuotas atrasadas · lleva ${o.cuotasAtrasadas}`}>
+      <Dato
+        etiqueta="Caducidad del crédito"
+        nota={o.atrasosPermitidos == null
+          ? `El sistema comercial no indica con cuántas cuotas atrasadas caduca · lleva ${o.cuotasAtrasadas}`
+          : `Caduca a las ${o.atrasosPermitidos} cuotas atrasadas · lleva ${o.cuotasAtrasadas}`}
+      >
         {o.caducado ? 'Crédito caducado' : 'No caducado'}
       </Dato>
       <Dato etiqueta="Ingreso al sistema">{formatearFechaISO(o.fechaIngreso)}</Dato>

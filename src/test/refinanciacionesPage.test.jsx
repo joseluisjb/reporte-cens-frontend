@@ -51,7 +51,7 @@ describe('pantalla 11 · lista', () => {
     expect(filas()).toHaveLength(1)
     const [fila] = filas()
     expect(fila).toHaveTextContent('28/09/2026 15:20Juan PérezRefinanciada el 28/09/2026')
-    expect(fila).toHaveTextContent('2255-7788Inversiones Pamplona S.A.S.Saldadamodo de extinción: Refinanciación')
+    expect(fila).toHaveTextContent('2255-7788Inversiones Pamplona S.A.S.Saldadamodo de extinción: RefinanciaciónCerrada en el corte del 30/09/2026')
     expect(fila).toHaveTextContent('$4.380.000')
     expect(fila).toHaveTextContent('2271-5502VigenteReestructurada (1)')
     expect(fila).toHaveTextContent('Otra36 cuotas')
@@ -145,7 +145,8 @@ describe('pantalla 11 · registro manual', () => {
     expect(await screen.findByText(/Refinanciación registrada: 2250-0987 pasa a Castigada recuperada y nace 2272-6101 en Vigente\./)).toBeInTheDocument()
     await waitFor(() => expect(filas()).toHaveLength(2))
     const [nueva] = filas()
-    expect(nueva).toHaveTextContent('2250-0987Hotel Mirador CúcutaCastigada recuperadamodo de extinción: Refinanciación')
+    // Recién registrada, la original sigue abierta hasta la actualización mensual (contrato 0.9.6).
+    expect(nueva).toHaveTextContent('2250-0987Hotel Mirador CúcutaCastigada recuperadamodo de extinción: RefinanciaciónSigue abierta: se cierra en la actualización mensual del próximo corte')
     expect(nueva).toHaveTextContent('$5.420.000')
     expect(nueva).toHaveTextContent('2272-6101VigenteReestructurada (1)')
     expect(nueva).toHaveTextContent('Ordinaria24 cuotas')

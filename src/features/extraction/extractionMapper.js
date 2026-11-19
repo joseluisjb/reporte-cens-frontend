@@ -12,7 +12,8 @@
 //   { numero_obligacion, nombre_titular,              estado: { codigo, descripcion },
 //     numero_identificacion, estado_tu,               edadMora: { codigo, descripcion },
 //     edad_mora, dias_mora, cuotas_mora,              diasMora, cuotasMora, valorMora, valorSaldo, nCreditos }
-//     valor_mora, valor_saldo, n_creditos }
+//     valor_mora, valor_saldo, n_creditos,          camposReporte (los 22 campos de la plantilla de CENS)
+//     campos_reporte }
 //
 // - `fecha_corte` se deja como texto 'YYYY-MM-DD': con `new Date()` se correría un día en hora de
 //   Colombia. Hoy el backend puede mandarla como fecha-hora (diferencia V): se toman los 10 primeros
@@ -23,7 +24,7 @@
 //   mapper lo vuelve a enmascarar por si acaso y NUNCA lo entrega completo a las pantallas: solo expone
 //   `identificacion` enmascarada (últimos 4 dígitos).
 import { enmascararIdentificacion } from '../../lib/format'
-import { descripcionEdadMora, descripcionEstado } from '../transunion/catalogosTU'
+import { descripcionEdadMora, descripcionEstado, descripcionPeriodicidad, descripcionTipoId } from '../transunion/catalogosTU'
 
 export function mapCorte(raw) {
   return {
@@ -60,6 +61,37 @@ export function mapObligacionCorte(raw) {
     valorMora: raw.valor_mora,
     valorSaldo: raw.valor_saldo,
     nCreditos: raw.n_creditos,
+    camposReporte: raw.campos_reporte ? mapCamposReporte(raw.campos_reporte) : null,
+  }
+}
+
+const codigoConDescripcion = (codigo, descripcion) => (codigo ? { codigo, descripcion: descripcion(codigo) } : null)
+
+// CamposReporte (contrato 0.9.7) → los 22 campos de la plantilla, en su orden. Los valores van en pesos
+// (en el archivo van en miles) y los datos personales siguen enmascarados.
+export function mapCamposReporte(c) {
+  return {
+    tipoIdentificacion: codigoConDescripcion(c.tipo_identificacion, descripcionTipoId),
+    identificacion: enmascararIdentificacion(c.numero_identificacion),
+    nombreTitular: c.nombre_titular,
+    fechaLimitePago: c.fecha_limite_pago ? String(c.fecha_limite_pago).slice(0, 10) : null,
+    numeroObligacion: c.numero_obligacion,
+    codigoSucursal: c.codigo_sucursal ?? null,
+    calidad: c.calidad ?? null,
+    estado: codigoConDescripcion(c.estado_tu, descripcionEstado),
+    edadMora: codigoConDescripcion(c.edad_mora, descripcionEdadMora),
+    fechaCorte: c.fecha_corte ? String(c.fecha_corte).slice(0, 10) : null,
+    fechaInicio: c.fecha_inicio ? String(c.fecha_inicio).slice(0, 10) : null,
+    periodicidad: codigoConDescripcion(c.periodicidad, descripcionPeriodicidad),
+    cuotasMora: c.cuotas_mora,
+    valorInicial: c.valor_inicial ?? null,
+    valorMora: c.valor_mora ?? null,
+    valorSaldo: c.valor_saldo ?? null,
+    valorCuota: c.valor_cuota ?? null,
+    obligacionRefinanciada: c.obligacion_refinanciada === '01',
+    correo: c.correo ?? null,
+    celular: c.celular ?? null,
+    valorRealPagado: c.valor_real_pagado ?? null,
   }
 }
 

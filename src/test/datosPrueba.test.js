@@ -42,7 +42,20 @@ describe('datos de prueba', () => {
   })
 
   test('cumple el contrato (ListaPaginada de ObligacionCorte) y los usuarios cumplen User', () => {
-    expect(() => expectCumpleContrato('get', '/extracciones/{id}/obligaciones/', 200, { total: obligaciones.length, resultados: obligaciones })).not.toThrow()
+    // El CSV trae solo los datos base; `campos_reporte` (contrato 0.9.7) lo arma el backend desde el corte.
+    const conCampos = obligaciones.map(({ tipo_id_tu, ...o }) => ({
+      ...o,
+      tipo_id_tu,
+      campos_reporte: {
+        tipo_identificacion: tipo_id_tu, numero_identificacion: `******${o.numero_identificacion.slice(-4)}`,
+        nombre_titular: o.nombre_titular, fecha_limite_pago: null, numero_obligacion: o.numero_obligacion,
+        codigo_sucursal: 'XXXXXX', calidad: 'P', estado_tu: o.estado_tu, edad_mora: o.edad_mora, fecha_corte: '2026-09-30',
+        fecha_inicio: null, periodicidad: '05', cuotas_mora: o.cuotas_mora, valor_inicial: null, valor_mora: o.valor_mora,
+        valor_saldo: o.valor_saldo, valor_cuota: null, obligacion_refinanciada: '02', correo: null, celular: null,
+        valor_real_pagado: null,
+      },
+    }))
+    expect(() => expectCumpleContrato('get', '/extracciones/{id}/obligaciones/', 200, { total: conCampos.length, resultados: conCampos })).not.toThrow()
     expect(() => expectCumpleContrato('get', '/users/', 200, generarUsuarios())).not.toThrow()
   })
 

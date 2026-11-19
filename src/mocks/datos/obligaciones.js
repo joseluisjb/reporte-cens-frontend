@@ -11,6 +11,7 @@
 // Lo que depende del corte (semilla = id del corte) son solo los montos; el estado, los días y las filas
 // saldadas o castigadas dependen de la posición de la fila, así que cualquier corte es coherente.
 import { edadMoraDesdeDias } from '../../features/transunion/catalogosTU'
+import { enmascararIdentificacion } from '../../lib/format'
 
 export const TOTAL_OBLIGACIONES = 24
 
@@ -42,6 +43,41 @@ function aleatorio(semilla) {
 
 const aMilesDePesos = (n) => Math.round(n / 1000) * 1000
 
+// Fecha 'YYYY-MM-DD' corrida `dias` días (en UTC, para no correrla por la zona horaria).
+function sumarDias(iso, dias) {
+  const fecha = new Date(`${iso}T00:00:00Z`)
+  fecha.setUTCDate(fecha.getUTCDate() + dias)
+  return fecha.toISOString().slice(0, 10)
+}
+
+// Los 22 campos de la plantilla de CENS (contrato 0.9.7, CamposReporte), coherentes con la fila.
+function camposReporte(corte, i, fila, { saldada, valorCuota }) {
+  const sinFecha = saldada || FILAS_SIN_FECHA_LIMITE.has(i)
+  return {
+    tipo_identificacion: '01',
+    numero_identificacion: enmascararIdentificacion(fila.numero_identificacion),
+    nombre_titular: fila.nombre_titular,
+    fecha_limite_pago: sinFecha || !corte.fecha_corte ? null : sumarDias(corte.fecha_corte, fila.dias_mora > 0 ? -fila.dias_mora : 15),
+    numero_obligacion: fila.numero_obligacion,
+    codigo_sucursal: 'XXXXXX',
+    calidad: 'P',
+    estado_tu: fila.estado_tu,
+    edad_mora: fila.edad_mora,
+    fecha_corte: corte.fecha_corte,
+    fecha_inicio: `2025-${dos((i % 12) + 1)}-15`,
+    periodicidad: '05',
+    cuotas_mora: fila.cuotas_mora,
+    valor_inicial: valorCuota * 12,
+    valor_mora: fila.valor_mora,
+    valor_saldo: fila.valor_saldo,
+    valor_cuota: saldada ? 0 : valorCuota,
+    obligacion_refinanciada: '02',
+    correo: i % 4 === 3 ? null : `t***@example.com`,
+    celular: i % 4 === 3 ? null : `******${dos(i + 1)}45`,
+    valor_real_pagado: saldada ? null : fila.dias_mora === 0 ? valorCuota : 0,
+  }
+}
+
 // Filas ObligacionCorte (contrato), ordenadas por numero_obligacion, con las claves en el orden del contrato.
 export function generarObligaciones(corte) {
   const azar = aleatorio(corte.id * 7919 + 13)
@@ -56,7 +92,7 @@ export function generarObligaciones(corte) {
     const cuotasMora = dias === 0 ? 0 : Math.max(1, Math.ceil(dias / 30))
     const valorCuota = Math.max(1000, aMilesDePesos(saldoBruto / 12))
     const valorMora = dias === 0 ? 0 : Math.min(valorSaldo, cuotasMora * valorCuota)
-    return {
+    const fila = {
       numero_obligacion: numeroObligacion(i),
       nombre_titular: `TITULAR FICTICIO ${dos(i + 1)}`,
       numero_identificacion: `10000000${dos(i + 1)}`,
@@ -68,6 +104,7 @@ export function generarObligaciones(corte) {
       valor_saldo: valorSaldo,
       n_creditos: nCreditos,
     }
+    return { ...fila, campos_reporte: camposReporte(corte, i, fila, { saldada, valorCuota }) }
   })
 }
 

@@ -37,6 +37,38 @@ describe('pantalla de extracción y consolidación de cartera (RF1–RF5)', () =
     expect(screen.queryByText('1000000001')).not.toBeInTheDocument()
   })
 
+  test('el número de obligación abre los 22 campos del reporte en el orden de la plantilla (RF5, contrato 0.9.7)', async () => {
+    await renderConSesion('/extraccion')
+    await screen.findByText('TITULAR FICTICIO 01')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver los campos del reporte de la obligación FIC-200000' }))
+
+    const panel = await screen.findByRole('dialog', { name: 'Campos del reporte · FIC-200000' })
+    const campos = within(panel).getByLabelText('Campos del reporte')
+    expect(within(campos).getAllByRole('term').map((dt) => dt.textContent)).toEqual([
+      'Tipo de identificación', 'Nº identificación', 'Nombre tercero', 'Fecha límite de pago', 'Número obligación',
+      'Código sucursal', 'Calidad', 'Estado de obligación', 'Edad de mora', 'Fecha de corte', 'Fecha inicio',
+      'Periodicidad', 'Cuotas en mora', 'Valor inicial', 'Valor de mora', 'Valor del saldo', 'Valor de la cuota',
+      'Línea de crédito', 'Obligación refinanciada', 'Correo electrónico', 'Celular', 'Valor real pagado',
+    ])
+    const valor = (etiqueta) => within(campos).getByText(etiqueta, { selector: 'dt' }).nextElementSibling.textContent
+    expect(valor('Tipo de identificación')).toBe('01 · Cédula de ciudadanía')
+    expect(valor('Nº identificación')).toBe('******0001')
+    expect(valor('Fecha límite de pago')).toBe('15/10/2026')
+    expect(valor('Código sucursal')).toBe('XXXXXX')
+    expect(valor('Calidad')).toBe('P · Principal')
+    expect(valor('Estado de obligación')).toBe('01 · Vigente')
+    expect(valor('Fecha de corte')).toBe('30/09/2026')
+    expect(valor('Periodicidad')).toBe('05 · Mensual')
+    expect(valor('Línea de crédito')).toBe('No aplica: CENS reporta en el sector Servicios')
+    expect(valor('Obligación refinanciada')).toBe('No')
+    expect(panel).toHaveTextContent('Los valores van en pesos (en el archivo van en miles)')
+    // Habeas Data: ni la identificación ni el celular salen completos.
+    expect(within(panel).queryByText('1000000001')).not.toBeInTheDocument()
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
   test('muestra carga y estado vacío cuando la página no tiene obligaciones', async () => {
     let resolverRespuesta
     server.use(

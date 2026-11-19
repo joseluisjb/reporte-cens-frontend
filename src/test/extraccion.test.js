@@ -372,6 +372,7 @@ describe('obligaciones del corte', () => {
       valorMora: 0,
       valorSaldo: data.resultados[0].valor_saldo,
       nCreditos: data.resultados[0].n_creditos,
+      camposReporte: expect.objectContaining({ identificacion: '******0001', numeroObligacion: data.resultados[0].numero_obligacion }),
     })
   })
 
@@ -398,7 +399,7 @@ describe('obligaciones del corte', () => {
 })
 
 describe('datos generados de las obligaciones', () => {
-  const corte = (id) => ({ id })
+  const corte = (id) => ({ id, fecha_corte: '2026-09-30' })
 
   test('son coherentes con el manual para cualquier corte y pasan la validación sin errores correctivos', () => {
     for (const id of [1, 2, 3, 4, 5, 57]) {
@@ -406,7 +407,7 @@ describe('datos generados de las obligaciones', () => {
       expect(filas).toHaveLength(24)
       expect(filas.map((f) => f.numero_obligacion)).toEqual(filas.map((f) => f.numero_obligacion).toSorted())
       for (const f of filas) {
-        expect(Object.keys(f)).toEqual(['numero_obligacion', 'nombre_titular', 'numero_identificacion', 'estado_tu', 'edad_mora', 'dias_mora', 'cuotas_mora', 'valor_mora', 'valor_saldo', 'n_creditos'])
+        expect(Object.keys(f)).toEqual(['numero_obligacion', 'nombre_titular', 'numero_identificacion', 'estado_tu', 'edad_mora', 'dias_mora', 'cuotas_mora', 'valor_mora', 'valor_saldo', 'n_creditos', 'campos_reporte'])
         expect(f.numero_obligacion).toMatch(/^FIC-\d{6}$/)
         expect(f.nombre_titular).toMatch(/^TITULAR FICTICIO \d\d$/)
         expect(f.numero_identificacion).toMatch(/^10000000\d\d$/)

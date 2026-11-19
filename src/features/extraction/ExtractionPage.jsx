@@ -36,6 +36,7 @@ import {
   listCuts,
   validateCut,
 } from './extractionService'
+import CamposReportePanel from './CamposReportePanel'
 import { mapCorteFieldErrors } from './extractionMapper'
 import SubmissionModal from './SubmissionModal'
 import ValidationErrorsModal from './ValidationErrorsModal'
@@ -79,6 +80,8 @@ export default function ExtractionPage() {
   const [erroresCorrectivos, setErroresCorrectivos] = useState(null)
   const [modalEnvioAbierto, setModalEnvioAbierto] = useState(false)
   const [aEliminarCorte, setAEliminarCorte] = useState(null)
+  // Obligación cuyos 22 campos del reporte se ven en el panel lateral (contrato 0.9.7)
+  const [conCampos, setConCampos] = useState(null)
   const [eliminando, setEliminando] = useState(false)
 
   // Carga inicial de cortes y grupos de conceptos
@@ -452,8 +455,9 @@ export default function ExtractionPage() {
             </div>
 
             <div className="border-b border-gris-d px-4 py-3 text-sm text-muted">
-              Muestra el saldo neto, los días de mora y la edad de mora de cada obligación. El estado
-              y los pagos se consultan en Obligaciones y Estados.
+              Muestra el saldo neto, los días de mora y la edad de mora de cada obligación. Haz clic en el
+              número para ver los 22 campos del reporte. El estado y los pagos se consultan en Obligaciones
+              y Estados.
             </div>
 
             {cargandoObligaciones ? (
@@ -493,8 +497,15 @@ export default function ExtractionPage() {
                     <tbody>
                       {obligaciones.map((o) => (
                         <tr key={o.numeroObligacion}>
-                          <td className="font-mono text-xs font-semibold text-ink">
-                            {o.numeroObligacion}
+                          <td className="whitespace-nowrap">
+                            <button
+                              type="button"
+                              className="cursor-pointer font-mono text-xs font-bold text-bosque-d underline hover:text-bosque-dd"
+                              aria-label={`Ver los campos del reporte de la obligación ${o.numeroObligacion}`}
+                              onClick={() => setConCampos(o)}
+                            >
+                              {o.numeroObligacion}
+                            </button>
                           </td>
                           <td className="font-medium text-ink">{o.nombreTitular}</td>
                           <td className="font-mono text-xs text-muted">{o.identificacion}</td>
@@ -569,6 +580,9 @@ export default function ExtractionPage() {
           </Card>
         </>
       )}
+
+      {/* Los 22 campos del reporte de una obligación */}
+      <CamposReportePanel obligacion={conCampos} onCerrar={() => setConCampos(null)} />
 
       {/* Modal de errores correctivos de validación */}
       {erroresCorrectivos && (

@@ -5,6 +5,7 @@
 //   - TABLA_9: edad de mora (`edad_mora`).
 //   - ESTADOS_OBLIGACION: Tabla 4b (`estado_tu`). No existen los códigos 05 ni 09.
 //   - TIPOS_IDENTIFICACION: Tabla 2 (`tipo_id_tu`). No existe el código 11.
+//   - PERIODICIDAD: Tabla 7, periodicidad del pago (`periodicidad`).
 // El backend entrega solo el código; la descripción se resuelve aquí (contrato 0.4, diferencia R).
 
 // Tabla 9. `desde` y `hasta` son días de mora (inclusivos); `hasta: null` = sin tope.
@@ -60,6 +61,16 @@ export const TIPOS_IDENTIFICACION = {
   '13': 'PPT',
 }
 
+// Tabla 7 (periodicidad del pago).
+export const PERIODICIDAD = {
+  '01': 'Semanal', '02': 'Quincenal', '03': 'Quincenal fija', '04': 'Quincenal variable',
+  '05': 'Mensual', '06': 'Mensual fija', '07': 'Mensual variable', '08': 'Bimensual',
+  '09': 'Bimensual fija', '10': 'Bimensual variable', '11': 'Trimestral', '12': 'Trimestral fija',
+  '13': 'Trimestral variable', '14': 'Semestral', '15': 'Semestral fija', '16': 'Semestral variable',
+  '17': 'Anual', '18': 'Anual fija', '19': 'Anual variable', '20': 'Al vencimiento',
+  '21': 'Otros', '22': 'Semanal fija', '23': 'Semanal variable', '24': 'Bimestral',
+}
+
 // Ojo: JavaScript ordena primero las claves que parecen número ('10'–'14'); el orden de las claves
 // no es el de la tabla, por eso nada aquí depende de él.
 // Un código desconocido se devuelve tal cual: mejor mostrar el código que ocultar el dato.
@@ -68,6 +79,7 @@ const descripcionDe = (tabla, codigo, campo) => (Object.hasOwn(tabla, codigo) ? 
 export const descripcionEdadMora = (codigo) => descripcionDe(TABLA_9, codigo, 'descripcion')
 export const descripcionEstado = (codigo) => descripcionDe(ESTADOS_OBLIGACION, codigo)
 export const descripcionTipoId = (codigo) => descripcionDe(TIPOS_IDENTIFICACION, codigo)
+export const descripcionPeriodicidad = (codigo) => descripcionDe(PERIODICIDAD, codigo)
 
 // Días de mora → código de edad de mora (Tabla 9). Entero ≥ 0; otro valor lanza RangeError.
 export function edadMoraDesdeDias(dias) {
